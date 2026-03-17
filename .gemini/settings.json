@@ -1,0 +1,10 @@
+{
+  "tools": {
+    "sandbox": "docker",
+    "useRipgrep": true,
+    "shell": {
+      "enableInteractiveShell": true,
+      "showColor": false
+    }
+  }
+}
