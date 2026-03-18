@@ -34,7 +34,7 @@ export default function PanelSwitcher() {
             flex: 1,
             margin: '5px'
           }}>
-                {multiTargets.map(({icon, label, id}) => 
+                {multiTargets.map(({icon, label, id}) =>
                   <ToggleButton
                     key={id}
                     checked={(state.view.layout as any)[id]}
@@ -52,7 +52,7 @@ export default function PanelSwitcher() {
                   style={{
                     flex: 1,
                   }}
-                  model={singleTargets.map(({icon, label, id}) => 
+                  model={singleTargets.map(({icon, label, id}) =>
                   ({icon, label, command: () => model.changeSingleVisibility(id)}))} />
               </>
         }
