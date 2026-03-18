@@ -230,17 +230,15 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
               </>
             ) : (
               <>
-                <GridSmithPanel className={`
-                  opacity-animated
-                  ${layout.mode === 'single' && layout.focus !== 'customizer' ? 'opacity-0' : ''}
-                  ${layout.mode === 'single' ? `absolute-fill` : ''}
-                `} style={getPanelStyle('customizer')} />
-                <ViewerPanel className={layout.mode === 'single' ? `absolute-fill` : ''} style={getPanelStyle('viewer')} />
-                <EditorPanel className={`
-                  opacity-animated
-                  ${layout.mode === 'single' && layout.focus !== 'editor' ? 'opacity-0' : ''}
-                  ${layout.mode === 'single' ? 'absolute-fill' : ''}
-                `} style={getPanelStyle('editor')} />
+                {layout.mode === 'single' && (layout as any).focus === 'customizer' && (
+                  <GridSmithPanel className="absolute-fill" style={getPanelStyle('customizer')} />
+                )}
+                {layout.mode === 'single' && (layout as any).focus === 'viewer' && (
+                  <ViewerPanel className="absolute-fill" style={getPanelStyle('viewer')} />
+                )}
+                {layout.mode === 'single' && (layout as any).focus === 'editor' && (
+                  <EditorPanel className="absolute-fill" style={getPanelStyle('editor')} />
+                )}
               </>
             )}
           </div>

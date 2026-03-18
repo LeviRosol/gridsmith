@@ -21,7 +21,24 @@ export default function SettingsMenu({className, style}: {className?: string, st
           label: (state.view as any).layout.showEditor ? 'Hide code editor' : 'Show code editor',
           icon: 'pi pi-code',
           command: () => model.mutate(s => {
-            (s.view as any).layout.showEditor = !(s.view as any).layout.showEditor;
+            const currentlyShown = (s.view as any).layout.showEditor;
+            if (!currentlyShown) {
+              // When turning the editor on, switch to single-panel mode focused on the editor.
+              s.view.layout = {
+                mode: 'single',
+                showEditor: true,
+                focus: 'editor',
+              } as any;
+            } else {
+              // When hiding the editor, return to the default multi-panel layout.
+              s.view.layout = {
+                mode: 'multi',
+                editor: false,
+                viewer: true,
+                customizer: true,
+                showEditor: false,
+              } as any;
+            }
           }),
         },
         {
@@ -32,12 +49,6 @@ export default function SettingsMenu({className, style}: {className?: string, st
           icon: 'pi pi-asterisk',
           // disabled: true,
           command: () => model.mutate(s => s.view.showAxes = !s.view.showAxes)
-        },
-        {
-          label: state.view.lineNumbers ? 'Hide line numbers' : 'Show line numbers',
-          icon: 'pi pi-list',
-          // disabled: true,
-          command: () => model.mutate(s => s.view.lineNumbers = !s.view.lineNumbers)
         },
         ...(isInStandaloneMode() ? [
           {
