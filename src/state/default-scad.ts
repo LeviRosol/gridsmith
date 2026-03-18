@@ -1,127 +1,101 @@
-// Portions of this file are Copyright 2021 Google LLC, and licensed under GPL2+. See COPYING.
+// Default baseplate SCAD program for GridSmith.
+// This script is the source of truth for the v1 base grid geometry.
+export default `// Adjustable size cell baseplate with wall-only underlay + internal shelves for tiles
+// Adjust rows/cols for different plate sizes (e.g., 3x3, 4x1, 4x2)
 
-export default `/*
-  Hello there!
+// Public parameters (overridable via -Dname=value)
+rows = 2;
+cols = 2;
 
-  If you're new to OpenSCAD, please learn the basics here:
-  https://openscad.org/documentation.html
+cell = 30.5;            // cell size (mm)
+wall = 1;               // interior wall thickness between cells (mm)
+ext_wall_pct = 0.5;     // exterior wall percent compared to interior wall
+height = 2;             // total wall height (mm)
+underlay_thick = 0.6;   // thickness of material under walls only (mm)
+gap = 0.2;              // clearance per side inside each cell (tune for fit)
 
-  There are lots of amazing libraries in the OpenSCAD ecosystem
-  (see this list: https://openscad.org/libraries.html).
+// Shelf parameters (tile support ledge inside each cell)
+shelf_height = 1.0;    // distance below top surface where shelf sits (mm)
+shelf_width  = 1.0;    // radial width of shelf from wall inward (mm)
+shelf_thick  = 1.6;    // thickness of the shelf rib (mm)
 
-  Some of these libraries are bundled with this playground
-  (search for "demo" or "example" in the file explorer above)
-  and can be included directly from your models.
+// Derived dimensions
+plate_w = cols*cell + (cols+1)*wall-(wall*ext_wall_pct);  // outer width
+plate_d = rows*cell + (rows+1)*wall-(wall*ext_wall_pct);  // outer depth
+inner_cell = cell - 2*gap;            // interior opening after gap
 
-  Any bugs (this is an Alpha!) or ideas of features?
-  https://github.com/openscad/openscad-playground/issues/new
-*/
-
-title = "OpenSCAD";
-
-color("gray")
-    rotate([90, 0, 0])
-        translate([0, debug ? -60 : -20, 0])
-            linear_extrude(1)
-                text(title,
-                    halign="center",
-                    valign="center");
-
-// You can find the original for the following example in the file explorer above,
-// under openscad / examples / Basic / CSG-modules.scad
-
-// CSG-modules.scad - Basic usage of modules, if, color, $fs/$fa
-
-// Change this to false to remove the helper geometry
-debug = true;
-
-// Global resolution
-$fs=$preview ? 1 : 0.1;  // Don't generate smaller facets than 0.1 mm
-$fa=$preview ? 15 : 5;    // Don't generate larger angles than 5 degrees
-
-// Main geometry
-difference() {
-    intersection() {
-        body();
-        intersector();
-    }
-    holes();
-}
-
-// Helpers
-if (debug) helpers();
-
-// Core geometric primitives.
-// These can be modified to create variations of the final object
-
-module body() {
-    color("Blue") sphere(10);
-}
-
-module intersector() {
-    color("Red") cube(15, center=true);
-}
-
-module holeObject() {
-    color("Lime") cylinder(h=20, r=5, center=true);
-}
-
-// Various modules for visualizing intermediate components
-
-module intersected() {
-    intersection() {
-        body();
-        intersector();
-    }
-}
-
-module holeA() rotate([0,90,0]) holeObject();
-module holeB() rotate([90,0,0]) holeObject();
-module holeC() holeObject();
-
-module holes() {
+module baseplate() {
+  difference() {
+    // Main block + underlay ribs
     union() {
-        holeA();
-        holeB();
-        holeC();
+      cube([plate_w, plate_d, height], center=false);
+      // Underlay ribs beneath all walls
+      translate([0, 0, -underlay_thick])
+        walls_2d_extrude(underlay_thick);
+
+      // Add shelves inside each cell
+      shelves();
+    }
+
+    // Hollow out cell interiors (down through shelves where appropriate)
+    for (r = [0:rows-1])
+      for (c = [0:cols-1]) {
+        translate([
+          wall + c*(cell + wall) + gap,
+          wall + r*(cell + wall) + gap,
+          0
+        ])
+        cube([inner_cell, inner_cell, height + underlay_thick + 1], center=false);
+      }
+  }
+}
+
+// Shelves: thin ledges inset from each wall, at shelf_height below top
+module shelves() {
+  z = height - shelf_height - shelf_thick; // bottom of shelf rib
+  for (r = [0:rows-1])
+    for (c = [0:cols-1]) {
+      // Cell inner corner
+      x0 = wall + c*(cell + wall) + gap;
+      y0 = wall + r*(cell + wall) + gap;
+
+      // Shelf outer rectangle follows the cell opening boundary
+      // We subtract an inner rectangle to make the shelf only shelf_width deep
+      difference() {
+        translate([x0, y0, z])
+          cube([inner_cell, inner_cell, shelf_thick], center=false);
+
+        // Inner cutout to leave a perimeter ring (the actual shelf)
+        translate([x0 + shelf_width, y0 + shelf_width, z - 0.1])
+          cube([inner_cell - 2*shelf_width, inner_cell - 2*shelf_width,
+                shelf_thick + 0.2], center=false);
+      }
     }
 }
 
-module helpers() {
-    // Inner module since it's only needed inside helpers
-    module line() color("Black") cylinder(r=1, h=10, center=true);
-
-    scale(0.5) {
-        translate([-30,0,-40]) {
-            intersected();
-            translate([-15,0,-35]) body();
-            translate([15,0,-35]) intersector();
-            translate([-7.5,0,-17.5]) rotate([0,30,0]) line();
-            translate([7.5,0,-17.5]) rotate([0,-30,0]) line();
-        }
-        translate([30,0,-40]) {
-            holes();
-            translate([-10,0,-35]) holeA();
-            translate([10,0,-35]) holeB();
-            translate([30,0,-35]) holeC();
-            translate([5,0,-17.5]) rotate([0,-20,0]) line();
-            translate([-5,0,-17.5]) rotate([0,30,0]) line();
-            translate([15,0,-17.5]) rotate([0,-45,0]) line();
-        }
-        translate([-20,0,-22.5]) rotate([0,45,0]) line();
-        translate([20,0,-22.5]) rotate([0,-45,0]) line();
-    }
+// 2D wall layout extruded to create the underlay ribs
+module walls_2d_extrude(th) {
+  linear_extrude(th)
+    walls_2d();
 }
 
-echo(version=version());
-// Written by Marius Kintel <marius@kintel.net>
-//
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to the
-// public domain worldwide. This software is distributed without any
-// warranty.
-//
-// You should have received a copy of the CC0 Public Domain
-// Dedication along with this software.
-// If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
-`
+module walls_2d() {
+  difference() {
+    // Outer boundary
+    square([plate_w, plate_d], center=false);
+
+    // Subtract openings for each cell (leaving only walls)
+    for (r = [0:rows-1])
+      for (c = [0:cols-1]) {
+        translate([
+          wall + c*(cell + wall) + gap,
+          wall + r*(cell + wall) + gap
+        ])
+        square([inner_cell, inner_cell], center=false);
+      }
+  }
+}
+
+baseplate();
+`;
+

@@ -211,6 +211,23 @@ export class Model {
     });
   }
 
+  private buildBaseplateExportName(): string | undefined {
+    const vars = this.state.params.vars ?? {};
+    const rows = (vars as any).rows;
+    const cols = (vars as any).cols;
+    const cell = (vars as any).cell;
+    if (rows == null || cols == null || cell == null) return undefined;
+
+    const formatPart = (v: any) => {
+      if (typeof v === 'number') {
+        return v.toString().replace('.', '-');
+      }
+      return String(v).replace('.', '-');
+    };
+
+    return `${formatPart(rows)}x${formatPart(cols)}_${formatPart(cell)}_baseplate.stl`;
+  }
+
   async export() {
     if (this.state.output) {
       const normalPassThrough = 
@@ -295,7 +312,11 @@ export class Model {
           formattedElapsedMillis: formatMillis(output.elapsedMillis),
           formattedOutFileSize: formatBytes(output.outFile.size),
         };
-        downloadUrl(s.export.outFileURL, output.outFile.name);
+        const customName = (!this.state.is2D && exportFormat === 'stl')
+          ? this.buildBaseplateExportName()
+          : undefined;
+        const downloadName = customName ?? output.outFile.name;
+        downloadUrl(s.export.outFileURL, downloadName);
       });
     } catch (err) {
       this.mutate(s => {

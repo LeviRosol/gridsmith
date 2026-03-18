@@ -51,6 +51,8 @@ export interface State {
       mode: 'multi',
     } & { [K in MultiLayoutComponentId]: boolean })
 
+    showEditor?: boolean,
+
     collapsedCustomizerTabs?: string[],
     
     color: string,

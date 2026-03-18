@@ -3,7 +3,7 @@
 import defaultScad from './default-scad.ts';
 import { State } from './app-state.ts';
 
-export const defaultSourcePath = '/playground.scad';
+export const defaultSourcePath = '/baseplate.scad';
 export const defaultModelColor = '#f9d72c';
 const defaultBlurhash = "|KSPX^%3~qtjMx$lR*x]t7n,R%xuxbM{WBt7ayfk_3bY9FnAt8XOxanjNF%fxbMyIn%3t7NFoLaeoeV[WBo{xar^IoS1xbxcR*S0xbofRjV[j[kCNGofxaWBNHW-xasDR*WTkBxuWBM{s:t7bYahRjfkozWUadofbIW:jZ";
   
@@ -38,13 +38,27 @@ export function createInitialState(state: State | null, source?: {content?: stri
         features: [],
         exportFormat2D: 'svg',
         exportFormat3D: 'stl',
+        vars: {
+          rows: 2,
+          cols: 2,
+          cell: 30.5,
+          gap: 0.2,
+          wall: 1,
+          ext_wall_pct: 0.5,
+          height: 2,
+          underlay_thick: 0.6,
+          shelf_height: 1.0,
+          shelf_width: 1.0,
+          shelf_thick: 1.6,
+        },
       },
       view: {
         layout: {
           mode: 'multi',
-          editor: true,
+          editor: false,
           viewer: true,
-          customizer: false,
+          customizer: true,
+          showEditor: false,
         } as any,
 
         color: defaultModelColor,
@@ -71,7 +85,7 @@ export function createInitialState(state: State | null, source?: {content?: stri
     }
   }
 
-  initialState.view.showAxes ??= true;
+  initialState.view.showAxes ??= false;
 
   // fs.writeFile(initialState.params.sourcePath, initialState.params.source);
   // if (initialState.params.sourcePath !== defaultSourcePath) {
