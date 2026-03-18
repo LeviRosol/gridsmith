@@ -10,6 +10,7 @@ import { ModelContext, FSContext } from './contexts';
 import PanelSwitcher from './PanelSwitcher';
 import { ConfirmDialog } from 'primereact/confirmdialog';
 import CustomizerPanel from './CustomizerPanel';
+import GridSmithPanel from './GridSmithPanel';
 
 
 export function App({initialState, statePersister, fs}: {initialState: State, statePersister: StatePersister, fs: FS}) {
@@ -94,7 +95,7 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
               ${layout.mode === 'single' ? 'absolute-fill' : ''}
             `} style={getPanelStyle('editor')} />
             <ViewerPanel className={layout.mode === 'single' ? `absolute-fill` : ''} style={getPanelStyle('viewer')} />
-            <CustomizerPanel className={`
+            <GridSmithPanel className={`
               opacity-animated
               ${layout.mode === 'single' && layout.focus !== 'customizer' ? 'opacity-0' : ''}
               ${layout.mode === 'single' ? `absolute-fill` : ''}

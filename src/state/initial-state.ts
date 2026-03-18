@@ -38,13 +38,26 @@ export function createInitialState(state: State | null, source?: {content?: stri
         features: [],
         exportFormat2D: 'svg',
         exportFormat3D: 'stl',
+        vars: {
+          rows: 2,
+          cols: 2,
+          cell: 30.5,
+          gap: 0.2,
+          wall: 1,
+          ext_wall_pct: 0.5,
+          height: 2,
+          underlay_thick: 0.6,
+          shelf_height: 1.0,
+          shelf_width: 1.0,
+          shelf_thick: 1.6,
+        },
       },
       view: {
         layout: {
           mode: 'multi',
           editor: true,
           viewer: true,
-          customizer: false,
+          customizer: true,
         } as any,
 
         color: defaultModelColor,
