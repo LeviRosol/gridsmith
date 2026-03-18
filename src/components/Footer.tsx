@@ -17,7 +17,7 @@ export default function Footer({style}: {style?: CSSProperties}) {
   const model = useContext(ModelContext);
   if (!model) throw new Error('No model');
   const state = model.state;
-  
+
   const toast = useRef<Toast>(null);
 
   const severityByMarkerSeverity = new Map<monaco.MarkerSeverity, 'danger' | 'warning' | 'info'>([
@@ -37,7 +37,7 @@ export default function Footer({style}: {style?: CSSProperties}) {
 
 
   const maxMarkerSeverity = markers.length == 0 ? undefined : markers.map(m => m.severity).reduce((a, b) => Math.max(a, b));
-  
+
   return <>
     <ProgressBar mode="indeterminate"
                 style={{
@@ -46,7 +46,7 @@ export default function Footer({style}: {style?: CSSProperties}) {
                     visibility: state.rendering || state.previewing || state.checkingSyntax || state.exporting
                       ? 'visible' : 'hidden',
                     height: '6px' }}></ProgressBar>
-      
+
     <div className="flex flex-row gap-1" style={{
         alignItems: 'center',
         margin: '5px',
@@ -81,19 +81,6 @@ export default function Footer({style}: {style?: CSSProperties}) {
         />
 
       <ExportButton /> */}
-      
-      {(state.lastCheckerRun || state.output) &&
-        <Button type="button"
-            severity={maxMarkerSeverity && severityByMarkerSeverity.get(maxMarkerSeverity)}
-            icon="pi pi-align-left"
-            text={!state.view.logs}
-            onClick={() => model.logsVisible = !state.view.logs}
-            className={maxMarkerSeverity && `p-button-${severityByMarkerSeverity.get(maxMarkerSeverity) ?? 'success'}`}
-            >
-          {getBadge(monaco.MarkerSeverity.Error)}
-          {getBadge(monaco.MarkerSeverity.Warning)}
-          {getBadge(monaco.MarkerSeverity.Info)}
-        </Button>}
 
       <div style={{flex: 1}}></div>
 
