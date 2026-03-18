@@ -22,11 +22,18 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
   useEffect(() => model.init());
 
   const [customizerOpen, setCustomizerOpen] = useState(true);
+  const [darkMode, setDarkMode] = useState(true);
   const accountMenuRef = useRef<Menu | null>(null);
 
   const accountItems: MenuItem[] = [
     { label: 'Profile', icon: 'pi pi-user', url: '#' },
     { label: 'Logout', icon: 'pi pi-sign-out', url: '#' },
+    { separator: true },
+    {
+      label: darkMode ? 'Light mode' : 'Dark mode',
+      icon: darkMode ? 'pi pi-sun' : 'pi pi-moon',
+      command: () => setDarkMode((v) => !v),
+    },
   ];
 
   useEffect(() => {
@@ -47,6 +54,30 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
+
+  useEffect(() => {
+    const body = document.body;
+    body.classList.remove('dark-mode', 'light-mode');
+    body.classList.add(darkMode ? 'dark-mode' : 'light-mode');
+
+    const themeId = 'primereact-theme';
+    const existing = document.getElementById(themeId) as HTMLLinkElement | null;
+    const href = darkMode
+      ? 'https://unpkg.com/primereact/resources/themes/lara-dark-amber/theme.css'
+      : 'https://unpkg.com/primereact/resources/themes/lara-light-amber/theme.css';
+
+    if (existing) {
+      if (existing.href !== href) {
+        existing.href = href;
+      }
+    } else {
+      const link = document.createElement('link');
+      link.id = themeId;
+      link.rel = 'stylesheet';
+      link.href = href;
+      document.head.appendChild(link);
+    }
+  }, [darkMode]);
 
   useEffect(() => {
     if (state.view.layout.mode === 'multi') {
@@ -95,18 +126,7 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
         <div className='flex flex-column' style={{
             flex: 1,
           }}>
-          <header
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0.3rem 0.75rem 0.2rem 0.75rem',
-              borderBottom: '1px solid #dddddd',
-              background: 'rgba(255,255,255,0.85)',
-              backdropFilter: 'blur(6px)',
-              zIndex: 20,
-            }}
-          >
+          <header className="app-header">
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <picture>
                 <source srcSet="/logo3_512.png" media="(min-width: 768px)" />
@@ -119,8 +139,8 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
               </picture>
             </div>
             <nav style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.9rem' }}>
-              <a href="#" style={{ textDecoration: 'none', color: '#444' }}>Get Tiles</a>
-              <a href="#" style={{ textDecoration: 'none', color: '#444' }}>About</a>
+              <a href="#" className="app-header-link">Get Tiles</a>
+              <a href="#" className="app-header-link">About</a>
               <div style={{ position: 'relative' }}>
                 <Menu
                   model={accountItems}
@@ -134,7 +154,8 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
                   iconPos="left"
                   text
                   onClick={(e) => accountMenuRef.current && accountMenuRef.current.toggle(e)}
-                  style={{ paddingInline: '0.25rem', color: '#444' }}
+                  className="app-header-link-button"
+                  style={{ paddingInline: '0.25rem' }}
                 />
               </div>
             </nav>
