@@ -66,6 +66,7 @@ const config = [
       static: path.join(__dirname, 'dist'),
       compress: true,
       port: 4000,
+      historyApiFallback: true,
     },
     plugins: [
       new webpack.EnvironmentPlugin({
