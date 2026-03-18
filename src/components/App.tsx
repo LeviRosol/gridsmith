@@ -7,17 +7,19 @@ import EditorPanel from './EditorPanel';
 import ViewerPanel from './ViewerPanel';
 import Footer from './Footer';
 import { ModelContext, FSContext } from './contexts';
-import PanelSwitcher from './PanelSwitcher';
 import { ConfirmDialog } from 'primereact/confirmdialog';
 import CustomizerPanel from './CustomizerPanel';
 import GridSmithPanel from './GridSmithPanel';
+import { Button } from 'primereact/button';
 
 
 export function App({initialState, statePersister, fs}: {initialState: State, statePersister: StatePersister, fs: FS}) {
   const [state, setState] = useState(initialState);
-  
+
   const model = new Model(fs, state, setState, statePersister);
   useEffect(() => model.init());
+
+  const [customizerOpen, setCustomizerOpen] = useState(true);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -37,6 +39,15 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
+
+  useEffect(() => {
+    if (state.view.layout.mode === 'multi') {
+      setCustomizerOpen(true);
+      return;
+    }
+    // `focus` only exists in single-panel mode; cast to avoid TS narrowing issues.
+    setCustomizerOpen((state.view.layout as any).focus === 'customizer');
+  }, [state.view.layout.mode]);
 
   const zIndexOfPanelsDependingOnFocus = {
     editor: {
@@ -59,18 +70,14 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
   const layout = state.view.layout
   const mode = state.view.layout.mode;
   function getPanelStyle(id: MultiLayoutComponentId): CSSProperties {
-    if (layout.mode === 'multi') {
-      const itemCount = (layout.editor ? 1 : 0) + (layout.viewer ? 1 : 0) + (layout.customizer ? 1 : 0)
+    if (id === 'editor' && !(state.view as any).layout.showEditor) {
       return {
-        flex: 1,
-        maxWidth: Math.floor(100/itemCount) + '%',
-        display: (state.view.layout as any)[id] ? 'flex' : 'none'
-      }
-    } else {
-      return {
-        flex: 1,
-        zIndex: Number((zIndexOfPanelsDependingOnFocus as any)[id][layout.focus]),
-      }
+        display: 'none',
+      };
+    }
+    return {
+      flex: 1,
+      zIndex: Number((zIndexOfPanelsDependingOnFocus as any)[id][(layout as any).focus]),
     }
   }
 
@@ -80,26 +87,89 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
         <div className='flex flex-column' style={{
             flex: 1,
           }}>
-          
-          <PanelSwitcher />
-    
           <div className={mode === 'multi' ? 'flex flex-row' : 'flex flex-column'}
-              style={mode === 'multi' ? {flex: 1} : {
+              style={mode === 'multi' ? {
+                flex: 1,
+                position: 'relative',
+                overflow: 'hidden',
+              } : {
                 flex: 1,
                 position: 'relative'
               }}>
+            {mode === 'multi' ? (
+              <>
+                {(layout as any).customizer ? (
+                  <div style={{ display: 'flex', flex: 1, position: 'relative', height: '100%' }}>
+                    <div
+                      style={{
+                        width: customizerOpen ? '30%' : '0px',
+                        maxWidth: customizerOpen ? '420px' : '0px',
+                        minWidth: customizerOpen ? '280px' : '0px',
+                        transition: 'width 0.25s ease-in-out, max-width 0.25s ease-in-out, min-width 0.25s ease-in-out',
+                        overflow: 'visible',
+                        position: 'relative',
+                        background: 'transparent',
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: '100%',
+                          maxHeight: 'unset',
+                          overflow: 'hidden',
+                          pointerEvents: customizerOpen ? 'auto' : 'none',
+                        }}
+                      >
+                        <GridSmithPanel
+                          className="opacity-animated"
+                          style={{ height: '100%', maxHeight: 'unset', overflow: 'auto' }}
+                        />
+                      </div>
 
-            <EditorPanel className={`
-              opacity-animated
-              ${layout.mode === 'single' && layout.focus !== 'editor' ? 'opacity-0' : ''}
-              ${layout.mode === 'single' ? 'absolute-fill' : ''}
-            `} style={getPanelStyle('editor')} />
-            <ViewerPanel className={layout.mode === 'single' ? `absolute-fill` : ''} style={getPanelStyle('viewer')} />
-            <GridSmithPanel className={`
-              opacity-animated
-              ${layout.mode === 'single' && layout.focus !== 'customizer' ? 'opacity-0' : ''}
-              ${layout.mode === 'single' ? `absolute-fill` : ''}
-            `} style={getPanelStyle('customizer')} />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 25,
+                          right: -37,
+                          zIndex: 6,
+                          pointerEvents: 'auto',
+                        }}
+                      >
+                        <Button
+                          icon="pi pi-bars"
+                          style={{
+                            borderRadius: '0 4px 4px 0',
+                            padding: '0.35rem 0.55rem',
+                            background: 'transparent',
+                            border: '1px solid #dddddd',
+                            borderLeft: 'none',
+                            color: '#cccccc',
+                          }}
+                          onClick={() => setCustomizerOpen((v) => !v)}
+                        />
+                      </div>
+                    </div>
+
+                    <ViewerPanel style={{ flex: 1 }} />
+                  </div>
+                ) : (
+                  <ViewerPanel style={{ flex: 1 }} />
+                )}
+              </>
+            ) : (
+              <>
+                <GridSmithPanel className={`
+                  opacity-animated
+                  ${layout.mode === 'single' && layout.focus !== 'customizer' ? 'opacity-0' : ''}
+                  ${layout.mode === 'single' ? `absolute-fill` : ''}
+                `} style={getPanelStyle('customizer')} />
+                <ViewerPanel className={layout.mode === 'single' ? `absolute-fill` : ''} style={getPanelStyle('viewer')} />
+                <EditorPanel className={`
+                  opacity-animated
+                  ${layout.mode === 'single' && layout.focus !== 'editor' ? 'opacity-0' : ''}
+                  ${layout.mode === 'single' ? 'absolute-fill' : ''}
+                `} style={getPanelStyle('editor')} />
+              </>
+            )}
           </div>
 
           <Footer />

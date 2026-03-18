@@ -55,9 +55,10 @@ export function createInitialState(state: State | null, source?: {content?: stri
       view: {
         layout: {
           mode: 'multi',
-          editor: true,
+          editor: false,
           viewer: true,
           customizer: true,
+          showEditor: false,
         } as any,
 
         color: defaultModelColor,

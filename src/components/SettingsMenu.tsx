@@ -27,7 +27,17 @@ export default function SettingsMenu({className, style}: {className?: string, st
         },
         {
           separator: true
-        },  
+        },
+        {
+          label: (state.view as any).layout.showEditor ? 'Hide code editor' : 'Show code editor',
+          icon: 'pi pi-code',
+          command: () => model.mutate(s => {
+            (s.view as any).layout.showEditor = !(s.view as any).layout.showEditor;
+          }),
+        },
+        {
+          separator: true
+        },
         {
           label: state.view.showAxes ? 'Hide axes' : 'Show axes',
           icon: 'pi pi-asterisk',

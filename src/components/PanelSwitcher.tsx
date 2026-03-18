@@ -13,12 +13,10 @@ export default function PanelSwitcher() {
   const state = model.state;
 
   const singleTargets: {id: SingleLayoutComponentId, icon: string, label: string}[] = [
-    { id: 'editor', icon: 'pi pi-pencil', label: 'Edit' },
     { id: 'viewer', icon: 'pi pi-box', label: 'View' },
+    { id: 'customizer', icon: 'pi pi-sliders-h', label: 'Customize' },
   ];
-  if ((state.parameterSet?.parameters?.length ?? 0) > 0) {
-    singleTargets.push({ id: 'customizer', icon: 'pi pi-sliders-h', label: 'Customize' });
-  }
+  // Editor is hidden from the main UI; only viewer/customizer are switched here.
   const multiTargets = singleTargets;
 
   return (
