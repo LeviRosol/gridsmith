@@ -1,6 +1,6 @@
 // Portions of this file are Copyright 2021 Google LLC, and licensed under GPL2+. See COPYING.
 
-import React, { CSSProperties, useEffect, useState } from 'react';
+import React, { CSSProperties, useEffect, useState, useRef } from 'react';
 import {MultiLayoutComponentId, State, StatePersister} from '../state/app-state'
 import { Model } from '../state/model';
 import EditorPanel from './EditorPanel';
@@ -11,6 +11,8 @@ import { ConfirmDialog } from 'primereact/confirmdialog';
 import CustomizerPanel from './CustomizerPanel';
 import GridSmithPanel from './GridSmithPanel';
 import { Button } from 'primereact/button';
+import { Menu } from 'primereact/menu';
+import type { MenuItem } from 'primereact/menuitem';
 
 
 export function App({initialState, statePersister, fs}: {initialState: State, statePersister: StatePersister, fs: FS}) {
@@ -20,6 +22,12 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
   useEffect(() => model.init());
 
   const [customizerOpen, setCustomizerOpen] = useState(true);
+  const accountMenuRef = useRef<Menu | null>(null);
+
+  const accountItems: MenuItem[] = [
+    { label: 'Profile', icon: 'pi pi-user', url: '#' },
+    { label: 'Logout', icon: 'pi pi-sign-out', url: '#' },
+  ];
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -87,6 +95,50 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
         <div className='flex flex-column' style={{
             flex: 1,
           }}>
+          <header
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0.3rem 0.75rem 0.2rem 0.75rem',
+              borderBottom: '1px solid #dddddd',
+              background: 'rgba(255,255,255,0.85)',
+              backdropFilter: 'blur(6px)',
+              zIndex: 20,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <picture>
+                <source srcSet="/logo3_512.png" media="(min-width: 768px)" />
+                <source srcSet="/logo3_256.png" media="(max-width: 767px)" />
+                <img
+                  src="/logo3_256.png"
+                  alt="GridSmith logo"
+                  style={{ height: 64, width: 'auto', borderRadius: 6, objectFit: 'contain' }}
+                />
+              </picture>
+            </div>
+            <nav style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.9rem' }}>
+              <a href="#" style={{ textDecoration: 'none', color: '#444' }}>Get Tiles</a>
+              <a href="#" style={{ textDecoration: 'none', color: '#444' }}>About</a>
+              <div style={{ position: 'relative' }}>
+                <Menu
+                  model={accountItems}
+                  popup
+                  ref={accountMenuRef}
+                />
+                <Button
+                  type="button"
+                  label="Account"
+                  icon="pi pi-user"
+                  iconPos="left"
+                  text
+                  onClick={(e) => accountMenuRef.current && accountMenuRef.current.toggle(e)}
+                  style={{ paddingInline: '0.25rem', color: '#444' }}
+                />
+              </div>
+            </nav>
+          </header>
           <div className={mode === 'multi' ? 'flex flex-row' : 'flex flex-column'}
               style={mode === 'multi' ? {
                 flex: 1,
