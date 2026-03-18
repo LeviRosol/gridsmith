@@ -17,6 +17,7 @@ import HomePage from './HomePage';
 import AboutPage from './AboutPage';
 import TilesPage from './TilesPage';
 import ProfilePage from './ProfilePage';
+import TosPage from './TosPage';
 import SiteFooter from './SiteFooter';
 
 
@@ -193,6 +194,8 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
       page = <TilesPage />;
     } else if (pathname === '/profile') {
       page = <ProfilePage />;
+    } else if (pathname === '/tos') {
+      page = <TosPage />;
     } else {
       page = <HomePage />;
     }
