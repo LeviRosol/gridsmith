@@ -236,14 +236,7 @@ export default function GridSmithPanel({ className, style }: { className?: strin
       >
         {basicInputs}
       </Fieldset>
-      <Fieldset
-        legend="Advanced settings"
-        toggleable
-        collapsed
-        style={{ margin: '5px 10px 5px 10px', backgroundColor: 'rgba(255,255,255,0.4)' }}
-      >
-        {advancedInputs}
-      </Fieldset>
+      {/* Advanced settings temporarily hidden; keep code for future use */}
     </div>
   );
 }
