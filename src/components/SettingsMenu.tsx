@@ -18,17 +18,6 @@ export default function SettingsMenu({className, style}: {className?: string, st
     <>
       <Menu model={[
         {
-          label: state.view.layout.mode === 'multi'
-            ? 'Switch to single panel mode'
-            : "Switch to side-by-side mode",
-          icon: 'pi pi-table',
-          // disabled: true,
-          command: () => model.changeLayout(state.view.layout.mode === 'multi' ? 'single' : 'multi'),
-        },
-        {
-          separator: true
-        },
-        {
           label: (state.view as any).layout.showEditor ? 'Hide code editor' : 'Show code editor',
           icon: 'pi pi-code',
           command: () => model.mutate(s => {

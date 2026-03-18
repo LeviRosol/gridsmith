@@ -85,7 +85,7 @@ export function createInitialState(state: State | null, source?: {content?: stri
     }
   }
 
-  initialState.view.showAxes ??= true;
+  initialState.view.showAxes ??= false;
 
   // fs.writeFile(initialState.params.sourcePath, initialState.params.source);
   // if (initialState.params.sourcePath !== defaultSourcePath) {
