@@ -70,6 +70,24 @@ body {
   color: #111111;
 }
 
+.app-footer {
+  padding: 10px 0.75rem;
+  text-align: center;
+  font-size: 0.8rem;
+  opacity: 0.7;
+  border-top: 1px solid transparent;
+}
+
+.dark-mode .app-footer {
+  background: var(--surface-ground);
+  border-top-color: #444444;
+}
+
+.light-mode .app-footer {
+  background: var(--surface-ground);
+  border-top-color: #dddddd;
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;

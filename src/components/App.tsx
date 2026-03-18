@@ -17,6 +17,7 @@ import HomePage from './HomePage';
 import AboutPage from './AboutPage';
 import TilesPage from './TilesPage';
 import ProfilePage from './ProfilePage';
+import SiteFooter from './SiteFooter';
 
 
 export function App({initialState, statePersister, fs}: {initialState: State, statePersister: StatePersister, fs: FS}) {
@@ -200,6 +201,7 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
       <div className="flex flex-column" style={{ flex: 1 }}>
         {header}
         {page}
+        <SiteFooter />
       </div>
     );
   }
@@ -295,6 +297,7 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
           </div>
 
           <Footer />
+          <SiteFooter />
           <ConfirmDialog />
         </div>
       </FSContext.Provider>
