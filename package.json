@@ -29,7 +29,7 @@
   "scripts": {
     "test:e2e": "jest",
     "start:development": "npx webpack serve --mode=development",
-    "start:production": "NODE_ENV=production PUBLIC_URL=http://localhost:3000/dist/ npm run build && npx serve",
+    "start:production": "NODE_ENV=production npm run build && npx serve -s dist -l 3000",
     "start:test": "npm run start:development",
     "start": "npm run start:development",
     "build": "NODE_ENV=production webpack --mode=production",

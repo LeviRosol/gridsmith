@@ -13,6 +13,10 @@ import GridSmithPanel from './GridSmithPanel';
 import { Button } from 'primereact/button';
 import { Menu } from 'primereact/menu';
 import type { MenuItem } from 'primereact/menuitem';
+import HomePage from './HomePage';
+import AboutPage from './AboutPage';
+import TilesPage from './TilesPage';
+import ProfilePage from './ProfilePage';
 
 
 export function App({initialState, statePersister, fs}: {initialState: State, statePersister: StatePersister, fs: FS}) {
@@ -25,8 +29,19 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
   const [darkMode, setDarkMode] = useState(true);
   const accountMenuRef = useRef<Menu | null>(null);
 
+  // Simple pathname-based routing
+  const rawPath = window.location.pathname;
+  const normalizedPath = rawPath.replace(/\/+$/, '') || '/';
+  const pathname = normalizedPath === '' ? '/' : normalizedPath;
+
   const accountItems: MenuItem[] = [
-    { label: 'Profile', icon: 'pi pi-user', url: '#' },
+    {
+      label: 'Profile',
+      icon: 'pi pi-user',
+      command: () => {
+        window.location.pathname = '/profile';
+      },
+    },
     { label: 'Logout', icon: 'pi pi-sign-out', url: '#' },
     { separator: true },
     {
@@ -38,6 +53,7 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (pathname !== '/viewer') return;
       if (event.key === 'F5') {
         event.preventDefault();
         model.render({isPreview: true, now: true})
@@ -53,7 +69,7 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [pathname, model]);
 
   useEffect(() => {
     const body = document.body;
@@ -120,46 +136,81 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
     }
   }
 
+  const header = (
+    <header className="app-header">
+      <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+        <picture>
+          <source srcSet="/logo3_512.png" media="(min-width: 768px)" />
+          <source srcSet="/logo3_256.png" media="(max-width: 767px)" />
+          <img
+            src="/logo3_256.png"
+            alt="GridSmith logo"
+            style={{ height: 64, width: 'auto', borderRadius: 6, objectFit: 'contain' }}
+          />
+        </picture>
+      </a>
+      <nav style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.9rem' }}>
+        <a href="/tiles" className="app-header-link">Get Tiles</a>
+        <a href="/about" className="app-header-link">About</a>
+        <Button
+          type="button"
+          label="Build"
+          icon="pi pi-bolt"
+          onClick={() => window.location.pathname = '/viewer'}
+          className="app-header-link-button app-header-build-button"
+          style={{ paddingInline: '0.75rem' }}
+        />
+        <div style={{ position: 'relative' }}>
+          <Menu
+            model={accountItems}
+            popup
+            ref={accountMenuRef}
+          />
+          <Button
+            type="button"
+            label="Account"
+            icon="pi pi-user"
+            iconPos="left"
+            text
+            onClick={(e) => accountMenuRef.current && accountMenuRef.current.toggle(e)}
+            className="app-header-link-button"
+            style={{ paddingInline: '0.25rem' }}
+          />
+        </div>
+      </nav>
+    </header>
+  );
+
+  // Non-viewer routes render lightweight pages without mounting the heavy viewer/editor shell.
+  if (pathname !== '/viewer') {
+    let page: JSX.Element;
+    if (pathname === '/') {
+      page = <HomePage />;
+    } else if (pathname === '/about') {
+      page = <AboutPage />;
+    } else if (pathname === '/tiles') {
+      page = <TilesPage />;
+    } else if (pathname === '/profile') {
+      page = <ProfilePage />;
+    } else {
+      page = <HomePage />;
+    }
+
+    return (
+      <div className="flex flex-column" style={{ flex: 1 }}>
+        {header}
+        {page}
+      </div>
+    );
+  }
+
   return (
     <ModelContext.Provider value={model}>
       <FSContext.Provider value={fs}>
         <div className='flex flex-column' style={{
             flex: 1,
           }}>
-          <header className="app-header">
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <picture>
-                <source srcSet="/logo3_512.png" media="(min-width: 768px)" />
-                <source srcSet="/logo3_256.png" media="(max-width: 767px)" />
-                <img
-                  src="/logo3_256.png"
-                  alt="GridSmith logo"
-                  style={{ height: 64, width: 'auto', borderRadius: 6, objectFit: 'contain' }}
-                />
-              </picture>
-            </div>
-            <nav style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.9rem' }}>
-              <a href="#" className="app-header-link">Get Tiles</a>
-              <a href="#" className="app-header-link">About</a>
-              <div style={{ position: 'relative' }}>
-                <Menu
-                  model={accountItems}
-                  popup
-                  ref={accountMenuRef}
-                />
-                <Button
-                  type="button"
-                  label="Account"
-                  icon="pi pi-user"
-                  iconPos="left"
-                  text
-                  onClick={(e) => accountMenuRef.current && accountMenuRef.current.toggle(e)}
-                  className="app-header-link-button"
-                  style={{ paddingInline: '0.25rem' }}
-                />
-              </div>
-            </nav>
-          </header>
+          {header}
           <div className={mode === 'multi' ? 'flex flex-row' : 'flex flex-column'}
               style={mode === 'multi' ? {
                 flex: 1,

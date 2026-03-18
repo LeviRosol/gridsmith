@@ -61,6 +61,15 @@ body {
   text-decoration: none;
 }
 
+/* Force dark text on the prominent Build button label, regardless of theme */
+.app-header-build-button .p-button-label {
+  color: #111111;
+}
+
+.app-header-build-button .p-button-icon {
+  color: #111111;
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
