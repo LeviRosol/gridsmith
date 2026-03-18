@@ -3,6 +3,7 @@ import { ModelContext } from './contexts.ts';
 import { Fieldset } from 'primereact/fieldset';
 import { InputNumber } from 'primereact/inputnumber';
 import { Slider } from 'primereact/slider';
+import { Button } from 'primereact/button';
 
 const BASE_DEFAULTS = {
   rows: 2,
@@ -20,12 +21,28 @@ const BASE_DEFAULTS = {
 
 type BaseDefaultsKey = keyof typeof BASE_DEFAULTS;
 
-function getVarValue(vars: {[k: string]: any} | undefined, key: BaseDefaultsKey) {
+function getVarValue(vars: { [k: string]: any } | undefined, key: BaseDefaultsKey) {
   const raw = vars?.[key];
   return typeof raw === 'number' ? raw : BASE_DEFAULTS[key];
 }
 
-export default function GridSmithPanel({className, style}: {className?: string, style?: CSSProperties}) {
+function computePlateSize(vars: { [k: string]: any } | undefined) {
+  const rows = getVarValue(vars, 'rows');
+  const cols = getVarValue(vars, 'cols');
+  const cell = getVarValue(vars, 'cell');
+  const wall = getVarValue(vars, 'wall');
+  const ext_wall_pct = getVarValue(vars, 'ext_wall_pct');
+
+  const plate_w = cols * cell + (cols + 1) * wall - wall * ext_wall_pct;
+  const plate_d = rows * cell + (rows + 1) * wall - wall * ext_wall_pct;
+
+  return {
+    width: Number(plate_w.toFixed(1)),
+    depth: Number(plate_d.toFixed(1)),
+  };
+}
+
+export default function GridSmithPanel({ className, style }: { className?: string; style?: CSSProperties }) {
   const model = useContext(ModelContext);
   if (!model) throw new Error('No model');
 
@@ -34,15 +51,63 @@ export default function GridSmithPanel({className, style}: {className?: string, 
 
   const handleChange = (key: BaseDefaultsKey, value: number | null | undefined) => {
     if (value == null || Number.isNaN(value)) {
-      // Reset to default if cleared
       model.setVar(key, BASE_DEFAULTS[key]);
     } else {
       model.setVar(key, value);
     }
   };
 
+  const applyPreset = (values: Partial<typeof BASE_DEFAULTS>) => {
+    (Object.keys(values) as BaseDefaultsKey[]).forEach((k) => {
+      const v = values[k];
+      if (typeof v === 'number') {
+        model.setVar(k, v);
+      }
+    });
+  };
+
+  const currentSize = computePlateSize(vars);
+
   const basicInputs = (
     <div className="flex flex-column gap-3">
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.5rem',
+        }}
+      >
+        <label style={{ fontWeight: 600 }}>Presets</label>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.5rem',
+          }}
+        >
+          <Button
+            label="2×2"
+            size="small"
+            onClick={() => applyPreset({ rows: 2, cols: 2 })}
+          />
+          <Button
+            label="4×4"
+            size="small"
+            onClick={() => applyPreset({ rows: 4, cols: 4 })}
+          />
+          <Button
+            label="6×6"
+            size="small"
+            onClick={() => applyPreset({ rows: 6, cols: 6 })}
+          />
+          <Button
+            label="Hallway (2×6)"
+            size="small"
+            onClick={() => applyPreset({ rows: 2, cols: 6 })}
+          />
+        </div>
+      </div>
+
       <LabeledNumber
         label="Rows"
         value={getVarValue(vars, 'rows')}
@@ -75,6 +140,19 @@ export default function GridSmithPanel({className, style}: {className?: string, 
         step={0.05}
         onChange={(v) => handleChange('gap', v)}
       />
+
+      <div
+        style={{
+          marginTop: '0.5rem',
+          fontSize: '0.85rem',
+          color: '#444',
+        }}
+      >
+        <div style={{ fontWeight: 600 }}>Approximate plate size</div>
+        <div>
+          Width: {currentSize.width} mm · Depth: {currentSize.depth} mm
+        </div>
+      </div>
     </div>
   );
 
@@ -149,7 +227,8 @@ export default function GridSmithPanel({className, style}: {className?: string, 
         overflow: 'scroll',
         ...style,
         bottom: 'unset',
-      }}>
+      }}
+    >
       <Fieldset
         legend="Baseplate"
         toggleable={false}
