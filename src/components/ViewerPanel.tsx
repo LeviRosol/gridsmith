@@ -57,7 +57,6 @@ export default function ViewerPanel({className, style}: {className?: string, sty
   const state = model.state;
   const [interactionPrompt, setInteractionPrompt] = useState('auto');
   const modelViewerRef = useRef<any>();
-  const axesViewerRef = useRef<any>();
   const toastRef = useRef<Toast>(null);
 
   const [loadedUri, setLoadedUri] = useState<string | undefined>();
@@ -103,71 +102,6 @@ export default function ViewerPanel({className, style}: {className?: string, sty
     element.addEventListener('load', onLoad);
     return () => element.removeEventListener('load', onLoad);
   }, [modelViewerRef.current, onLoad]);
-
-
-  for (const ref of [modelViewerRef, axesViewerRef]) {
-    const otherRef = ref === modelViewerRef ? axesViewerRef : modelViewerRef;
-    useEffect(() => {
-      if (!ref.current) return;
-
-      function handleCameraChange(e: any) {
-        if (!otherRef.current) return;
-        if (e.detail.source === 'user-interaction') {
-          const cameraOrbit = ref.current.getCameraOrbit();
-          cameraOrbit.radius = otherRef.current.getCameraOrbit().radius;
-        
-          otherRef.current.cameraOrbit = cameraOrbit.toString();
-        }
-      }
-      const element = ref.current;
-      element.addEventListener('camera-change', handleCameraChange);
-      return () => element.removeEventListener('camera-change', handleCameraChange);
-    }, [ref.current, otherRef.current]);
-  }
-
-  // Cycle through predefined views when user clicks on the axes viewer
-  useEffect(() => {
-    let mouseDownSpherePoint: [number, number, number] | undefined;
-    function getSpherePoint() {
-      const orbit = axesViewerRef.current.getCameraOrbit();
-      return spherePoint(orbit.theta, orbit.phi);
-    }
-    function onMouseDown(e: MouseEvent) {
-      if (e.target === axesViewerRef.current) {
-        mouseDownSpherePoint = getSpherePoint();
-      }
-    }
-    function onMouseUp(e: MouseEvent) {
-      if (e.target === axesViewerRef.current) {
-        const euclEps = 0.01;
-        const radEps = 0.1;
-
-        const spherePoint = getSpherePoint();
-        const clickDist = mouseDownSpherePoint ? euclideanDist(spherePoint, mouseDownSpherePoint) : Infinity;
-        if (clickDist > euclEps) {
-          return;
-        }
-        // Note: unlike the axes viewer, the model viewer has a prompt that makes the model wiggle around, we only fetch it to get the radius.
-        const axesOrbit = axesViewerRef.current.getCameraOrbit();
-        const modelOrbit = modelViewerRef.current.getCameraOrbit();
-        const [currentIndex, dist, radDist] = getClosestPredefinedOrbitIndex(axesOrbit.theta, axesOrbit.phi);
-        const newIndex = dist < euclEps && radDist < radEps ? (currentIndex + 1) % PREDEFINED_ORBITS.length : currentIndex;
-        const [name, theta, phi] = PREDEFINED_ORBITS[newIndex];
-        Object.assign(modelOrbit, {theta, phi});
-        const newOrbit = modelViewerRef.current.cameraOrbit = axesViewerRef.current.cameraOrbit = modelOrbit.toString();
-        toastRef.current?.show({severity: 'info', detail: `${name} view`, life: 1000,});
-        setInteractionPrompt('none');
-      }
-    }
-    window.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mouseup', onMouseUp);
-    // window.addEventListener('click', onClick);
-    return () => {
-      // window.removeEventListener('click', onClick);
-      window.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-  });
 
   return (
     <div className={className}
@@ -224,35 +158,6 @@ export default function ViewerPanel({className, style}: {className?: string, sty
       >
         <span slot="progress-bar"></span>
       </model-viewer>
-      {state.view.showAxes && (
-        <model-viewer
-                orientation="0deg -90deg 0deg"
-                src="./axes.glb"
-                style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  zIndex: 10,
-                  height: '100px',
-                  width: '100px',
-                }}
-                loading="eager"
-                camera-orbit={originalOrbit}
-                // interpolation-decay="0"
-                environment-image="./skybox-lights.jpg"
-                max-camera-orbit="auto 180deg auto"
-                min-camera-orbit="auto 0deg auto"
-                orbit-sensitivity="5"
-                interaction-prompt="none"
-                camera-controls="false"
-                disable-zoom
-                disable-tap 
-                disable-pan
-                ref={axesViewerRef}
-        >
-          <span slot="progress-bar"></span>
-        </model-viewer>
-      )}
     </div>
   )
 }
