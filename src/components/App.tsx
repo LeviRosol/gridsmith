@@ -18,6 +18,7 @@ import AboutPage from './AboutPage';
 import TilesPage from './TilesPage';
 import ProfilePage from './ProfilePage';
 import TosPage from './TosPage';
+import PrivacyPage from './PrivacyPage';
 import SiteFooter from './SiteFooter';
 import { AuthProvider, useAuth } from './AuthContext';
 
@@ -299,6 +300,8 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
       page = <ProfilePage />;
     } else if (pathname === '/tos') {
       page = <TosPage />;
+    } else if (pathname === '/privacy') {
+      page = <PrivacyPage />;
     } else {
       page = <HomePage />;
     }
