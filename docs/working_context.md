@@ -26,6 +26,7 @@ Reference rule: `.cursor/rules/no-direct-main-commits.mdc`
 - Product focus remains a client-side baseplate generator on top of OpenSCAD WASM.
 - Production deployment path is working (Vercel + Cognito Google auth flow validated).
 - PWA/app branding has been switched to **GridSmith** (title + manifest naming).
+- Google Analytics is now wired for route-level page views and key viewer conversion events.
 
 ### Recently Completed (high impact)
 
@@ -43,9 +44,16 @@ Reference rule: `.cursor/rules/no-direct-main-commits.mdc`
   - removed obsolete assets (`axes.scad`, `public/axes.glb`)
 - Auth display behavior:
   - show account display name only when `given_name` exists
+- Analytics rollout completed:
+  - sitewide `page_view` tracking on route changes
+  - `stl_rendered` and `stl_downloaded` events implemented
+  - event params include `rows`, `columns`, and enum-based `title_type` (`GridSmith`, `OpenForge`, `Custom`)
 
 ### Recent Commit Trail
 
+- `434fb68` marked analytics TODOs complete in docs
+- `51a4d67` added Google Analytics page and STL event tracking
+- `7c44e9b` added analytics tracking TODOs for production follow-up
 - `2e3108f` added Cursor branch safety rule
 - `2fa724d` updated TODOs to match current project state
 - `5209095` removed axes feature and related assets

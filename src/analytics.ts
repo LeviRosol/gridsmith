@@ -1,0 +1,103 @@
+type AnalyticsValue = string | number | boolean;
+
+declare global {
+  interface Window {
+    dataLayer?: unknown[];
+    gtag?: (...args: any[]) => void;
+  }
+}
+
+const GA_MEASUREMENT_ID = (process.env.GA_MEASUREMENT_ID as string | undefined)?.trim() ?? '';
+const DEFAULT_ROWS = 2;
+const DEFAULT_COLUMNS = 2;
+const DEFAULT_CELL_SIZE = 30.5;
+
+const TITLE_TYPE_BY_CELL: Record<number, string> = {
+  30.5: 'GridSmith',
+  50: 'OpenForge',
+};
+
+let initialized = false;
+
+function isAnalyticsEnabled(): boolean {
+  return GA_MEASUREMENT_ID.length > 0;
+}
+
+function getWindowGtag(): ((...args: any[]) => void) | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return window.gtag;
+}
+
+export function initAnalytics(): void {
+  if (!isAnalyticsEnabled() || initialized || typeof window === 'undefined' || typeof document === 'undefined') {
+    return;
+  }
+
+  if (!window.dataLayer) {
+    window.dataLayer = [];
+  }
+
+  if (!window.gtag) {
+    window.gtag = function gtag(...args: any[]) {
+      window.dataLayer?.push(args);
+    };
+  }
+
+  if (!document.querySelector(`script[src*="googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"]`)) {
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(GA_MEASUREMENT_ID)}`;
+    document.head.appendChild(script);
+  }
+
+  window.gtag('js', new Date());
+  // Disable automatic page_view so route tracking is explicit and predictable.
+  window.gtag('config', GA_MEASUREMENT_ID, { send_page_view: false });
+  initialized = true;
+}
+
+function sanitizeEventParams(
+  params: Record<string, AnalyticsValue | undefined>,
+): Record<string, AnalyticsValue> {
+  return Object.fromEntries(
+    Object.entries(params).filter(([, value]) => value !== undefined),
+  ) as Record<string, AnalyticsValue>;
+}
+
+export function trackEvent(eventName: string, params: Record<string, AnalyticsValue | undefined> = {}): void {
+  if (!isAnalyticsEnabled()) return;
+  initAnalytics();
+  const gtag = getWindowGtag();
+  if (!gtag) return;
+  gtag('event', eventName, sanitizeEventParams(params));
+}
+
+export function trackPageView(path: string): void {
+  if (!isAnalyticsEnabled()) return;
+  initAnalytics();
+  const gtag = getWindowGtag();
+  if (!gtag) return;
+  gtag('event', 'page_view', {
+    page_path: path,
+    page_title: document.title,
+    page_location: window.location.href,
+  });
+}
+
+export function getGridAnalyticsParams(vars: { [name: string]: any } | undefined): {
+  rows: number;
+  columns: number;
+  title_type: string;
+} {
+  const rows = typeof vars?.rows === 'number' ? vars.rows : DEFAULT_ROWS;
+  const columns = typeof vars?.cols === 'number' ? vars.cols : DEFAULT_COLUMNS;
+  const cellSize = typeof vars?.cell === 'number' ? vars.cell : DEFAULT_CELL_SIZE;
+  const titleType = TITLE_TYPE_BY_CELL[cellSize] ?? 'Custom';
+
+  return {
+    rows,
+    columns,
+    title_type: titleType,
+  };
+}
+
