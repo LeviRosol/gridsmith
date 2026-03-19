@@ -1,5 +1,4 @@
 type AnalyticsValue = string | number | boolean;
-
 declare global {
   interface Window {
     dataLayer?: unknown[];
@@ -18,6 +17,9 @@ const TITLE_TYPE_BY_CELL: Record<number, string> = {
 };
 
 let initialized = false;
+let scriptLoaded = false;
+let activationCheckScheduled = false;
+let runtimeWarningEmitted = false;
 
 function isAnalyticsEnabled(): boolean {
   return GA_MEASUREMENT_ID.length > 0;
@@ -26,6 +28,30 @@ function isAnalyticsEnabled(): boolean {
 function getWindowGtag(): ((...args: any[]) => void) | undefined {
   if (typeof window === 'undefined') return undefined;
   return window.gtag;
+}
+
+function warnAnalyticsRuntime(message: string): void {
+  if (runtimeWarningEmitted) return;
+  runtimeWarningEmitted = true;
+  // Keep this warning in all environments: silent GA failures are hard to diagnose in production.
+  console.warn(`[analytics] ${message}`);
+}
+
+function scheduleRuntimeActivationCheck(): void {
+  if (activationCheckScheduled || typeof window === 'undefined') return;
+  activationCheckScheduled = true;
+
+  window.setTimeout(() => {
+    const dataLayer = window.dataLayer;
+    const pushPatched = !!dataLayer && dataLayer.push !== Array.prototype.push;
+    if (!scriptLoaded && !pushPatched) {
+      warnAnalyticsRuntime('Google Analytics script loaded state is unknown and runtime is still inactive.');
+      return;
+    }
+    if (!pushPatched) {
+      warnAnalyticsRuntime('Google Analytics runtime is inactive: events are queued but not being transported.');
+    }
+  }, 3000);
 }
 
 export function initAnalytics(): void {
@@ -43,16 +69,32 @@ export function initAnalytics(): void {
     };
   }
 
-  if (!document.querySelector(`script[src*="googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"]`)) {
-    const script = document.createElement('script');
+  const scriptSelector = `script[src*="googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"]`;
+  let script = document.querySelector(scriptSelector) as HTMLScriptElement | null;
+  if (!script) {
+    script = document.createElement('script');
     script.async = true;
     script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(GA_MEASUREMENT_ID)}`;
     document.head.appendChild(script);
+  }
+  if (!script.dataset.gridsmithGaBound) {
+    script.dataset.gridsmithGaBound = '1';
+    script.addEventListener('load', () => {
+      scriptLoaded = true;
+    });
+    script.addEventListener('error', () => {
+      warnAnalyticsRuntime('Google Analytics script failed to load.');
+    });
+  }
+  // Existing script may have already loaded before we attached listeners.
+  if (window.dataLayer && window.dataLayer.push !== Array.prototype.push) {
+    scriptLoaded = true;
   }
 
   window.gtag('js', new Date());
   // Disable automatic page_view so route tracking is explicit and predictable.
   window.gtag('config', GA_MEASUREMENT_ID, { send_page_view: false });
+  scheduleRuntimeActivationCheck();
   initialized = true;
 }
 
