@@ -218,12 +218,13 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
           />
           <Button
             type="button"
-            label={auth.isSignedIn && auth.user?.name ? auth.user.name : 'Account'}
+            label={auth.isSignedIn ? (auth.user?.givenName ? auth.user.givenName : '') : ''}
             icon="pi pi-user"
-            iconPos="left"
-            text
             onClick={(e) => accountMenuRef.current && accountMenuRef.current.toggle(e)}
             className="app-header-link-button"
+            iconPos="left"
+            text={!auth.isSignedIn || !!auth.user?.givenName}
+            aria-label={auth.isSignedIn ? 'Account' : 'Account'}
             style={{ paddingInline: '0.25rem' }}
           />
         </div>

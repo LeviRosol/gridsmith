@@ -4,6 +4,7 @@ type AuthUser = {
   sub?: string;
   email?: string;
   name?: string;
+  givenName?: string;
 };
 
 type AuthContextValue = {
@@ -225,6 +226,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsAdmin(getRoleFromTokenPayload(effectivePayload));
       const email = effectivePayload?.email as string | undefined;
       const emailLocal = email ? email.split('@')[0] : undefined;
+      const givenName = effectivePayload?.given_name as string | undefined;
       const displayName =
         effectivePayload?.given_name ??
         effectivePayload?.name ??
@@ -234,6 +236,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         sub: effectivePayload?.sub,
         email,
         name: displayName,
+        givenName,
       });
 
       setLoading(false);
@@ -249,6 +252,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAdmin(getRoleFromTokenPayload(payload));
     const email = payload?.email as string | undefined;
     const emailLocal = email ? email.split('@')[0] : undefined;
+    const givenName = payload?.given_name as string | undefined;
     const displayName =
       payload?.given_name ??
       payload?.name ??
@@ -258,6 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sub: payload?.sub,
       email,
       name: displayName,
+      givenName,
     });
   }, [idToken]);
 
