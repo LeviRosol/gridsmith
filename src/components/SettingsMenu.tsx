@@ -70,12 +70,6 @@ export default function SettingsMenu({className, style}: {className?: string, st
         {
           separator: true
         },
-        {
-          label: state.view.showAxes ? 'Hide axes' : 'Show axes',
-          icon: 'pi pi-asterisk',
-          // disabled: true,
-          command: () => model.mutate(s => s.view.showAxes = !s.view.showAxes)
-        },
         ...(isInStandaloneMode() ? [
           {
             separator: true

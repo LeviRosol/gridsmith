@@ -57,7 +57,6 @@ export default function ViewerPanel({className, style}: {className?: string, sty
   const state = model.state;
   const [interactionPrompt, setInteractionPrompt] = useState('auto');
   const modelViewerRef = useRef<any>();
-  const axesViewerRef = useRef<any>();
   const toastRef = useRef<Toast>(null);
 
   const [loadedUri, setLoadedUri] = useState<string | undefined>();
@@ -158,34 +157,6 @@ export default function ViewerPanel({className, style}: {className?: string, sty
       >
         <span slot="progress-bar"></span>
       </model-viewer>
-      {state.view.showAxes && (
-        <model-viewer
-          orientation="0deg -90deg 0deg"
-          src="./axes.glb"
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            zIndex: 10,
-            height: '100px',
-            width: '100px',
-          }}
-          loading="eager"
-          camera-orbit={originalOrbit}
-          environment-image="./skybox-lights.jpg"
-          max-camera-orbit="auto 180deg auto"
-          min-camera-orbit="auto 0deg auto"
-          orbit-sensitivity="5"
-          interaction-prompt="none"
-          camera-controls="false"
-          disable-zoom
-          disable-tap
-          disable-pan
-          ref={axesViewerRef}
-        >
-          <span slot="progress-bar"></span>
-        </model-viewer>
-      )}
     </div>
   )
 }

@@ -56,7 +56,6 @@ export interface State {
     collapsedCustomizerTabs?: string[],
     
     color: string,
-    showAxes?: boolean,
     lineNumbers?: boolean,
   }
 
