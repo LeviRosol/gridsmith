@@ -1,0 +1,17 @@
+---
+description: Prevent direct commits to main from Cursor
+alwaysApply: true
+---
+
+# Branch Safety
+
+- Never create commits on `main`.
+- Before any commit, check the current branch.
+- If the current branch is `main`, stop and ask the user whether to:
+  - create a new feature branch, or
+  - switch to an existing non-`main` branch.
+- Branch names must:
+  - start with `feature-` or `bug-`
+  - use lowercase letters and hyphens between words
+  - avoid spaces and underscores
+- Only commit on non-`main` branches unless the user explicitly overrides this rule for a one-off exception.
