@@ -19,17 +19,25 @@ import TilesPage from './TilesPage';
 import ProfilePage from './ProfilePage';
 import TosPage from './TosPage';
 import SiteFooter from './SiteFooter';
-
+import { AuthProvider, useAuth } from './AuthContext';
 
 export function App({initialState, statePersister, fs}: {initialState: State, statePersister: StatePersister, fs: FS}) {
+  return (
+    <AuthProvider>
+      <AppImpl initialState={initialState} statePersister={statePersister} fs={fs} />
+    </AuthProvider>
+  );
+}
+
+function AppImpl({initialState, statePersister, fs}: {initialState: State, statePersister: StatePersister, fs: FS}) {
   const [state, setState] = useState(initialState);
 
   const model = new Model(fs, state, setState, statePersister);
-  useEffect(() => model.init());
 
   const [customizerOpen, setCustomizerOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
   const accountMenuRef = useRef<Menu | null>(null);
+  const auth = useAuth();
 
   // Simple pathname-based routing
   const rawPath = window.location.pathname;
@@ -37,14 +45,28 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
   const pathname = normalizedPath === '' ? '/' : normalizedPath;
 
   const accountItems: MenuItem[] = [
-    {
-      label: 'Profile',
-      icon: 'pi pi-user',
-      command: () => {
-        window.location.pathname = '/profile';
-      },
-    },
-    { label: 'Logout', icon: 'pi pi-sign-out', url: '#' },
+    ...(auth.isSignedIn
+      ? [
+          {
+            label: 'Profile',
+            icon: 'pi pi-user',
+            command: () => {
+              window.location.pathname = '/profile';
+            },
+          },
+          {
+            label: 'Sign out',
+            icon: 'pi pi-sign-out',
+            command: () => auth.logout(),
+          },
+        ]
+      : [
+          {
+            label: 'Sign in',
+            icon: 'pi pi-sign-in',
+            command: () => auth.login(),
+          },
+        ]),
     { separator: true },
     {
       label: darkMode ? 'Light mode' : 'Dark mode',
@@ -54,8 +76,18 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
   ];
 
   useEffect(() => {
+    if (pathname !== '/viewer') return;
+    if (auth.loading) return;
+    if (!auth.isSignedIn) return;
+    model.init();
+    // We intentionally don't include `model` in deps: we only want initialization on route+auth changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, auth.loading, auth.isSignedIn]);
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (pathname !== '/viewer') return;
+      if (auth.loading || !auth.isSignedIn) return;
       if (event.key === 'F5') {
         event.preventDefault();
         model.render({isPreview: true, now: true})
@@ -71,7 +103,7 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [pathname, model]);
+  }, [pathname, model, auth.loading, auth.isSignedIn]);
 
   useEffect(() => {
     const body = document.body;
@@ -170,7 +202,7 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
           />
           <Button
             type="button"
-            label="Account"
+            label={auth.isSignedIn && auth.user?.name ? auth.user.name : 'Account'}
             icon="pi pi-user"
             iconPos="left"
             text
@@ -182,6 +214,62 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
       </nav>
     </header>
   );
+
+  if (pathname === '/viewer') {
+    if (auth.loading) {
+      return (
+        <div className="flex flex-column" style={{ flex: 1 }}>
+          {header}
+          <main
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '2rem 1rem',
+              textAlign: 'center',
+            }}
+          >
+            <p style={{ opacity: 0.85 }}>Loading authentication...</p>
+          </main>
+          <SiteFooter />
+        </div>
+      );
+    }
+
+    if (!auth.isSignedIn) {
+      return (
+        <div className="flex flex-column" style={{ flex: 1 }}>
+          {header}
+          <main
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '2rem 1rem',
+              textAlign: 'center',
+            }}
+          >
+            <h1 style={{ marginBottom: '0.75rem' }}>Sign in required</h1>
+            <p style={{ maxWidth: 640, opacity: 0.85, marginBottom: '1rem' }}>
+              Please sign in to access the GridSmith viewer and export tools.
+            </p>
+            <Button
+              type="button"
+              label="Sign in with Google"
+              icon="pi pi-google"
+              onClick={() => auth.login()}
+            />
+          </main>
+          <SiteFooter />
+          <ConfirmDialog />
+        </div>
+      );
+    }
+  }
 
   // Non-viewer routes render lightweight pages without mounting the heavy viewer/editor shell.
   if (pathname !== '/viewer') {

@@ -1,23 +1,49 @@
 // Portions of this file are Copyright 2021 Google LLC, and licensed under GPL2+. See COPYING.
 
-import { CSSProperties, useContext, useRef } from 'react';
+import { CSSProperties, useContext, useEffect, useRef } from 'react';
 import { Button } from 'primereact/button';
 import { MenuItem } from 'primereact/menuitem';
 import { Menu } from 'primereact/menu';
 import { ModelContext } from './contexts.ts';
 import { isInStandaloneMode } from '../utils.ts';
 import { confirmDialog } from 'primereact/confirmdialog';
+import { useAuth } from './AuthContext';
 
 export default function SettingsMenu({className, style}: {className?: string, style?: CSSProperties}) {
   const model = useContext(ModelContext);
   if (!model) throw new Error('No model');
   const state = model.state;
+  const auth = useAuth();
 
   const settingsMenu = useRef<Menu>(null);
+
+  useEffect(() => {
+    if (auth.loading) return;
+    if (auth.isAdmin) return;
+
+    const layout: any = state.view.layout;
+    const editorVisible =
+      (layout.mode === 'single' && layout.focus === 'editor') ||
+      (layout.mode === 'multi' && (layout.editor === true || layout.showEditor === true));
+
+    if (!editorVisible) return;
+
+    model.mutate((s) => {
+      s.view.layout = {
+        mode: 'multi',
+        editor: false,
+        viewer: true,
+        customizer: true,
+        showEditor: false,
+      } as any;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.loading, auth.isAdmin]);
+
   return (
     <>
       <Menu model={[
-        {
+        ...(auth.isAdmin ? [{
           label: (state.view as any).layout.showEditor ? 'Hide code editor' : 'Show code editor',
           icon: 'pi pi-code',
           command: () => model.mutate(s => {
@@ -40,7 +66,7 @@ export default function SettingsMenu({className, style}: {className?: string, st
               } as any;
             }
           }),
-        },
+        }] : []),
         {
           separator: true
         },

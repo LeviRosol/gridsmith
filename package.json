@@ -28,7 +28,7 @@
   },
   "scripts": {
     "test:e2e": "jest",
-    "start:development": "npx webpack serve --mode=development",
+    "start:development": "dotenv -e .env -- npx webpack serve --mode=development",
     "start:production": "NODE_ENV=production npm run build && npx serve -s dist -l 3000",
     "start:test": "npm run start:development",
     "start": "npm run start:development",
@@ -61,6 +61,9 @@
     "node": ">=18.12.0"
   },
   "devDependencies": {
+    "dotenv": "^16.4.5",
+    "dotenv-cli": "^8.0.0",
+    "dotenv-webpack": "^8.0.1",
     "@types/chroma-js": "^2.4.5",
     "@types/debug": "^4.1.12",
     "@types/filesystem": "^0.0.36",

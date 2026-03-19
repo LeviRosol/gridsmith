@@ -1,6 +1,7 @@
 import CopyPlugin from 'copy-webpack-plugin';
 import webpack from 'webpack';
 import WorkboxPlugin from 'workbox-webpack-plugin';
+import Dotenv from 'dotenv-webpack';
 
 import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -69,8 +70,10 @@ const config = [
       historyApiFallback: true,
     },
     plugins: [
+      // Load .env and inject process.env.COGNITO_* (and any other process.env.X used in code) into the bundle
+      new Dotenv({ path: path.resolve(__dirname, '.env'), systemvars: true }),
       new webpack.EnvironmentPlugin({
-        'process.env.NODE_ENV': 'development',
+        'process.env.NODE_ENV': process.env.NODE_ENV ?? 'development',
       }),
       ...(process.env.NODE_ENV === 'production' ? [
         new WorkboxPlugin.GenerateSW({
@@ -181,7 +184,12 @@ const config = [
     },
     plugins: [
       new webpack.EnvironmentPlugin({
-        'process.env.NODE_ENV': 'development',
+        'process.env.NODE_ENV': process.env.NODE_ENV ?? 'development',
+        'process.env.COGNITO_DOMAIN': process.env.COGNITO_DOMAIN ?? '',
+        'process.env.COGNITO_REGION': process.env.COGNITO_REGION ?? '',
+        'process.env.COGNITO_CLIENT_ID': process.env.COGNITO_CLIENT_ID ?? '',
+        'process.env.COGNITO_REDIRECT_URI': process.env.COGNITO_REDIRECT_URI ?? '',
+        'process.env.COGNITO_LOGOUT_URI': process.env.COGNITO_LOGOUT_URI ?? '',
       }),
     ],
   },
