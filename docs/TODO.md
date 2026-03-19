@@ -85,3 +85,11 @@ Based on `docs/gridsmith-context.md`.
 - [ ] Flesh out Get Tiles page content and CTAs for future tile packs/tools.
 - [ ] Add additional GridSmith-specific presets and refine parameter ranges and labels.
 - [ ] Consider PWA cache-busting/versioning strategy to reduce stale title/icon/install prompt artifacts after deploy.
+
+## 9. Analytics & Observability
+- [ ] Add Google Analytics across the full site:
+  - [ ] Track page views on all routes.
+  - [ ] Track custom events:
+    - [ ] `stl_rendered` with params `rows`, `columns`, and `title_type`.
+    - [ ] `stl_downloaded` with params `rows`, `columns`, and `title_type`.
+  - [ ] Use a human-readable enum for `title_type` (e.g., `GridSmith`, `OpenForge`) instead of numeric values.
