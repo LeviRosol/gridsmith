@@ -13,6 +13,7 @@ import { parseOff } from "../io/import_off.ts";
 import { exportGlb } from "../io/export_glb.ts";
 import { export3MF } from "../io/export_3mf.ts";
 import chroma from "chroma-js";
+import { getGridAnalyticsParams, trackEvent } from "../analytics.ts";
 
 const githubRx = /^https:\/\/github.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/;
 
@@ -229,6 +230,7 @@ export class Model {
   }
 
   async export() {
+    const exportFormat = this.state.is2D ? this.state.params.exportFormat2D : this.state.params.exportFormat3D;
     if (this.state.output) {
       const normalPassThrough = 
         (this.state.is2D && this.state.params.exportFormat2D === 'svg')
@@ -246,6 +248,9 @@ export class Model {
         } else {
           downloadUrl(this.state.output.outFileURL, this.state.output.outFile.name);
         }
+        if (!this.state.is2D && exportFormat === 'stl') {
+          trackEvent('stl_downloaded', getGridAnalyticsParams(this.state.params.vars));
+        }
         return;
       }
     }
@@ -262,8 +267,7 @@ export class Model {
       throw new Error('No output file to export');
     }
 
-    const {features, exportFormat2D, exportFormat3D} = this.state.params;
-    const exportFormat = this.state.is2D ? exportFormat2D : exportFormat3D;
+    const {features} = this.state.params;
 
     try {
       let output: RenderOutput;
@@ -318,6 +322,9 @@ export class Model {
         const downloadName = customName ?? output.outFile.name;
         downloadUrl(s.export.outFileURL, downloadName);
       });
+      if (!this.state.is2D && exportFormat === 'stl') {
+        trackEvent('stl_downloaded', getGridAnalyticsParams(this.state.params.vars));
+      }
     } catch (err) {
       this.mutate(s => {
         s.exporting = false;
@@ -464,6 +471,7 @@ export class Model {
         };
 
         if (!isPreview) {
+          trackEvent('stl_rendered', getGridAnalyticsParams(this.state.params.vars));
           const audio = document.getElementById('complete-sound') as HTMLAudioElement;
           audio?.play();
         }

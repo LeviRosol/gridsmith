@@ -21,6 +21,7 @@ import TosPage from './TosPage';
 import PrivacyPage from './PrivacyPage';
 import SiteFooter from './SiteFooter';
 import { AuthProvider, useAuth } from './AuthContext';
+import { trackPageView } from '../analytics';
 
 const THEME_MODE_STORAGE_KEY = 'gridsmith.theme.darkMode';
 
@@ -182,6 +183,10 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
       document.head.appendChild(link);
     }
   }, [darkMode]);
+
+  useEffect(() => {
+    trackPageView(`${window.location.pathname}${window.location.search}`);
+  }, [pathname]);
 
   useEffect(() => {
     if (state.view.layout.mode === 'multi') {
