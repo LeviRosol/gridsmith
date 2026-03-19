@@ -4,6 +4,7 @@ import { Fieldset } from 'primereact/fieldset';
 import { InputNumber } from 'primereact/inputnumber';
 import { Slider } from 'primereact/slider';
 import { Button } from 'primereact/button';
+import { Dropdown } from 'primereact/dropdown';
 
 const BASE_DEFAULTS = {
   rows: 2,
@@ -18,6 +19,11 @@ const BASE_DEFAULTS = {
   shelf_width: 1.0,
   shelf_thick: 1.6,
 };
+
+const TILE_TYPE_OPTIONS = [
+  { label: 'GridSmith', value: 30.5 },
+  { label: 'OpenForge', value: 50 },
+];
 
 type BaseDefaultsKey = keyof typeof BASE_DEFAULTS;
 
@@ -101,7 +107,7 @@ export default function GridSmithPanel({ className, style }: { className?: strin
             onClick={() => applyPreset({ rows: 6, cols: 6 })}
           />
           <Button
-            label="Hallway (2×6)"
+            label="Hallway"
             size="small"
             onClick={() => applyPreset({ rows: 2, cols: 6 })}
           />
@@ -112,7 +118,7 @@ export default function GridSmithPanel({ className, style }: { className?: strin
         label="Rows"
         value={getVarValue(vars, 'rows')}
         min={1}
-        max={10}
+        max={15}
         step={1}
         onChange={(v) => handleChange('rows', v)}
       />
@@ -120,26 +126,27 @@ export default function GridSmithPanel({ className, style }: { className?: strin
         label="Columns"
         value={getVarValue(vars, 'cols')}
         min={1}
-        max={10}
+        max={15}
         step={1}
         onChange={(v) => handleChange('cols', v)}
       />
-      <LabeledNumber
-        label="Cell Size (mm)"
-        value={getVarValue(vars, 'cell')}
-        min={10}
-        max={80}
-        step={0.5}
-        onChange={(v) => handleChange('cell', v)}
-      />
-      <LabeledNumber
-        label="Fit Tolerance / Gap (mm)"
-        value={getVarValue(vars, 'gap')}
-        min={0}
-        max={1}
-        step={0.05}
-        onChange={(v) => handleChange('gap', v)}
-      />
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '0.5rem',
+        }}
+      >
+        <label style={{ fontWeight: 600, flexShrink: 0 }}>Tile Type</label>
+        <Dropdown
+          value={getVarValue(vars, 'cell')}
+          options={TILE_TYPE_OPTIONS}
+          onChange={(e) => handleChange('cell', e.value)}
+          style={{ width: '60%' }}
+        />
+      </div>
 
       <div
         style={{
@@ -158,6 +165,14 @@ export default function GridSmithPanel({ className, style }: { className?: strin
 
   const advancedInputs = (
     <div className="flex flex-column gap-3">
+      <LabeledNumber
+        label="Fit Tolerance / Gap (mm)"
+        value={getVarValue(vars, 'gap')}
+        min={0}
+        max={1}
+        step={0.05}
+        onChange={(v) => handleChange('gap', v)}
+      />
       <LabeledNumber
         label="Interior Wall Thickness (mm)"
         value={getVarValue(vars, 'wall')}
