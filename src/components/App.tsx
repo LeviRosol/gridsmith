@@ -48,6 +48,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     }
   });
   const accountMenuRef = useRef<Menu | null>(null);
+  const mobileMenuRef = useRef<Menu | null>(null);
   const auth = useAuth();
 
   // Simple pathname-based routing
@@ -84,6 +85,20 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
       icon: darkMode ? 'pi pi-sun' : 'pi pi-moon',
       command: () => setDarkMode((v) => !v),
     },
+  ];
+
+  const mobileMenuItems: MenuItem[] = [
+    {
+      label: 'Build',
+      icon: 'pi pi-bolt',
+      command: () => {
+        window.location.pathname = '/viewer';
+      },
+    },
+    { label: 'Get Tiles', command: () => (window.location.pathname = '/tiles') },
+    { label: 'About', command: () => (window.location.pathname = '/about') },
+    { separator: true },
+    ...accountItems,
   ];
 
   useEffect(() => {
@@ -199,32 +214,42 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
           />
         </picture>
       </a>
-      <nav style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.9rem' }}>
-        <a href="/tiles" className="app-header-link">Get Tiles</a>
-        <a href="/about" className="app-header-link">About</a>
-        <Button
-          type="button"
-          label="Build"
-          icon="pi pi-bolt"
-          onClick={() => window.location.pathname = '/viewer'}
-          className="app-header-link-button app-header-build-button"
-          style={{ paddingInline: '0.75rem' }}
-        />
-        <div style={{ position: 'relative' }}>
-          <Menu
-            model={accountItems}
-            popup
-            ref={accountMenuRef}
-          />
+      <nav className="app-header-nav">
+        <div className="app-header-nav-desktop">
+          <a href="/tiles" className="app-header-link">Get Tiles</a>
+          <a href="/about" className="app-header-link">About</a>
           <Button
             type="button"
-            label={auth.isSignedIn ? (auth.user?.givenName ? auth.user.givenName : '') : ''}
-            icon="pi pi-user"
-            onClick={(e) => accountMenuRef.current && accountMenuRef.current.toggle(e)}
+            label="Build"
+            icon="pi pi-bolt"
+            onClick={() => (window.location.pathname = '/viewer')}
+            className="app-header-link-button app-header-build-button"
+            style={{ paddingInline: '0.75rem' }}
+          />
+          <div style={{ position: 'relative' }}>
+            <Menu model={accountItems} popup ref={accountMenuRef} />
+            <Button
+              type="button"
+              label={auth.isSignedIn ? (auth.user?.givenName ? auth.user.givenName : '') : ''}
+              icon="pi pi-user"
+              onClick={(e) => accountMenuRef.current && accountMenuRef.current.toggle(e)}
+              className="app-header-link-button"
+              iconPos="left"
+              text={!auth.isSignedIn || !!auth.user?.givenName}
+              aria-label={auth.isSignedIn ? 'Account' : 'Account'}
+              style={{ paddingInline: '0.25rem' }}
+            />
+          </div>
+        </div>
+
+        <div className="app-header-nav-mobile">
+          <Menu model={mobileMenuItems} popup ref={mobileMenuRef} />
+          <Button
+            type="button"
+            icon="pi pi-bars"
+            aria-label="Menu"
+            onClick={(e) => mobileMenuRef.current && mobileMenuRef.current.toggle(e)}
             className="app-header-link-button"
-            iconPos="left"
-            text={!auth.isSignedIn || !!auth.user?.givenName}
-            aria-label={auth.isSignedIn ? 'Account' : 'Account'}
             style={{ paddingInline: '0.25rem' }}
           />
         </div>

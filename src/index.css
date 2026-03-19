@@ -93,6 +93,38 @@ body {
   font-size: 0.8rem;
 }
 
+/* Responsive header nav */
+.app-header-nav {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.app-header-nav-desktop {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.app-header-nav-mobile {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .app-header-nav-desktop {
+    display: none;
+  }
+
+  .app-header-nav-mobile {
+    display: flex;
+    align-items: center;
+  }
+
+  .app-header {
+    padding: 10px 0.5rem;
+  }
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
