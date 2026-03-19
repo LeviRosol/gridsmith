@@ -221,8 +221,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const effectiveIdToken = localStorage.getItem(STORAGE_KEYS.idToken);
       const effectivePayload = decodeJwt(effectiveIdToken ?? '') ?? {};
-      // Temporary debug: inspect all available claims from Cognito
-      console.log('Cognito ID token payload:', effectivePayload);
 
       setIsAdmin(getRoleFromTokenPayload(effectivePayload));
       const email = effectivePayload?.email as string | undefined;
@@ -248,8 +246,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!idToken) return;
     const payload = decodeJwt(idToken) ?? {};
-    // Temporary debug: inspect payload when idToken changes
-    console.log('Cognito ID token payload (idToken effect):', payload);
     setIsAdmin(getRoleFromTokenPayload(payload));
     const email = payload?.email as string | undefined;
     const emailLocal = email ? email.split('@')[0] : undefined;
