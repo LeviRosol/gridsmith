@@ -111,6 +111,29 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   }, [pathname, auth.loading, auth.isSignedIn]);
 
   useEffect(() => {
+    if (pathname !== '/viewer') return;
+    if (state.view.layout.mode !== 'single') return;
+    if (!window.matchMedia('(max-width: 767px)').matches) return;
+
+    // On initial mobile loads, force the viewer shell into the sidebar-capable layout
+    // so params remain discoverable with the same slide-tab behavior as resized desktop.
+    setState((prev) => ({
+      ...prev,
+      view: {
+        ...prev.view,
+        layout: {
+          mode: 'multi',
+          editor: false,
+          viewer: true,
+          customizer: true,
+          showEditor: false,
+        } as any,
+      },
+    }));
+    setCustomizerOpen(true);
+  }, [pathname, state.view.layout.mode]);
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (pathname !== '/viewer') return;
       if (auth.loading || !auth.isSignedIn) return;
