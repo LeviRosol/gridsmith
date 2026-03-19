@@ -1,6 +1,6 @@
 {
-  "short_name": "OpenSCAD",
-  "name": "OpenSCAD Playground",
+  "short_name": "GridSmith",
+  "name": "GridSmith",
   "icons": [
     {
       "src": "favicon.ico",
