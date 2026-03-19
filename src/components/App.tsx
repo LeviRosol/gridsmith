@@ -21,6 +21,8 @@ import TosPage from './TosPage';
 import SiteFooter from './SiteFooter';
 import { AuthProvider, useAuth } from './AuthContext';
 
+const THEME_MODE_STORAGE_KEY = 'gridsmith.theme.darkMode';
+
 export function App({initialState, statePersister, fs}: {initialState: State, statePersister: StatePersister, fs: FS}) {
   return (
     <AuthProvider>
@@ -35,7 +37,15 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   const model = new Model(fs, state, setState, statePersister);
 
   const [customizerOpen, setCustomizerOpen] = useState(true);
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(() => {
+    try {
+      const persisted = localStorage.getItem(THEME_MODE_STORAGE_KEY);
+      if (persisted == null) return true;
+      return persisted === 'true';
+    } catch {
+      return true;
+    }
+  });
   const accountMenuRef = useRef<Menu | null>(null);
   const auth = useAuth();
 
@@ -109,6 +119,11 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     const body = document.body;
     body.classList.remove('dark-mode', 'light-mode');
     body.classList.add(darkMode ? 'dark-mode' : 'light-mode');
+    try {
+      localStorage.setItem(THEME_MODE_STORAGE_KEY, String(darkMode));
+    } catch {
+      // Ignore storage failures; theme still applies for current session.
+    }
 
     const themeId = 'primereact-theme';
     const existing = document.getElementById(themeId) as HTMLLinkElement | null;
