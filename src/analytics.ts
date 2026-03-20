@@ -1,13 +1,10 @@
 type AnalyticsValue = string | number | boolean;
-
 declare global {
   interface Window {
-    dataLayer?: unknown[];
-    gtag?: (...args: any[]) => void;
+    dataLayer?: Array<Record<string, unknown>>;
   }
 }
 
-const GA_MEASUREMENT_ID = (process.env.GA_MEASUREMENT_ID as string | undefined)?.trim() ?? '';
 const DEFAULT_ROWS = 2;
 const DEFAULT_COLUMNS = 2;
 const DEFAULT_CELL_SIZE = 30.5;
@@ -19,40 +16,14 @@ const TITLE_TYPE_BY_CELL: Record<number, string> = {
 
 let initialized = false;
 
-function isAnalyticsEnabled(): boolean {
-  return GA_MEASUREMENT_ID.length > 0;
-}
-
-function getWindowGtag(): ((...args: any[]) => void) | undefined {
-  if (typeof window === 'undefined') return undefined;
-  return window.gtag;
-}
-
 export function initAnalytics(): void {
-  if (!isAnalyticsEnabled() || initialized || typeof window === 'undefined' || typeof document === 'undefined') {
+  if (initialized || typeof window === 'undefined') {
     return;
   }
 
   if (!window.dataLayer) {
     window.dataLayer = [];
   }
-
-  if (!window.gtag) {
-    window.gtag = function gtag(...args: any[]) {
-      window.dataLayer?.push(args);
-    };
-  }
-
-  if (!document.querySelector(`script[src*="googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"]`)) {
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(GA_MEASUREMENT_ID)}`;
-    document.head.appendChild(script);
-  }
-
-  window.gtag('js', new Date());
-  // Disable automatic page_view so route tracking is explicit and predictable.
-  window.gtag('config', GA_MEASUREMENT_ID, { send_page_view: false });
   initialized = true;
 }
 
@@ -64,20 +35,22 @@ function sanitizeEventParams(
   ) as Record<string, AnalyticsValue>;
 }
 
-export function trackEvent(eventName: string, params: Record<string, AnalyticsValue | undefined> = {}): void {
-  if (!isAnalyticsEnabled()) return;
+function pushDataLayerEvent(eventName: string, params: Record<string, AnalyticsValue>): void {
+  if (typeof window === 'undefined') return;
   initAnalytics();
-  const gtag = getWindowGtag();
-  if (!gtag) return;
-  gtag('event', eventName, sanitizeEventParams(params));
+  window.dataLayer?.push({
+    event: eventName,
+    ...params,
+  });
+}
+
+export function trackEvent(eventName: string, params: Record<string, AnalyticsValue | undefined> = {}): void {
+  pushDataLayerEvent(eventName, sanitizeEventParams(params));
 }
 
 export function trackPageView(path: string): void {
-  if (!isAnalyticsEnabled()) return;
-  initAnalytics();
-  const gtag = getWindowGtag();
-  if (!gtag) return;
-  gtag('event', 'page_view', {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return;
+  pushDataLayerEvent('page_view', {
     page_path: path,
     page_title: document.title,
     page_location: window.location.href,
