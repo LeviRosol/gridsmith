@@ -26,7 +26,7 @@ Reference rule: `.cursor/rules/no-direct-main-commits.mdc`
 - Product focus remains a client-side baseplate generator on top of OpenSCAD WASM.
 - Production deployment path is working (Vercel + Cognito Google auth flow validated).
 - PWA/app branding has been switched to **GridSmith** (title + manifest naming).
-- Google Analytics is now wired for route-level page views and key viewer conversion events.
+- **GTM** is embedded; **GA4** receives data via GTM tags. The app pushes route-level `page_view` and conversion events to `dataLayer`.
 
 ### Recently Completed (high impact)
 
@@ -47,7 +47,7 @@ Reference rule: `.cursor/rules/no-direct-main-commits.mdc`
 - Analytics rollout completed:
   - sitewide `page_view` tracking on route changes
   - `stl_rendered` and `stl_downloaded` events implemented
-  - event params include `rows`, `columns`, and enum-based `title_type` (`GridSmith`, `OpenForge`, `Custom`)
+  - event params include `rows`, `columns`, and enum-based `tile_type` (`GridSmith`, `OpenForge`, `Custom`)
 
 ### Recent Commit Trail
 
