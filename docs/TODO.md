@@ -87,9 +87,10 @@ Based on `docs/gridsmith-context.md`.
 - [ ] Consider PWA cache-busting/versioning strategy to reduce stale title/icon/install prompt artifacts after deploy.
 
 ## 9. Analytics & Observability
-- [x] Add Google Analytics across the full site:
-  - [x] Track page views on all routes.
+- [x] **Google Tag Manager (GTM)** is embedded in the app; **Google Analytics 4 (GA4)** is configured in GTM (no direct GA snippet in source—tags fire from the container).
+  - [x] Push route-level `page_view` and custom events to `dataLayer` from the app.
+  - [x] Map `dataLayer` events to GA4 in GTM (including custom events below).
   - [x] Track custom events:
-    - [x] `stl_rendered` with params `rows`, `columns`, and `title_type`.
-    - [x] `stl_downloaded` with params `rows`, `columns`, and `title_type`.
-  - [x] Use a human-readable enum for `title_type` (e.g., `GridSmith`, `OpenForge`) instead of numeric values.
+    - [x] `stl_rendered` with params `rows`, `columns`, and `tile_type`.
+    - [x] `stl_downloaded` with params `rows`, `columns`, and `tile_type`.
+  - [x] Use a human-readable enum for `tile_type` (e.g., `GridSmith`, `OpenForge`) instead of numeric values.
