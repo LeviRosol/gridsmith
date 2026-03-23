@@ -129,3 +129,503 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Marketing / home page */
+.home-page {
+  flex: 1;
+  width: 100%;
+  text-align: left;
+}
+
+.home-page-container {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.home-section {
+  padding: 3rem 0;
+}
+
+.home-section-hero {
+  position: relative;
+  padding-top: 2.5rem;
+  padding-bottom: 4rem;
+  min-height: min(72vh, 38rem);
+  display: flex;
+  align-items: center;
+  background-color: #141414;
+  background-image: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.35) 0%,
+      rgba(0, 0, 0, 0.55) 100%
+    ),
+    url('/gs_hero_final.png');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  color: #f5f5f5;
+}
+
+.home-section-hero .home-page-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+.home-section-hero .home-eyebrow,
+.home-section-hero .home-h1,
+.home-section-hero .home-subhead,
+.home-section-hero .home-supporting {
+  color: inherit;
+}
+
+.home-section-hero .home-subhead,
+.home-section-hero .home-supporting {
+  opacity: 0.92;
+}
+
+/* Outlined CTA readable on dark hero */
+.home-section-hero .p-button-outlined {
+  color: #f5f5f5 !important;
+  border-color: rgba(255, 255, 255, 0.55) !important;
+}
+
+.home-section-hero .p-button-outlined:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.75) !important;
+  color: #ffffff !important;
+}
+
+/* Background: public/combined_hero_even.png — panoramic grid progression */
+.home-section-how-it-works {
+  position: relative;
+  padding-top: 3.5rem;
+  padding-bottom: 3.5rem;
+  min-height: clamp(22rem, 48vh, 40rem);
+  background-color: #000000;
+  background-image: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.78) 0%,
+      rgba(0, 0, 0, 0.42) 45%,
+      rgba(0, 0, 0, 0.42) 55%,
+      rgba(0, 0, 0, 0.78) 100%
+    ),
+    url('/combined_hero_even.png');
+  /* Keep the full panorama visible without cropping. */
+  background-size: 100% 100%, contain;
+  background-position: center center, center center;
+  background-repeat: no-repeat;
+  color: #f5f5f5;
+}
+
+.home-section-how-it-works .home-page-container {
+  position: relative;
+  z-index: 1;
+}
+
+.home-section-how-it-works .home-eyebrow,
+.home-section-how-it-works .home-h2,
+.home-section-how-it-works .home-h3 {
+  color: inherit;
+}
+
+.home-section-how-it-works .home-eyebrow {
+  opacity: 0.85;
+}
+
+.home-section-how-it-works .home-step p {
+  color: rgba(245, 245, 245, 0.92);
+}
+
+.home-section-about-hero {
+  position: relative;
+  padding-top: 2.5rem;
+  padding-bottom: 3rem;
+  min-height: clamp(18rem, 42vh, 32rem);
+  display: flex;
+  align-items: center;
+  background-color: #000000;
+  background-image: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.72) 0%,
+      rgba(0, 0, 0, 0.38) 45%,
+      rgba(0, 0, 0, 0.38) 55%,
+      rgba(0, 0, 0, 0.72) 100%
+    ),
+    url('/walls_combined_close.png');
+  background-size: 100% 100%, contain;
+  background-position: center center, center center;
+  background-repeat: no-repeat;
+  color: #f5f5f5;
+}
+
+.home-section-about-hero .home-page-container {
+  position: relative;
+  z-index: 1;
+}
+
+.home-section-about-hero .home-h1,
+.home-section-about-hero .home-prose p {
+  color: inherit;
+}
+
+.home-section-about-hero .home-prose p {
+  opacity: 0.92;
+}
+
+/* Hero + How it works: readable on phones, tablets, and wide desktops */
+@media (max-width: 767px) {
+  .home-section-hero {
+    min-height: clamp(17rem, 52vh, 30rem);
+    padding-top: 1.5rem;
+    padding-bottom: 2.25rem;
+    /* Favor upper focal area on tall narrow viewports */
+    background-position: center 22%;
+  }
+
+  .home-section-how-it-works {
+    min-height: clamp(19rem, 46vh, 34rem);
+    padding-top: 2.25rem;
+    padding-bottom: 2.25rem;
+    /* Center of panoramic keeps middle grids visible when cover crops sides */
+    background-position: center center;
+  }
+
+  .home-section-about-hero {
+    min-height: clamp(16rem, 38vh, 26rem);
+    padding-top: 1.75rem;
+    padding-bottom: 2rem;
+  }
+}
+
+@media (max-width: 896px) and (orientation: landscape) {
+  .home-section-hero {
+    min-height: clamp(13rem, 88vh, 24rem);
+    padding-top: 1rem;
+    padding-bottom: 1.5rem;
+    background-position: center 35%;
+  }
+
+  .home-section-how-it-works {
+    min-height: clamp(15rem, 72vh, 26rem);
+    padding-top: 1.75rem;
+    padding-bottom: 1.75rem;
+  }
+
+  .home-section-about-hero {
+    min-height: clamp(14rem, 62vh, 22rem);
+    padding-top: 1.25rem;
+    padding-bottom: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .home-section-hero {
+    min-height: min(68vh, 37rem);
+    background-position: center 35%;
+  }
+
+  .home-section-how-it-works {
+    min-height: clamp(24rem, 46vh, 38rem);
+  }
+
+  .home-section-about-hero {
+    min-height: clamp(20rem, 40vh, 30rem);
+  }
+}
+
+@media (min-width: 1200px) {
+  .home-section-hero {
+    min-height: min(78vh, 44rem);
+    background-position: center center;
+  }
+
+  .home-section-how-it-works {
+    min-height: clamp(26rem, 50vh, 46rem);
+  }
+
+  .home-section-about-hero {
+    min-height: clamp(22rem, 42vh, 34rem);
+  }
+}
+
+@media (min-width: 1600px) {
+  .home-section-hero {
+    min-height: min(80vh, 48rem);
+  }
+
+  .home-section-how-it-works {
+    min-height: clamp(28rem, 52vh, 50rem);
+  }
+
+  .home-section-about-hero {
+    min-height: clamp(24rem, 44vh, 38rem);
+  }
+}
+
+.home-section-alt {
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+}
+
+.home-section-subtle {
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+}
+
+.dark-mode .home-section-alt {
+  background: rgba(255, 255, 255, 0.03);
+  border-top-color: #333333;
+  border-bottom-color: #333333;
+}
+
+.light-mode .home-section-alt {
+  background: rgba(0, 0, 0, 0.03);
+  border-top-color: #e0e0e0;
+  border-bottom-color: #e0e0e0;
+}
+
+.dark-mode .home-section-subtle {
+  background: rgba(255, 255, 255, 0.015);
+  border-top-color: #2f2f2f;
+  border-bottom-color: #2f2f2f;
+}
+
+.light-mode .home-section-subtle {
+  background: rgba(0, 0, 0, 0.015);
+  border-top-color: #e6e6e6;
+  border-bottom-color: #e6e6e6;
+}
+
+.home-section-cta {
+  padding-bottom: 4rem;
+}
+
+.home-eyebrow {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.home-h1 {
+  margin: 0 0 1rem;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.home-h2 {
+  margin: 0 0 1rem;
+  font-size: clamp(1.35rem, 3vw, 1.85rem);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.home-h2-tight {
+  margin-bottom: 0.75rem;
+}
+
+.home-h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.home-subhead {
+  margin: 0 0 1rem;
+  max-width: 40rem;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  opacity: 0.92;
+}
+
+.home-supporting {
+  margin: 0 0 1.75rem;
+  font-size: 0.95rem;
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.home-prose p {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  line-height: 1.6;
+  opacity: 0.92;
+}
+
+.home-prose p:last-child {
+  margin-bottom: 0;
+}
+
+.home-list {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+  line-height: 1.6;
+  opacity: 0.92;
+}
+
+.home-list li {
+  margin-bottom: 0.35rem;
+}
+
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+}
+
+.home-actions-single {
+  margin-top: 0.5rem;
+}
+
+.home-page-cta {
+  text-decoration: none;
+}
+
+.home-fine-print {
+  margin: 1.25rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  opacity: 0.65;
+  max-width: 40rem;
+}
+
+.home-steps {
+  display: grid;
+  gap: 1.75rem;
+  margin-top: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .home-steps {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+.home-step p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  opacity: 0.9;
+}
+
+.home-feature-grid {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .home-feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.home-feature p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  opacity: 0.9;
+}
+
+.home-page-centered {
+  text-align: center;
+}
+
+.home-page-centered .home-subhead {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.home-actions-centered {
+  justify-content: center;
+}
+
+/* Legal pages */
+.legal-page {
+  flex: 1;
+  width: 100%;
+}
+
+.legal-container {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.legal-hero {
+  padding: 2.5rem 0 1.5rem;
+  border-bottom: 1px solid transparent;
+}
+
+.legal-hero h1 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.6rem, 3.4vw, 2.35rem);
+  line-height: 1.2;
+}
+
+.legal-hero p {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  line-height: 1.6;
+  opacity: 0.92;
+}
+
+.legal-last-updated {
+  font-size: 0.9rem;
+  opacity: 0.75;
+}
+
+.legal-section {
+  padding: 1.75rem 0 3.25rem;
+}
+
+.legal-content h2 {
+  margin: 1.5rem 0 0.65rem;
+  font-size: 1.15rem;
+  line-height: 1.35;
+}
+
+.legal-content h3 {
+  margin: 1rem 0 0.5rem;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.legal-content p {
+  margin: 0 0 0.9rem;
+  font-size: 0.98rem;
+  line-height: 1.65;
+  opacity: 0.94;
+}
+
+.legal-content ul {
+  margin: 0 0 1rem 1.25rem;
+  padding: 0;
+}
+
+.legal-content li {
+  margin: 0 0 0.45rem;
+  line-height: 1.6;
+  opacity: 0.94;
+}
+
+.legal-content a {
+  color: inherit;
+  text-underline-offset: 2px;
+}
+
+.dark-mode .legal-hero {
+  border-bottom-color: #2f2f2f;
+}
+
+.light-mode .legal-hero {
+  border-bottom-color: #e2e2e2;
+}
