@@ -106,6 +106,15 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   ];
 
   useEffect(() => {
+    document.documentElement.classList.remove('use-system-font');
+    try {
+      localStorage.removeItem('gridsmith.font.systemStack');
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
     if (pathname !== '/viewer') return;
     if (auth.loading) return;
     if (!auth.isSignedIn) return;
