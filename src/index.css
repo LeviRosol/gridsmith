@@ -74,7 +74,6 @@ body {
   padding: 10px 0.75rem;
   text-align: center;
   font-size: 0.8rem;
-  opacity: 0.7;
   border-top: 1px solid transparent;
 }
 
@@ -88,9 +87,18 @@ body {
   border-top-color: #dddddd;
 }
 
-.app-footer-link {
+.app-footer-link,
+.app-footer-link:link,
+.app-footer-link:visited,
+.app-footer-link:hover,
+.app-footer-link:active {
   text-decoration: none;
   font-size: 0.8rem;
+  color: var(--yellow-500, #f59e0b);
+}
+
+.app-footer > div:last-child {
+  opacity: 0.7;
 }
 
 /* Responsive header nav */
@@ -546,6 +554,80 @@ code {
 
 .home-actions-centered {
   justify-content: center;
+}
+
+/* Cookie consent banner (GTM loads only after opt-in) */
+.cookie-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  padding: 0.75rem;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.cookie-banner-inner {
+  pointer-events: auto;
+  max-width: 52rem;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+
+.dark-mode .cookie-banner-inner {
+  background: rgba(22, 22, 22, 0.98);
+  border-color: #3a3a3a;
+  box-shadow: 0 -6px 28px rgba(0, 0, 0, 0.45);
+}
+
+.light-mode .cookie-banner-inner {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: #d8d8d8;
+  box-shadow: 0 -6px 28px rgba(0, 0, 0, 0.1);
+}
+
+.cookie-banner-copy {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.cookie-banner-title {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.cookie-banner-text {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  opacity: 0.92;
+}
+
+.cookie-banner-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cookie-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.cookie-banner-close.p-button.p-button-text {
+  padding: 0.35rem 0.5rem;
 }
 
 /* Legal pages */
