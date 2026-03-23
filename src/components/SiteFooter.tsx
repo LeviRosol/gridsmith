@@ -1,6 +1,8 @@
 import React from 'react';
+import { useConsent } from './ConsentProvider';
 
 export default function SiteFooter() {
+  const { openCookieSettings } = useConsent();
   const year = new Date().getFullYear();
   return (
     <footer className="app-footer">
@@ -32,6 +34,16 @@ export default function SiteFooter() {
       >
         <a href="/tos" className="app-footer-link">Terms of Service</a>
         <a href="/privacy" className="app-footer-link">Privacy Policy</a>
+        <a
+          href="#cookie-settings"
+          className="app-footer-link"
+          onClick={(e) => {
+            e.preventDefault();
+            openCookieSettings();
+          }}
+        >
+          Cookie settings
+        </a>
       </div>
       <div>© {year} GridSmith. All rights reserved.</div>
     </footer>

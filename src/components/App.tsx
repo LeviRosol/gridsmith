@@ -21,15 +21,18 @@ import TosPage from './TosPage';
 import PrivacyPage from './PrivacyPage';
 import SiteFooter from './SiteFooter';
 import { AuthProvider, useAuth } from './AuthContext';
+import { ConsentProvider } from './ConsentProvider';
 import { trackPageView } from '../analytics';
 
 const THEME_MODE_STORAGE_KEY = 'gridsmith.theme.darkMode';
 
 export function App({initialState, statePersister, fs}: {initialState: State, statePersister: StatePersister, fs: FS}) {
   return (
-    <AuthProvider>
-      <AppImpl initialState={initialState} statePersister={statePersister} fs={fs} />
-    </AuthProvider>
+    <ConsentProvider>
+      <AuthProvider>
+        <AppImpl initialState={initialState} statePersister={statePersister} fs={fs} />
+      </AuthProvider>
+    </ConsentProvider>
   );
 }
 
@@ -101,6 +104,15 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     { separator: true },
     ...accountItems,
   ];
+
+  useEffect(() => {
+    document.documentElement.classList.remove('use-system-font');
+    try {
+      localStorage.removeItem('gridsmith.font.systemStack');
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     if (pathname !== '/viewer') return;

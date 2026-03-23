@@ -1,3 +1,5 @@
+import { getStoredConsent } from './consent';
+
 type AnalyticsValue = string | number | boolean;
 declare global {
   interface Window {
@@ -9,14 +11,18 @@ const DEFAULT_ROWS = 2;
 const DEFAULT_COLUMNS = 2;
 const DEFAULT_CELL_SIZE = 30.5;
 
-const TITLE_TYPE_BY_CELL: Record<number, string> = {
+const TILE_TYPE_BY_CELL: Record<number, string> = {
   30.5: 'GridSmith',
   50: 'OpenForge',
 };
 
 let initialized = false;
 
-export function initAnalytics(): void {
+function analyticsConsentGranted(): boolean {
+  return getStoredConsent()?.analytics === true;
+}
+
+function ensureDataLayer(): void {
   if (initialized || typeof window === 'undefined') {
     return;
   }
@@ -37,7 +43,8 @@ function sanitizeEventParams(
 
 function pushDataLayerEvent(eventName: string, params: Record<string, AnalyticsValue>): void {
   if (typeof window === 'undefined') return;
-  initAnalytics();
+  if (!analyticsConsentGranted()) return;
+  ensureDataLayer();
   window.dataLayer?.push({
     event: eventName,
     ...params,
@@ -60,17 +67,17 @@ export function trackPageView(path: string): void {
 export function getGridAnalyticsParams(vars: { [name: string]: any } | undefined): {
   rows: number;
   columns: number;
-  title_type: string;
+  tile_type: string;
 } {
   const rows = typeof vars?.rows === 'number' ? vars.rows : DEFAULT_ROWS;
   const columns = typeof vars?.cols === 'number' ? vars.cols : DEFAULT_COLUMNS;
   const cellSize = typeof vars?.cell === 'number' ? vars.cell : DEFAULT_CELL_SIZE;
-  const titleType = TITLE_TYPE_BY_CELL[cellSize] ?? 'Custom';
+  const tileType = TILE_TYPE_BY_CELL[cellSize] ?? 'Custom';
 
   return {
     rows,
     columns,
-    title_type: titleType,
+    tile_type: tileType,
   };
 }
 
