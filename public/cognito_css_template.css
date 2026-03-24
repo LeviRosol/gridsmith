@@ -1,0 +1,132 @@
+/* GridSmith Cognito Hosted UI theme (allowed selector set only) */
+
+.logo-customizable {
+  max-width: 220px;
+  max-height: 72px;
+}
+
+.banner-customizable {
+  padding: 22px 20px;
+  background: rgba(17, 24, 39, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.label-customizable {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.textDescription-customizable {
+  padding-top: 8px;
+  padding-bottom: 12px;
+  display: block;
+  font-size: 14px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.idpDescription-customizable {
+  padding-top: 8px;
+  padding-bottom: 12px;
+  display: block;
+  font-size: 14px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.legalText-customizable {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
+}
+
+.submitButton-customizable {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 14px 0 10px 0;
+  height: 42px;
+  width: 100%;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  color: #111827;
+  background-color: #fbbf24;
+}
+
+.submitButton-customizable:hover {
+  color: #111827;
+  background-color: #f59e0b;
+}
+
+.errorMessage-customizable {
+  padding: 10px 12px;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(127, 29, 29, 0.22);
+  border: 1px solid rgba(248, 113, 113, 0.65);
+  border-radius: 6px;
+  color: #fecaca;
+}
+
+.inputField-customizable {
+  width: 100%;
+  height: 42px;
+  box-sizing: border-box;
+  color: #f9fafb;
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  padding: 0 12px;
+}
+
+.inputField-customizable:focus {
+  border-color: #fbbf24;
+  outline: 0;
+}
+
+.idpButton-customizable {
+  height: 42px;
+  width: 100%;
+  text-align: center;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  color: #111827;
+  background-color: #fbbf24;
+}
+
+.idpButton-customizable:hover {
+  color: #111827;
+  background-color: #f59e0b;
+}
+
+.socialButton-customizable {
+  border-radius: 6px;
+  height: 42px;
+  margin-bottom: 12px;
+  padding: 0 10px;
+  text-align: left;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(17, 24, 39, 0.86);
+  color: #f9fafb;
+}
+
+.redirect-customizable {
+  text-align: center;
+}
+
+.passwordCheck-notValid-customizable {
+  color: #fca5a5;
+}
+
+.passwordCheck-valid-customizable {
+  color: #86efac;
+}
+
+.background-customizable {
+  background: radial-gradient(circle at top, #1f2937 0%, #111827 45%, #0b1020 100%);
+  min-height: 100vh;
+  color: rgba(255, 255, 255, 0.9);
+}
