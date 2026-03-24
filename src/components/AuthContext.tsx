@@ -438,7 +438,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         `https://${domainPrefix}.auth.${region}.amazoncognito.com/oauth2/authorize` +
         `?client_id=${encodeURIComponent(clientId)}` +
         `&response_type=code` +
-        `&scope=${encodeURIComponent('openid email profile offline_access')}` +
+        `&scope=${encodeURIComponent('openid email profile')}` +
         `&redirect_uri=${encodeURIComponent(redirectUri)}` +
         `&state=${encodeURIComponent(state)}` +
         `&code_challenge=${encodeURIComponent(codeChallenge)}` +
