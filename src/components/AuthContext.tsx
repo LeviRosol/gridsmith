@@ -21,12 +21,15 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const STORAGE_KEYS = {
   idToken: 'gridsmith.cognito.idToken',
   accessToken: 'gridsmith.cognito.accessToken',
+  refreshToken: 'gridsmith.cognito.refreshToken',
 };
 
 const SESSION_KEYS = {
   pkceVerifier: 'gridsmith.cognito.pkceVerifier',
   redirectUri: 'gridsmith.cognito.redirectUri',
 };
+const TOKEN_REFRESH_SKEW_MS = 2 * 60 * 1000;
+const TOKEN_REFRESH_MIN_DELAY_MS = 5 * 1000;
 
 function base64UrlDecode(input: string): string {
   const base64 = input.replace(/-/g, '+').replace(/_/g, '/');
@@ -124,7 +127,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { nextAccess, nextId };
     };
 
-    const applyTokens = (nextId: string | null, nextAccess: string | null) => {
+    const applyTokens = (
+      nextId: string | null,
+      nextAccess: string | null,
+      nextRefresh?: string | null,
+    ) => {
       if (nextId && !isExpiredJwt(nextId)) {
         localStorage.setItem(STORAGE_KEYS.idToken, nextId);
         setIdToken(nextId);
@@ -139,6 +146,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         localStorage.removeItem(STORAGE_KEYS.accessToken);
         setAccessToken(null);
+      }
+
+      if (nextRefresh !== undefined) {
+        if (nextRefresh) {
+          localStorage.setItem(STORAGE_KEYS.refreshToken, nextRefresh);
+        } else {
+          localStorage.removeItem(STORAGE_KEYS.refreshToken);
+        }
       }
     };
 
@@ -183,7 +198,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const nextId = json?.id_token ?? null;
       const nextAccess = json?.access_token ?? null;
-      applyTokens(nextId, nextAccess);
+      const nextRefresh = json?.refresh_token ?? null;
+      applyTokens(nextId, nextAccess, nextRefresh);
+    };
+
+    const refreshTokens = async (refreshToken: string) => {
+      const domainPrefix = getCognitoDomainPrefix(process.env.COGNITO_DOMAIN as string | undefined);
+      const region = process.env.COGNITO_REGION as string | undefined;
+      const clientId = process.env.COGNITO_CLIENT_ID as string | undefined;
+
+      if (!domainPrefix || !region || !clientId) {
+        throw new Error('Cognito not configured (missing COGNITO_DOMAIN/COGNITO_REGION/COGNITO_CLIENT_ID).');
+      }
+
+      const tokenUrl = `https://${domainPrefix}.auth.${region}.amazoncognito.com/oauth2/token`;
+      const body = new URLSearchParams({
+        grant_type: 'refresh_token',
+        client_id: clientId,
+        refresh_token: refreshToken,
+      });
+
+      const res = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body,
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(`Token refresh failed: ${json?.error ?? res.status}`);
+      }
+
+      const nextId = json?.id_token ?? null;
+      const nextAccess = json?.access_token ?? null;
+      // Cognito typically does not rotate refresh tokens on refresh, so keep the existing token unless present.
+      const nextRefresh = json?.refresh_token ?? refreshToken;
+      applyTokens(nextId, nextAccess, nextRefresh);
     };
 
     const init = async () => {
@@ -209,13 +259,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else {
             const storedId = localStorage.getItem(STORAGE_KEYS.idToken);
             const storedAccess = localStorage.getItem(STORAGE_KEYS.accessToken);
-            applyTokens(storedId, storedAccess);
+            const storedRefresh = localStorage.getItem(STORAGE_KEYS.refreshToken);
+
+            if (storedRefresh && (isExpiredJwt(storedId ?? undefined) || isExpiredJwt(storedAccess ?? undefined))) {
+              await refreshTokens(storedRefresh);
+            } else {
+              applyTokens(storedId, storedAccess);
+            }
           }
         }
       } catch (e) {
         console.warn('Auth init failed:', e);
         localStorage.removeItem(STORAGE_KEYS.idToken);
         localStorage.removeItem(STORAGE_KEYS.accessToken);
+        localStorage.removeItem(STORAGE_KEYS.refreshToken);
         setIdToken(null);
         setAccessToken(null);
       }
@@ -266,6 +323,94 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, [idToken]);
 
+  useEffect(() => {
+    if (!idToken) return;
+    const payload = decodeJwt(idToken);
+    const exp = payload?.exp;
+    if (typeof exp !== 'number') return;
+
+    const refreshToken = localStorage.getItem(STORAGE_KEYS.refreshToken);
+    if (!refreshToken) return;
+
+    const expiresAtMs = exp * 1000;
+    const delayMs = Math.max(
+      TOKEN_REFRESH_MIN_DELAY_MS,
+      expiresAtMs - Date.now() - TOKEN_REFRESH_SKEW_MS,
+    );
+
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const domainPrefix = getCognitoDomainPrefix(process.env.COGNITO_DOMAIN as string | undefined);
+          const region = process.env.COGNITO_REGION as string | undefined;
+          const clientId = process.env.COGNITO_CLIENT_ID as string | undefined;
+
+          if (!domainPrefix || !region || !clientId) {
+            throw new Error(
+              'Cognito not configured (missing COGNITO_DOMAIN/COGNITO_REGION/COGNITO_CLIENT_ID).',
+            );
+          }
+
+          const tokenUrl = `https://${domainPrefix}.auth.${region}.amazoncognito.com/oauth2/token`;
+          const body = new URLSearchParams({
+            grant_type: 'refresh_token',
+            client_id: clientId,
+            refresh_token: refreshToken,
+          });
+
+          const res = await fetch(tokenUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body,
+          });
+          const json = await res.json();
+          if (!res.ok) {
+            throw new Error(`Token refresh failed: ${json?.error ?? res.status}`);
+          }
+
+          const nextId = json?.id_token ?? null;
+          const nextAccess = json?.access_token ?? null;
+          const nextRefresh = json?.refresh_token ?? refreshToken;
+
+          if (nextId && !isExpiredJwt(nextId)) {
+            localStorage.setItem(STORAGE_KEYS.idToken, nextId);
+            setIdToken(nextId);
+          } else {
+            localStorage.removeItem(STORAGE_KEYS.idToken);
+            setIdToken(null);
+          }
+
+          if (nextAccess && !isExpiredJwt(nextAccess)) {
+            localStorage.setItem(STORAGE_KEYS.accessToken, nextAccess);
+            setAccessToken(nextAccess);
+          } else {
+            localStorage.removeItem(STORAGE_KEYS.accessToken);
+            setAccessToken(null);
+          }
+
+          if (nextRefresh) {
+            localStorage.setItem(STORAGE_KEYS.refreshToken, nextRefresh);
+          } else {
+            localStorage.removeItem(STORAGE_KEYS.refreshToken);
+          }
+        } catch (e) {
+          console.warn('Proactive token refresh failed:', e);
+          localStorage.removeItem(STORAGE_KEYS.idToken);
+          localStorage.removeItem(STORAGE_KEYS.accessToken);
+          localStorage.removeItem(STORAGE_KEYS.refreshToken);
+          setIdToken(null);
+          setAccessToken(null);
+          setIsAdmin(false);
+          setUser(undefined);
+        }
+      })();
+    }, delayMs);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [idToken]);
+
   const login = () => {
     void (async () => {
       const domainPrefix = getCognitoDomainPrefix(process.env.COGNITO_DOMAIN as string | undefined);
@@ -293,7 +438,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         `https://${domainPrefix}.auth.${region}.amazoncognito.com/oauth2/authorize` +
         `?client_id=${encodeURIComponent(clientId)}` +
         `&response_type=code` +
-        `&scope=${encodeURIComponent('openid email profile')}` +
+        `&scope=${encodeURIComponent('openid email profile offline_access')}` +
         `&redirect_uri=${encodeURIComponent(redirectUri)}` +
         `&state=${encodeURIComponent(state)}` +
         `&code_challenge=${encodeURIComponent(codeChallenge)}` +
@@ -310,6 +455,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     localStorage.removeItem(STORAGE_KEYS.idToken);
     localStorage.removeItem(STORAGE_KEYS.accessToken);
+    localStorage.removeItem(STORAGE_KEYS.refreshToken);
     setIdToken(null);
     setAccessToken(null);
     setIsAdmin(false);

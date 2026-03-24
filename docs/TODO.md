@@ -52,7 +52,7 @@ Based on `docs/gridsmith-context.md`.
 - [x] **App Shell / PWA naming:**
   - [x] Update page/app title to "GridSmith".
   - [x] Update PWA install name/short name in `manifest.json`.
-  - [ ] Update tagline placement/copy across pages: "Build Your World. One Tile at a Time."
+  - [x] Update tagline placement/copy across pages: "Build Your World. One Tile at a Time."
 - [ ] **Cleanup:**
   - [x] Remove unused axes feature (toggle, overlay, and assets).
   - [ ] Remove remaining "Playground" legacy content where it no longer serves GridSmith.
@@ -75,21 +75,34 @@ Based on `docs/gridsmith-context.md`.
 ## 7. Auth & Production Readiness
 - [x] Cognito + Google sign-in working in production.
 - [x] Hide account name fallback unless `given_name` exists.
-- [ ] Replace placeholder legal text with finalized Terms of Service and Privacy Policy.
+- [x] Replace placeholder legal text with finalized Terms of Service and Privacy Policy.
+- [x] Add refresh-token based auth session renewal:
+  - [x] Request `offline_access` in Cognito authorize flow.
+  - [x] Persist refresh token and renew id/access tokens at app init when needed.
+  - [x] Proactively refresh before token expiry for long-lived open tabs.
 - [ ] Add a short deployment runbook (Cognito callback/sign-out URL matching, Vercel env vars, DNS notes).
 
 ## 8. Future Work / Nice-to-Haves
 - [ ] Make the code editor accessible only to admin/advanced roles (hide for normal users).
 - [ ] Re-enable and design the "Advanced settings" section in the parameter panel.
-- [ ] Flesh out About page copy and visuals.
-- [ ] Flesh out Get Tiles page content and CTAs for future tile packs/tools.
+- [x] Flesh out About page copy and visuals.
+- [x] Flesh out Get Tiles page content and CTAs for future tile packs/tools.
 - [ ] Add additional GridSmith-specific presets and refine parameter ranges and labels.
 - [ ] Consider PWA cache-busting/versioning strategy to reduce stale title/icon/install prompt artifacts after deploy.
+- [ ] Add optional in-app typography presets/font toggle only if needed for design iteration.
 
 ## 9. Analytics & Observability
 - [x] Add Google Analytics across the full site:
   - [x] Track page views on all routes.
   - [x] Track custom events:
-    - [x] `stl_rendered` with params `rows`, `columns`, and `title_type`.
-    - [x] `stl_downloaded` with params `rows`, `columns`, and `title_type`.
-  - [x] Use a human-readable enum for `title_type` (e.g., `GridSmith`, `OpenForge`) instead of numeric values.
+    - [x] `stl_rendered` with params `rows`, `columns`, and `tile_type`.
+    - [x] `stl_downloaded` with params `rows`, `columns`, and `tile_type`.
+  - [x] Use a human-readable enum for `tile_type` (e.g., `GridSmith`, `OpenForge`) instead of numeric values.
+- [x] Add consent-gated analytics loading:
+  - [x] Show GDPR/CCPA cookie banner with accept/essential-only actions.
+  - [x] Defer GTM script load until analytics consent is granted.
+  - [x] Add footer "Cookie settings" entry point to reopen consent controls.
+
+## 10. Hosted UI & External Styling Assets
+- [x] Add Cognito Hosted UI CSS template (`public/cognito_css_template.css`) for external upload/storage.
+- [ ] Validate final Cognito Hosted UI CSS after upload in all auth screens (sign-in, sign-up, forgot password).
