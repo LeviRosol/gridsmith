@@ -9,6 +9,7 @@ import { Badge } from 'primereact/badge';
 import { Toast } from 'primereact/toast';
 import HelpMenu from './HelpMenu.tsx';
 import ExportButton from './ExportButton.tsx';
+import { isTileBuilderProTierResolution } from '../utils.ts';
 import SettingsMenu from './SettingsMenu.tsx';
 import MultimaterialColorsDialog from './MultimaterialColorsDialog.tsx';
 
@@ -38,6 +39,14 @@ export default function Footer({style}: {style?: CSSProperties}) {
 
   const maxMarkerSeverity = markers.length == 0 ? undefined : markers.map(m => m.severity).reduce((a, b) => Math.max(a, b));
 
+  const vars = state.params.vars ?? {};
+  const tileBuilderNothingToRender =
+    state.params.activePath === '/tile_builder.scad' &&
+    vars.use_floor !== true &&
+    vars.use_north_wall !== true;
+  const tileBuilderProTierLocked =
+    state.params.activePath === '/tile_builder.scad' && isTileBuilderProTierResolution(vars.resolution);
+
   return <>
     <ProgressBar mode="indeterminate"
                 style={{
@@ -54,7 +63,7 @@ export default function Footer({style}: {style?: CSSProperties}) {
     }}>
       {state.output && !state.output.isPreview
         ? (
-            <ExportButton />
+            !tileBuilderProTierLocked ? <ExportButton /> : null
         ) : state.previewing ? (
           <Button
             icon="pi pi-bolt"
@@ -63,13 +72,15 @@ export default function Footer({style}: {style?: CSSProperties}) {
             label="Previewing..."
             />
         ) : state.output && state.output.isPreview ? (
-            <Button
-              icon="pi pi-bolt"
-              onClick={() => model.render({isPreview: false, now: true})}
-              className="p-button-sm"
-              disabled={state.rendering}
-              label={state.rendering ? 'Rendering...' : 'Render'}
+            !tileBuilderProTierLocked ? (
+              <Button
+                icon="pi pi-bolt"
+                onClick={() => model.render({isPreview: false, now: true})}
+                className="p-button-sm"
+                disabled={state.rendering || tileBuilderNothingToRender}
+                label={state.rendering ? 'Rendering...' : 'Render'}
               />
+            ) : null
         ) : undefined
       }
       <MultimaterialColorsDialog />

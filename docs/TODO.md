@@ -106,3 +106,12 @@ Based on `docs/gridsmith-context.md`.
 ## 10. Hosted UI & External Styling Assets
 - [x] Add Cognito Hosted UI CSS template (`public/cognito_css_template.css`) for external upload/storage.
 - [x] Validate final Cognito Hosted UI CSS after upload in all auth screens (sign-in, sign-up, forgot password).
+
+## 11. Tile builder (`/tile-builder`)
+- [x] **Route & shell:** `/tile-builder` behind auth; header Build uses SplitButton (Baseplate primary, Tile builder in menu); mobile menu matches; Cognito default redirect when login starts on tile-builder path.
+- [x] **Assets & pipeline:** `public/tile_stls/manifest.json` + STL assets; main thread install + `sourcesWithTileStls` so worker FS receives tile meshes; `ensureParentDirs` in worker for nested writes.
+- [x] **SCAD:** `tile_builder.scad` assembler with `wall_profile` (`none` / `flat` / `curved`), per-side `use_*_wall` and `*_wall_type`, flat STL names `wall`/`door` vs curved `curved_wall`/`curved_door`, resolution-driven `tile_file()`.
+- [x] **UI (`TileBuilderPanel`):** accordion Core (default open) / Floor / Walls; resolution labels Low / Med / High (64 / 128 / 256); flat walls: per-side dropdown (None / Wall / Door) drives toggles; curved: north type only; profile switch normalizes flat ↔ curved types and clears side toggles when entering curved.
+- [x] **Free tier (Med/High):** dialog explains Pro for Medium & High resolution; selection stays for preview; footer **Render** and **Download** (export) hidden at 128/256; F6/F7 blocked for tile builder at those resolutions.
+- [ ] **Pro gating (future):** replace UI-only lock with real membership check (Cognito group, entitlement API, or similar) before allowing final render + STL export at Med/High.
+- [ ] **Optional:** tile-builder-specific analytics (`stl_previewed` / `stl_downloaded` with `resolution`, `wall_profile`, etc.) and download filename parity.

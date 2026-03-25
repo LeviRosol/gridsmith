@@ -14,8 +14,10 @@ import { exportGlb } from "../io/export_glb.ts";
 import { export3MF } from "../io/export_3mf.ts";
 import chroma from "chroma-js";
 import { getGridAnalyticsParams, trackEvent } from "../analytics.ts";
+import { sourcesWithTileStls } from "../tile-builder/tile-stl-sources.ts";
 
 const githubRx = /^https:\/\/github.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/;
+const TILE_BUILDER_SCAD_PATH = '/tile_builder.scad';
 
 export class Model {
   constructor(private fs: FS, public state: State, private setStateCallback?: (state: State) => void, 
@@ -56,6 +58,7 @@ export class Model {
   }
   setVar(name: string, value: any) {
     this.mutate(s => s.params.vars = {...s.params.vars ?? {}, [name]: value});
+    if (this.state.params.activePath === TILE_BUILDER_SCAD_PATH) return;
     this.render({isPreview: true, now: false});
   }
 
@@ -181,16 +184,19 @@ export class Model {
       if (this.state.params.activePath.endsWith('.scad')) {
         this.checkSyntax();
       }
-      this.render({isPreview: true, now: false});
+      if (this.state.params.activePath !== TILE_BUILDER_SCAD_PATH) {
+        this.render({isPreview: true, now: false});
+      }
     }
   }
 
   async checkSyntax() {
     this.mutate(s => s.checkingSyntax = true);
     try {
+      const sources = await sourcesWithTileStls(this.state.params.sources);
       const checkerRun = await checkSyntax({
         activePath: this.state.params.activePath,
-        sources: this.state.params.sources,
+        sources,
       })({now: false});
       this.mutate(s => {
         s.lastCheckerRun = checkerRun;
@@ -229,6 +235,30 @@ export class Model {
     return `${formatPart(rows)}x${formatPart(cols)}_${formatPart(cell)}_baseplate.stl`;
   }
 
+  /** Custom download filename for STL on tile builder or baseplate routes. */
+  private buildCustomStlDownloadName(): string | undefined {
+    if (this.state.params.activePath === TILE_BUILDER_SCAD_PATH) {
+      const v = this.state.params.vars ?? {};
+      const resolution = v.resolution;
+      if (resolution == null) return undefined;
+      const parts: string[] = ['gridsmith', String(resolution)];
+      if (v.use_floor === true) {
+        const ft = v.floor_type;
+        if (ft != null && String(ft) !== '') {
+          parts.push(String(ft).replace(/\s/g, '_'));
+        }
+      }
+      if (v.wall_profile !== 'none' && v.use_north_wall === true) {
+        const nt = v.north_wall_type;
+        if (nt != null && String(nt) !== '') {
+          parts.push(String(nt).replace(/\s/g, '_'));
+        }
+      }
+      return `${parts.join('-')}.stl`;
+    }
+    return this.buildBaseplateExportName();
+  }
+
   async export() {
     const exportFormat = this.state.is2D ? this.state.params.exportFormat2D : this.state.params.exportFormat3D;
     if (this.state.output) {
@@ -246,7 +276,11 @@ export class Model {
         if (glbPassThrough) {
           downloadUrl(this.state.output.displayFileURL!, this.state.output.displayFile!.name);
         } else {
-          downloadUrl(this.state.output.outFileURL, this.state.output.outFile.name);
+          const downloadName =
+            !this.state.is2D && exportFormat === 'stl'
+              ? (this.buildCustomStlDownloadName() ?? this.state.output.outFile.name)
+              : this.state.output.outFile.name;
+          downloadUrl(this.state.output.outFileURL, downloadName);
         }
         if (!this.state.is2D && exportFormat === 'stl') {
           trackEvent('stl_downloaded', getGridAnalyticsParams(this.state.params.vars));
@@ -317,7 +351,7 @@ export class Model {
           formattedOutFileSize: formatBytes(output.outFile.size),
         };
         const customName = (!this.state.is2D && exportFormat === 'stl')
-          ? this.buildBaseplateExportName()
+          ? this.buildCustomStlDownloadName()
           : undefined;
         const downloadName = customName ?? output.outFile.name;
         downloadUrl(s.export.outFileURL, downloadName);
@@ -361,6 +395,24 @@ export class Model {
     // console.log(JSON.stringify(this.state, null, 2));
     mountArchives ??= true;
     retryInOtherDim ??= true;
+
+    if (!isPreview) {
+      const v = this.state.params.vars ?? {};
+      if (this.state.params.activePath === TILE_BUILDER_SCAD_PATH) {
+        const wp = v.wall_profile;
+        const wallsAllowed = wp != null && wp !== 'none';
+        const anyWall =
+          wallsAllowed &&
+          (v.use_north_wall === true ||
+            v.use_east_wall === true ||
+            v.use_south_wall === true ||
+            v.use_west_wall === true);
+        if (v.use_floor !== true && !anyWall) {
+          return;
+        }
+      }
+    }
+
     const setRendering = (s: State, value: boolean) => {
       if (isPreview) {
         s.previewing = value;
@@ -398,6 +450,8 @@ export class Model {
         ...sources.filter(s => s.path === resourcePath),
       ];
     }
+
+    sources = await sourcesWithTileStls(sources);
 
     const renderArgs: RenderArgs = {
       mountArchives,

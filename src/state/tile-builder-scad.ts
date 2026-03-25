@@ -5,9 +5,14 @@ export default `
 // <tile_type>_<resolution>.stl
 
 // -----------------------------
+// Tile set (reserved; not used in assembly yet)
+// -----------------------------
+tile_set = "tavern";
+
+// -----------------------------
 // Resolution
 // -----------------------------
-resolution = 256;
+resolution = 64;
 
 // -----------------------------
 // Tile size
@@ -27,11 +32,14 @@ use_floor = true;
 floor_type = "floor";
 floor_rotation = 0;
 
+// none | flat | curved (UI; walls only assemble when not "none")
+wall_profile = "none";
+
 // -----------------------------
 // Wall positions
 // -----------------------------
-use_north_wall = true;
-north_wall_type = "curved_wall";
+use_north_wall = false;
+north_wall_type = "wall";
 north_wall_rotation = 0;
 
 use_east_wall = false;
@@ -88,28 +96,28 @@ module terrain_tile_from_stls() {
                 floor_rotation
             );
 
-        if (use_north_wall)
+        if (wall_profile != "none" && use_north_wall)
             place_stl(
                 tile_file(north_wall_type),
                 wall_offset("north"),
                 side_rotation("north") + north_wall_rotation
             );
 
-        if (use_east_wall)
+        if (wall_profile != "none" && use_east_wall)
             place_stl(
                 tile_file(east_wall_type),
                 wall_offset("east"),
                 side_rotation("east") + east_wall_rotation
             );
 
-        if (use_south_wall)
+        if (wall_profile != "none" && use_south_wall)
             place_stl(
                 tile_file(south_wall_type),
                 wall_offset("south"),
                 side_rotation("south") + south_wall_rotation
             );
 
-        if (use_west_wall)
+        if (wall_profile != "none" && use_west_wall)
             place_stl(
                 tile_file(west_wall_type),
                 wall_offset("west"),

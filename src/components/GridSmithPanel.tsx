@@ -234,7 +234,7 @@ export default function GridSmithPanel({ className, style }: { className?: strin
 
   return (
     <div
-      className={className}
+      className={`params-slider params-slider-compact ${className ?? ''}`}
       style={{
         display: 'flex',
         flexDirection: 'column',

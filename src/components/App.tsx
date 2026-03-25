@@ -26,6 +26,7 @@ import { AuthProvider, useAuth } from './AuthContext';
 import { ConsentProvider } from './ConsentProvider';
 import { trackPageView } from '../analytics';
 import { installTileStls } from '../tile-builder/install-tile-stls.ts';
+import { isTileBuilderProTierResolution } from '../utils.ts';
 
 const THEME_MODE_STORAGE_KEY = 'gridsmith.theme.darkMode';
 
@@ -143,6 +144,21 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
       }
       if (cancelled) return;
       model.init();
+      if (cancelled) return;
+      if (pathname === '/tile-builder') {
+        const v = model.state.params.vars ?? {};
+        const wallsAllowed = v.wall_profile != null && v.wall_profile !== 'none';
+        const anyWall =
+          wallsAllowed &&
+          (v.use_north_wall === true ||
+            v.use_east_wall === true ||
+            v.use_south_wall === true ||
+            v.use_west_wall === true);
+        const canPreview = v.use_floor === true || anyWall;
+        if (canPreview) {
+          void model.render({ isPreview: true, now: true });
+        }
+      }
     })();
     return () => {
       cancelled = true;
@@ -183,9 +199,21 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
         model.render({isPreview: true, now: true})
       } else if (event.key === 'F6') {
         event.preventDefault();
+        if (
+          pathname === '/tile-builder' &&
+          isTileBuilderProTierResolution(model.state.params.vars?.resolution)
+        ) {
+          return;
+        }
         model.render({isPreview: false, now: true})
       } else if (event.key === 'F7') {
         event.preventDefault();
+        if (
+          pathname === '/tile-builder' &&
+          isTileBuilderProTierResolution(model.state.params.vars?.resolution)
+        ) {
+          return;
+        }
         model.export();
       }
     };
