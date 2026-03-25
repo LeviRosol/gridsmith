@@ -32,7 +32,7 @@ export default function SettingsMenu({className, style}: {className?: string, st
       s.view.layout = {
         mode: 'multi',
         editor: false,
-        viewer: true,
+        baseplate: true,
         customizer: true,
         showEditor: false,
       } as any;
@@ -60,7 +60,7 @@ export default function SettingsMenu({className, style}: {className?: string, st
               s.view.layout = {
                 mode: 'multi',
                 editor: false,
-                viewer: true,
+                baseplate: true,
                 customizer: true,
                 showEditor: false,
               } as any;

@@ -58,17 +58,17 @@ Based on `docs/gridsmith-context.md`.
   - [ ] Remove remaining "Playground" legacy content where it no longer serves GridSmith.
 
 ## 5. Navigation & Pages
-- [x] Implement pathname-based routing for `/`, `/viewer`, `/about`, `/tiles`, `/profile`, `/tos`, `/privacy`.
+- [x] Implement pathname-based routing for `/`, `/baseplate`, `/about`, `/tiles`, `/profile`, `/tos`, `/privacy`.
 - [x] Create stub pages for Home, About, Get Tiles, Profile, Terms of Service, and Privacy Policy.
 - [x] Add a global site header and footer that appear on all routes.
 - [x] Add footer navigation links for all routes.
-- [x] Add a prominent "Build" button in the header that routes to `/viewer`.
+- [x] Add a prominent "Build" button in the header that routes to `/baseplate`.
 
 ## 6. Theming, Layout, and Presets
 - [x] Implement dark/light mode toggle in the Account menu.
 - [x] Dynamically load PrimeReact Lara Amber themes (dark/light) via `<link>` tag.
 - [x] Implement a left slide-out customizer panel with a persistent hamburger/tab toggle.
-- [x] Fix initial mobile `/viewer` load so params panel/tab is discoverable immediately.
+- [x] Fix initial mobile `/baseplate` load so params panel/tab is discoverable immediately.
 - [x] Add responsive mobile hamburger navigation for header links/actions.
 - [x] Add GridSmith baseplate presets (2x2, 4x4, 6x6, Hallway 2x6).
 
@@ -105,4 +105,4 @@ Based on `docs/gridsmith-context.md`.
 
 ## 10. Hosted UI & External Styling Assets
 - [x] Add Cognito Hosted UI CSS template (`public/cognito_css_template.css`) for external upload/storage.
-- [ ] Validate final Cognito Hosted UI CSS after upload in all auth screens (sign-in, sign-up, forgot password).
+- [x] Validate final Cognito Hosted UI CSS after upload in all auth screens (sign-in, sign-up, forgot password).

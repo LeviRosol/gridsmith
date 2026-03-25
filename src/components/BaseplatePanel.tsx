@@ -50,7 +50,7 @@ function getClosestPredefinedOrbitIndex(theta: number, phi: number): [number, nu
 
 const originalOrbit = (([name, theta, phi]) => `${theta}rad ${phi}rad auto`)(PREDEFINED_ORBITS[0]);
 
-export default function ViewerPanel({className, style}: {className?: string, style?: CSSProperties}) {
+export default function BaseplatePanel({className, style}: {className?: string, style?: CSSProperties}) {
   const model = useContext(ModelContext);
   if (!model) throw new Error('No model');
 
@@ -138,7 +138,7 @@ export default function ViewerPanel({className, style}: {className?: string, sty
 
       <model-viewer
         orientation="0deg -90deg 0deg"
-        class="main-viewer"
+        class="main-baseplate-model"
         src={modelUri}
         style={{
           transition: 'opacity 0.5s',

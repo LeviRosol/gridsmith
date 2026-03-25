@@ -4,7 +4,7 @@ import React, { CSSProperties, useEffect, useState, useRef } from 'react';
 import {MultiLayoutComponentId, State, StatePersister} from '../state/app-state'
 import { Model } from '../state/model';
 import EditorPanel from './EditorPanel';
-import ViewerPanel from './ViewerPanel';
+import BaseplatePanel from './BaseplatePanel';
 import Footer from './Footer';
 import { ModelContext, FSContext } from './contexts';
 import { ConfirmDialog } from 'primereact/confirmdialog';
@@ -56,8 +56,14 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   const auth = useAuth();
 
   // Simple pathname-based routing
-  const rawPath = window.location.pathname;
-  const normalizedPath = rawPath.replace(/\/+$/, '') || '/';
+  let rawPath = window.location.pathname;
+  let normalizedPath = rawPath.replace(/\/+$/, '') || '/';
+  if (normalizedPath === '/viewer') {
+    const next = '/baseplate' + window.location.search + window.location.hash;
+    window.history.replaceState(window.history.state ?? {}, '', next);
+    rawPath = '/baseplate';
+    normalizedPath = '/baseplate';
+  }
   const pathname = normalizedPath === '' ? '/' : normalizedPath;
 
   const accountItems: MenuItem[] = [
@@ -96,7 +102,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
       label: 'Build',
       icon: 'pi pi-bolt',
       command: () => {
-        window.location.pathname = '/viewer';
+        window.location.pathname = '/baseplate';
       },
     },
     { label: 'Get Tiles', command: () => (window.location.pathname = '/tiles') },
@@ -115,7 +121,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   }, []);
 
   useEffect(() => {
-    if (pathname !== '/viewer') return;
+    if (pathname !== '/baseplate') return;
     if (auth.loading) return;
     if (!auth.isSignedIn) return;
     model.init();
@@ -124,11 +130,11 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   }, [pathname, auth.loading, auth.isSignedIn]);
 
   useEffect(() => {
-    if (pathname !== '/viewer') return;
+    if (pathname !== '/baseplate') return;
     if (state.view.layout.mode !== 'single') return;
     if (!window.matchMedia('(max-width: 767px)').matches) return;
 
-    // On initial mobile loads, force the viewer shell into the sidebar-capable layout
+    // On initial mobile loads, force the baseplate shell into the sidebar-capable layout
     // so params remain discoverable with the same slide-tab behavior as resized desktop.
     setState((prev) => ({
       ...prev,
@@ -137,7 +143,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
         layout: {
           mode: 'multi',
           editor: false,
-          viewer: true,
+          baseplate: true,
           customizer: true,
           showEditor: false,
         } as any,
@@ -148,7 +154,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (pathname !== '/viewer') return;
+      if (pathname !== '/baseplate') return;
       if (auth.loading || !auth.isSignedIn) return;
       if (event.key === 'F5') {
         event.preventDefault();
@@ -212,17 +218,17 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   const zIndexOfPanelsDependingOnFocus = {
     editor: {
       editor: 3,
-      viewer: 1,
+      baseplate: 1,
       customizer: 0,
     },
-    viewer: {
+    baseplate: {
       editor: 2,
-      viewer: 3,
+      baseplate: 3,
       customizer: 1,
     },
     customizer: {
       editor: 0,
-      viewer: 1,
+      baseplate: 1,
       customizer: 3,
     }
   }
@@ -262,7 +268,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
             type="button"
             label="Build"
             icon="pi pi-bolt"
-            onClick={() => (window.location.pathname = '/viewer')}
+            onClick={() => (window.location.pathname = '/baseplate')}
             className="app-header-link-button app-header-build-button"
             style={{ paddingInline: '0.75rem' }}
           />
@@ -297,7 +303,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     </header>
   );
 
-  if (pathname === '/viewer') {
+  if (pathname === '/baseplate') {
     if (auth.loading) {
       return (
         <div className="flex flex-column" style={{ flex: 1 }}>
@@ -337,7 +343,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
           >
             <h1 style={{ marginBottom: '0.75rem' }}>Sign in required</h1>
             <p style={{ maxWidth: 640, opacity: 0.85, marginBottom: '1rem' }}>
-              Please sign in to access the GridSmith viewer and export tools.
+              Please sign in to access the GridSmith baseplate builder and export tools.
             </p>
             <Button
               type="button"
@@ -353,8 +359,8 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     }
   }
 
-  // Non-viewer routes render lightweight pages without mounting the heavy viewer/editor shell.
-  if (pathname !== '/viewer') {
+  // Non-baseplate routes render lightweight pages without mounting the heavy baseplate/editor shell.
+  if (pathname !== '/baseplate') {
     let page: JSX.Element;
     if (pathname === '/') {
       page = <HomePage />;
@@ -450,10 +456,10 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
                       </div>
                     </div>
 
-                    <ViewerPanel style={{ flex: 1 }} />
+                    <BaseplatePanel style={{ flex: 1 }} />
                   </div>
                 ) : (
-                  <ViewerPanel style={{ flex: 1 }} />
+                  <BaseplatePanel style={{ flex: 1 }} />
                 )}
               </>
             ) : (
@@ -461,8 +467,8 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
                 {layout.mode === 'single' && (layout as any).focus === 'customizer' && (
                   <GridSmithPanel className="absolute-fill" style={getPanelStyle('customizer')} />
                 )}
-                {layout.mode === 'single' && (layout as any).focus === 'viewer' && (
-                  <ViewerPanel className="absolute-fill" style={getPanelStyle('viewer')} />
+                {layout.mode === 'single' && (layout as any).focus === 'baseplate' && (
+                  <BaseplatePanel className="absolute-fill" style={getPanelStyle('baseplate')} />
                 )}
                 {layout.mode === 'single' && (layout as any).focus === 'editor' && (
                   <EditorPanel className="absolute-fill" style={getPanelStyle('editor')} />

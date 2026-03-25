@@ -56,7 +56,7 @@ export function createInitialState(state: State | null, source?: {content?: stri
         layout: {
           mode: 'multi',
           editor: false,
-          viewer: true,
+          baseplate: true,
           customizer: true,
           showEditor: false,
         } as any,
@@ -72,13 +72,13 @@ export function createInitialState(state: State | null, source?: {content?: stri
       initialState.view.layout = {
         mode,
         editor: true,
-        viewer: true,
+        baseplate: true,
         customizer: initialState.view.layout.focus == 'customizer'
       }
     } else if (mode === 'single' && initialState.view.layout.mode === 'multi') {
       initialState.view.layout = {
         mode,
-        focus: initialState.view.layout.viewer ? 'viewer'
+        focus: initialState.view.layout.baseplate ? 'baseplate'
           : initialState.view.layout.customizer ? 'customizer'
           : 'editor'
       }
