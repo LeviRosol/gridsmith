@@ -85,6 +85,7 @@ const DEFAULTS: {
   south_wall_type: string;
   use_west_wall: boolean;
   west_wall_type: string;
+  curved_wall_mirror: boolean;
 } = {
   tile_set: 'tavern',
   resolution: 64,
@@ -99,6 +100,7 @@ const DEFAULTS: {
   south_wall_type: 'wall',
   use_west_wall: false,
   west_wall_type: 'wall',
+  curved_wall_mirror: false,
 };
 
 type TileVarKey = keyof typeof DEFAULTS;
@@ -133,10 +135,16 @@ export default function TileBuilderPanel({ className, style }: { className?: str
   };
 
   useEffect(() => {
-    if (wallProfile === 'curved' && !useNorthWallEnabled) {
-      setVar('use_north_wall', true);
+    if (wallProfile !== 'curved') return;
+    const mirror = getVar(vars, 'curved_wall_mirror') === true;
+    if (mirror) {
+      if (useNorthWallEnabled) setVar('use_north_wall', false);
+      if (!useEastWallEnabled) setVar('use_east_wall', true);
+    } else {
+      if (useEastWallEnabled) setVar('use_east_wall', false);
+      if (!useNorthWallEnabled) setVar('use_north_wall', true);
     }
-  }, [wallProfile, useNorthWallEnabled]);
+  }, [wallProfile, useNorthWallEnabled, useEastWallEnabled, vars.curved_wall_mirror]);
 
   return (
     <div
@@ -269,10 +277,16 @@ export default function TileBuilderPanel({ className, style }: { className?: str
                       for (const k of SIDE_WALL_TYPE_KEYS) {
                         setVar(k, tileWallTypeToCurved(vars[k]));
                       }
-                      setVar('use_east_wall', false);
                       setVar('use_south_wall', false);
                       setVar('use_west_wall', false);
-                      setVar('use_north_wall', true);
+                      const mirror = getVar(vars, 'curved_wall_mirror') === true;
+                      if (mirror) {
+                        setVar('use_north_wall', false);
+                        setVar('use_east_wall', true);
+                      } else {
+                        setVar('use_east_wall', false);
+                        setVar('use_north_wall', true);
+                      }
                     } else if (v === 'flat') {
                       for (const k of SIDE_WALL_TYPE_KEYS) {
                         setVar(k, tileWallTypeToFlat(vars[k]));
@@ -305,8 +319,44 @@ export default function TileBuilderPanel({ className, style }: { className?: str
                       <Dropdown
                         value={getVar(vars, 'north_wall_type')}
                         options={CURVED_WALL_TYPE_OPTIONS}
-                        onChange={(e) => setVar('north_wall_type', e.value)}
+                        onChange={(e) => {
+                          const val = e.value;
+                          setVar('north_wall_type', val);
+                          if (getVar(vars, 'curved_wall_mirror') === true) {
+                            setVar('east_wall_type', val);
+                          }
+                        }}
                         style={{ width: '60%' }}
+                      />
+                    </div>
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '0.5rem',
+                      }}
+                    >
+                      <label htmlFor="tile-curved-mirror" style={{ fontWeight: 600 }}>
+                        Mirror
+                      </label>
+                      <Checkbox
+                        inputId="tile-curved-mirror"
+                        checked={getVar(vars, 'curved_wall_mirror')}
+                        onChange={(e) => {
+                          const checked = e.checked ?? false;
+                          setVar('curved_wall_mirror', checked);
+                          if (checked) {
+                            setVar('use_north_wall', false);
+                            setVar('use_east_wall', true);
+                            setVar('east_wall_type', getVar(vars, 'north_wall_type'));
+                          } else {
+                            setVar('use_east_wall', false);
+                            setVar('use_north_wall', true);
+                          }
+                        }}
                       />
                     </div>
                   </div>

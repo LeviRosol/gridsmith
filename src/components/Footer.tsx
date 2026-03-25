@@ -1,7 +1,7 @@
 // Portions of this file are Copyright 2021 Google LLC, and licensed under GPL2+. See COPYING.
 
 import React, { CSSProperties, useContext, useRef } from 'react';
-import { ModelContext } from './contexts.ts';
+import { ModelContext, TileBuilderUpsellContext } from './contexts.ts';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import { Button } from 'primereact/button';
 import { ProgressBar } from 'primereact/progressbar';
@@ -17,6 +17,7 @@ import MultimaterialColorsDialog from './MultimaterialColorsDialog.tsx';
 export default function Footer({style}: {style?: CSSProperties}) {
   const model = useContext(ModelContext);
   if (!model) throw new Error('No model');
+  const tileBuilderUpsell = useContext(TileBuilderUpsellContext);
   const state = model.state;
 
   const toast = useRef<Toast>(null);
@@ -63,7 +64,7 @@ export default function Footer({style}: {style?: CSSProperties}) {
     }}>
       {state.output && !state.output.isPreview
         ? (
-            !tileBuilderProTierLocked ? <ExportButton /> : null
+            <ExportButton />
         ) : state.previewing ? (
           <Button
             icon="pi pi-bolt"
@@ -72,15 +73,19 @@ export default function Footer({style}: {style?: CSSProperties}) {
             label="Previewing..."
             />
         ) : state.output && state.output.isPreview ? (
-            !tileBuilderProTierLocked ? (
-              <Button
-                icon="pi pi-bolt"
-                onClick={() => model.render({isPreview: false, now: true})}
-                className="p-button-sm"
-                disabled={state.rendering || tileBuilderNothingToRender}
-                label={state.rendering ? 'Rendering...' : 'Render'}
-              />
-            ) : null
+            <Button
+              icon="pi pi-bolt"
+              onClick={() => {
+                if (tileBuilderProTierLocked && tileBuilderUpsell) {
+                  tileBuilderUpsell.openRenderDownloadUpsell();
+                  return;
+                }
+                model.render({isPreview: false, now: true});
+              }}
+              className="p-button-sm"
+              disabled={state.rendering || tileBuilderNothingToRender}
+              label={state.rendering ? 'Rendering...' : 'Render'}
+            />
         ) : undefined
       }
       <MultimaterialColorsDialog />

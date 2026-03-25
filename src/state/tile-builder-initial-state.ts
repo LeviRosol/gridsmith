@@ -29,6 +29,7 @@ export function createTileBuilderInitialState(): State {
         south_wall_type: 'wall',
         use_west_wall: false,
         west_wall_type: 'wall',
+        curved_wall_mirror: false,
       },
     },
     view: {

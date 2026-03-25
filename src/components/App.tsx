@@ -1,18 +1,18 @@
 // Portions of this file are Copyright 2021 Google LLC, and licensed under GPL2+. See COPYING.
 
-import React, { CSSProperties, useEffect, useState, useRef } from 'react';
+import React, { CSSProperties, useEffect, useMemo, useState, useRef } from 'react';
 import {MultiLayoutComponentId, State, StatePersister} from '../state/app-state'
 import { Model } from '../state/model';
 import EditorPanel from './EditorPanel';
 import BaseplatePanel from './BaseplatePanel';
 import Footer from './Footer';
-import { ModelContext, FSContext } from './contexts';
+import { ModelContext, FSContext, TileBuilderUpsellContext } from './contexts';
 import { ConfirmDialog } from 'primereact/confirmdialog';
 import CustomizerPanel from './CustomizerPanel';
 import GridSmithPanel from './GridSmithPanel';
 import TileBuilderPanel from './TileBuilderPanel';
 import { Button } from 'primereact/button';
-import { SplitButton } from 'primereact/splitbutton';
+import { Dialog } from 'primereact/dialog';
 import { Menu } from 'primereact/menu';
 import type { MenuItem } from 'primereact/menuitem';
 import HomePage from './HomePage';
@@ -58,6 +58,15 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   const accountMenuRef = useRef<Menu | null>(null);
   const mobileMenuRef = useRef<Menu | null>(null);
   const auth = useAuth();
+
+  const [buildChooserModalOpen, setBuildChooserModalOpen] = useState(false);
+  const [tileBuilderRenderDownloadUpsellOpen, setTileBuilderRenderDownloadUpsellOpen] = useState(false);
+  const tileBuilderUpsellApi = useMemo(
+    () => ({
+      openRenderDownloadUpsell: () => setTileBuilderRenderDownloadUpsellOpen(true),
+    }),
+    [],
+  );
 
   // Simple pathname-based routing
   let rawPath = window.location.pathname;
@@ -105,17 +114,10 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
 
   const mobileMenuItems: MenuItem[] = [
     {
-      label: 'Baseplate',
+      label: 'Build',
       icon: 'pi pi-bolt',
       command: () => {
-        window.location.pathname = '/baseplate';
-      },
-    },
-    {
-      label: 'Tile builder',
-      icon: 'pi pi-th-large',
-      command: () => {
-        window.location.pathname = '/tile-builder';
+        setBuildChooserModalOpen(true);
       },
     },
     { label: 'Get Tiles', command: () => (window.location.pathname = '/tiles') },
@@ -203,6 +205,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
           pathname === '/tile-builder' &&
           isTileBuilderProTierResolution(model.state.params.vars?.resolution)
         ) {
+          setTileBuilderRenderDownloadUpsellOpen(true);
           return;
         }
         model.render({isPreview: false, now: true})
@@ -212,6 +215,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
           pathname === '/tile-builder' &&
           isTileBuilderProTierResolution(model.state.params.vars?.resolution)
         ) {
+          setTileBuilderRenderDownloadUpsellOpen(true);
           return;
         }
         model.export();
@@ -298,69 +302,94 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   }
 
   const header = (
-    <header className="app-header">
-      <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-        <picture>
-          <source srcSet="/logo3_512.png" media="(min-width: 768px)" />
-          <source srcSet="/logo3_256.png" media="(max-width: 767px)" />
-          <img
-            src="/logo3_256.png"
-            alt="GridSmith logo"
-            style={{ height: 64, width: 'auto', borderRadius: 6, objectFit: 'contain' }}
-          />
-        </picture>
-      </a>
-      <nav className="app-header-nav">
-        <div className="app-header-nav-desktop">
-          <a href="/tiles" className="app-header-link">Get Tiles</a>
-          <a href="/about" className="app-header-link">About</a>
-          <SplitButton
-            label="Baseplate"
-            icon="pi pi-bolt"
-            onClick={() => {
-              window.location.pathname = '/baseplate';
-            }}
-            model={[
-              {
-                label: 'Tile builder',
-                icon: 'pi pi-th-large',
-                command: () => {
-                  window.location.pathname = '/tile-builder';
-                },
-              },
-            ]}
-            className="app-header-link-button app-header-build-button"
-            style={{ paddingInline: '0.75rem' }}
-          />
-          <div style={{ position: 'relative' }}>
-            <Menu model={accountItems} popup ref={accountMenuRef} />
+    <>
+      <header className="app-header">
+        <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+          <picture>
+            <source srcSet="/logo3_512.png" media="(min-width: 768px)" />
+            <source srcSet="/logo3_256.png" media="(max-width: 767px)" />
+            <img
+              src="/logo3_256.png"
+              alt="GridSmith logo"
+              style={{ height: 64, width: 'auto', borderRadius: 6, objectFit: 'contain' }}
+            />
+          </picture>
+        </a>
+        <nav className="app-header-nav">
+          <div className="app-header-nav-desktop">
+            <a href="/tiles" className="app-header-link">Get Tiles</a>
+            <a href="/about" className="app-header-link">About</a>
             <Button
               type="button"
-              label={auth.isSignedIn ? (auth.user?.givenName ? auth.user.givenName : '') : ''}
-              icon="pi pi-user"
-              onClick={(e) => accountMenuRef.current && accountMenuRef.current.toggle(e)}
+              label="Build"
+              icon="pi pi-bolt"
+              onClick={() => setBuildChooserModalOpen(true)}
+              className="app-header-link-button app-header-build-button"
+              style={{ paddingInline: '0.75rem' }}
+            />
+            <div style={{ position: 'relative' }}>
+              <Menu model={accountItems} popup ref={accountMenuRef} />
+              <Button
+                type="button"
+                label={auth.isSignedIn ? (auth.user?.givenName ? auth.user.givenName : '') : ''}
+                icon="pi pi-user"
+                onClick={(e) => accountMenuRef.current && accountMenuRef.current.toggle(e)}
+                className="app-header-link-button"
+                iconPos="left"
+                text={!auth.isSignedIn || !!auth.user?.givenName}
+                aria-label={auth.isSignedIn ? 'Account' : 'Account'}
+                style={{ paddingInline: '0.25rem' }}
+              />
+            </div>
+          </div>
+
+          <div className="app-header-nav-mobile">
+            <Menu model={mobileMenuItems} popup ref={mobileMenuRef} />
+            <Button
+              type="button"
+              icon="pi pi-bars"
+              aria-label="Menu"
+              onClick={(e) => mobileMenuRef.current && mobileMenuRef.current.toggle(e)}
               className="app-header-link-button"
-              iconPos="left"
-              text={!auth.isSignedIn || !!auth.user?.givenName}
-              aria-label={auth.isSignedIn ? 'Account' : 'Account'}
               style={{ paddingInline: '0.25rem' }}
             />
           </div>
-        </div>
+        </nav>
+      </header>
 
-        <div className="app-header-nav-mobile">
-          <Menu model={mobileMenuItems} popup ref={mobileMenuRef} />
+      <Dialog
+        header="Let's get to work!"
+        visible={buildChooserModalOpen}
+        modal
+        dismissableMask
+        closable
+        onHide={() => setBuildChooserModalOpen(false)}
+        style={{ width: 'min(96vw, 420px)' }}
+      >
+        <div className="flex flex-column gap-3">
           <Button
             type="button"
-            icon="pi pi-bars"
-            aria-label="Menu"
-            onClick={(e) => mobileMenuRef.current && mobileMenuRef.current.toggle(e)}
-            className="app-header-link-button"
-            style={{ paddingInline: '0.25rem' }}
+            label="Baseplate Builder"
+            icon="pi pi-bolt"
+            className="w-full"
+            onClick={() => {
+              setBuildChooserModalOpen(false);
+              window.location.pathname = '/baseplate';
+            }}
+          />
+          <Button
+            type="button"
+            label="Tile Builder"
+            icon="pi pi-th-large"
+            className="w-full"
+            onClick={() => {
+              setBuildChooserModalOpen(false);
+              window.location.pathname = '/tile-builder';
+            }}
           />
         </div>
-      </nav>
-    </header>
+      </Dialog>
+    </>
   );
 
   if (isBuilderShell) {
@@ -453,6 +482,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
 
   return (
     <ModelContext.Provider value={model}>
+      <TileBuilderUpsellContext.Provider value={tileBuilderUpsellApi}>
       <FSContext.Provider value={fs}>
         <div className='flex flex-column' style={{
             flex: 1,
@@ -544,8 +574,47 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
           <Footer />
           <SiteFooter />
           <ConfirmDialog />
+
+          <Dialog
+            header="Render & download"
+            visible={tileBuilderRenderDownloadUpsellOpen}
+            modal
+            dismissableMask
+            closable
+            onHide={() => setTileBuilderRenderDownloadUpsellOpen(false)}
+            style={{ width: 'min(96vw, 440px)' }}
+            footer={
+              <div className="flex flex-row gap-2 justify-content-end flex-wrap">
+                <Button
+                  type="button"
+                  label="Not Now"
+                  className="p-button-outlined"
+                  onClick={() => setTileBuilderRenderDownloadUpsellOpen(false)}
+                />
+                <Button
+                  type="button"
+                  label="Sign Me Up!"
+                  icon="pi pi-arrow-right"
+                  iconPos="right"
+                  severity="success"
+                  onClick={() => {
+                    setTileBuilderRenderDownloadUpsellOpen(false);
+                    window.location.pathname = '/tiles';
+                  }}
+                />
+              </div>
+            }
+          >
+            <p style={{ margin: 0, lineHeight: 1.55 }}>
+              Wouldn&apos;t it be nice to render and download that STL??
+            </p>
+            <p style={{ margin: '0.75rem 0 0', lineHeight: 1.55 }}>
+              Become a Pro Member to get access to Med and High resolution GridSmith tiles!
+            </p>
+          </Dialog>
         </div>
       </FSContext.Provider>
+      </TileBuilderUpsellContext.Provider>
     </ModelContext.Provider>
   );
 }

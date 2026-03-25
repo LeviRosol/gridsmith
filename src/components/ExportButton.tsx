@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
-import { ModelContext } from './contexts.ts';
+import { ModelContext, TileBuilderUpsellContext } from './contexts.ts';
+import { isTileBuilderProTierResolution } from '../utils.ts';
 
 import { SplitButton } from 'primereact/splitbutton';
 import { MenuItem } from 'primereact/menuitem';
@@ -9,7 +10,11 @@ type ExtendedMenuItem = MenuItem & { buttonLabel?: string };
 export default function ExportButton({className, style}: {className?: string, style?: React.CSSProperties}) {
     const model = useContext(ModelContext);
     if (!model) throw new Error('No model');
+    const tileBuilderUpsell = useContext(TileBuilderUpsellContext);
     const state = model.state;
+    const vars = state.params.vars ?? {};
+    const tileBuilderProTierLocked =
+      state.params.activePath === '/tile_builder.scad' && isTileBuilderProTierResolution(vars.resolution);
 
     const dropdownModel: ExtendedMenuItem[] = 
       state.is2D ? [
@@ -77,7 +82,13 @@ export default function ExportButton({className, style}: {className?: string, st
         icon="pi pi-download" 
         model={dropdownModel}
         severity="secondary"
-        onClick={e => model!.export()}
+        onClick={() => {
+          if (tileBuilderProTierLocked && tileBuilderUpsell) {
+            tileBuilderUpsell.openRenderDownloadUpsell();
+            return;
+          }
+          model!.export();
+        }}
         className="p-button-sm"
       />
     </div>
