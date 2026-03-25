@@ -46,7 +46,7 @@ export default function HomePage() {
           </p>
           <p className="home-supporting">Strong enough to play on. Thin enough to customize.</p>
           <div className="home-actions">
-            <HomeLinkButton href="/viewer" label="Generate a Base Grid" />
+            <HomeLinkButton href="/baseplate" label="Generate a Base Grid" />
             <HomeLinkButton href="/tiles" label="Get Free Starter Tiles" outlined />
           </div>
         </div>
@@ -169,7 +169,7 @@ export default function HomePage() {
             </p>
           </div>
           <div className="home-actions">
-            <HomeLinkButton href="/viewer" label="Generate a Free Base Grid" />
+            <HomeLinkButton href="/baseplate" label="Generate a Free Base Grid" />
             <HomeLinkButton href="/tiles" label="Download Starter Tiles" outlined />
           </div>
         </div>
@@ -239,7 +239,7 @@ export default function HomePage() {
             </p>
           </div>
           <div className="home-actions">
-            <HomeLinkButton href="/viewer" label="Open the Generator" />
+            <HomeLinkButton href="/baseplate" label="Open the Generator" />
             <HomeLinkButton href="/tiles" label="Browse Tile Sets" outlined />
           </div>
         </div>

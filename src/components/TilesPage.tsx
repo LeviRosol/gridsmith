@@ -24,7 +24,7 @@ export default function TilesPage() {
           <h1 className="home-h1">Tile pack downloads &amp; what&apos;s next</h1>
           <p className="home-subhead">
             Tile packs and tile generation tools will expand here in future releases. For now, you can use the baseplate
-            generator viewer to create grids that match your tiles, and watch this space for downloadable starter sets.
+            generator to create grids that match your tiles, and watch this space for downloadable starter sets.
           </p>
         </div>
       </section>
@@ -41,7 +41,7 @@ export default function TilesPage() {
             In the meantime, generate a base grid and grab the free starter tiles to print at home.
           </p>
           <div className="home-actions">
-            <a href="/viewer" className="p-button p-component home-page-cta">
+            <a href="/baseplate" className="p-button p-component home-page-cta">
               <span className="p-button-label">Open the generator</span>
             </a>
             <a href="/" className="p-button p-component p-button-outlined home-page-cta">

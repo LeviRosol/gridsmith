@@ -18,6 +18,22 @@ function callback(payload: OpenSCADInvocationCallback) {
   self.postMessage(payload);
 }
 
+/** Emscripten FS requires parent directories to exist before writeFile (no implicit mkdir -p). */
+function ensureParentDirs(fs: { mkdir: (path: string, mode?: number) => void }, filePath: string) {
+  const normalized = filePath.startsWith('/') ? filePath : `/${filePath}`;
+  const segments = normalized.split('/').filter(Boolean);
+  segments.pop();
+  let acc = '';
+  for (const seg of segments) {
+    acc += '/' + seg;
+    try {
+      fs.mkdir(acc);
+    } catch {
+      // already exists
+    }
+  }
+}
+
 self.addEventListener('message', async (e: MessageEvent<OpenSCADInvocation>) => {
   const {
     mountArchives,
@@ -93,6 +109,7 @@ self.addEventListener('message', async (e: MessageEvent<OpenSCADInvocation>) => 
               console.error(`File ${source.path} does not exist!`);
             }
           } else {
+            ensureParentDirs(instance.FS, source.path);
             instance.FS.writeFile(source.path, await fetchSource(instance.FS, source));
           }
         } catch (e) {

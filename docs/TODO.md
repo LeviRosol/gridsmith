@@ -58,17 +58,17 @@ Based on `docs/gridsmith-context.md`.
   - [ ] Remove remaining "Playground" legacy content where it no longer serves GridSmith.
 
 ## 5. Navigation & Pages
-- [x] Implement pathname-based routing for `/`, `/viewer`, `/about`, `/tiles`, `/profile`, `/tos`, `/privacy`.
+- [x] Implement pathname-based routing for `/`, `/baseplate`, `/about`, `/tiles`, `/profile`, `/tos`, `/privacy`.
 - [x] Create stub pages for Home, About, Get Tiles, Profile, Terms of Service, and Privacy Policy.
 - [x] Add a global site header and footer that appear on all routes.
 - [x] Add footer navigation links for all routes.
-- [x] Add a prominent "Build" button in the header that routes to `/viewer`.
+- [x] Add a prominent **Build** button in the header (all routes) that opens a chooser modal: **Baseplate Builder** → `/baseplate`, **Tile Builder** → `/tile-builder`; mobile hamburger uses the same **Build** entry.
 
 ## 6. Theming, Layout, and Presets
 - [x] Implement dark/light mode toggle in the Account menu.
 - [x] Dynamically load PrimeReact Lara Amber themes (dark/light) via `<link>` tag.
 - [x] Implement a left slide-out customizer panel with a persistent hamburger/tab toggle.
-- [x] Fix initial mobile `/viewer` load so params panel/tab is discoverable immediately.
+- [x] Fix initial mobile `/baseplate` load so params panel/tab is discoverable immediately.
 - [x] Add responsive mobile hamburger navigation for header links/actions.
 - [x] Add GridSmith baseplate presets (2x2, 4x4, 6x6, Hallway 2x6).
 
@@ -105,4 +105,13 @@ Based on `docs/gridsmith-context.md`.
 
 ## 10. Hosted UI & External Styling Assets
 - [x] Add Cognito Hosted UI CSS template (`public/cognito_css_template.css`) for external upload/storage.
-- [ ] Validate final Cognito Hosted UI CSS after upload in all auth screens (sign-in, sign-up, forgot password).
+- [x] Validate final Cognito Hosted UI CSS after upload in all auth screens (sign-in, sign-up, forgot password).
+
+## 11. Tile builder (`/tile-builder`)
+- [x] **Route & shell:** `/tile-builder` behind auth; Cognito default redirect when login starts on tile-builder path.
+- [x] **Assets & pipeline:** `public/tile_stls/manifest.json` + STL assets; main thread install + `sourcesWithTileStls` so worker FS receives tile meshes; `ensureParentDirs` in worker for nested writes.
+- [x] **SCAD:** `tile_builder.scad` assembler with `wall_profile` (`none` / `flat` / `curved`), `curved_wall_mirror`, per-side `use_*_wall` and `*_wall_type`, flat STL names `wall`/`door` vs curved `curved_wall`/`curved_door`, resolution-driven `tile_file()`.
+- [x] **UI (`TileBuilderPanel`):** accordion Core (default open) / Floor / Walls; resolution labels Low / Med / High (64 / 128 / 256); flat walls: per-side dropdown (None / Wall / Door) drives toggles; curved: **Type** (north) + **Mirror** checkbox (`curved_wall_mirror`): mirrored uses `use_east_wall` + `east_wall_type` instead of north; profile switch normalizes flat ↔ curved types and clears side toggles when entering curved.
+- [x] **Free tier (Med/High):** first dialog when selecting Med/High explains Pro (selection stays for preview); **Render** / **Download** / F6 / F7 open `TileBuilderUpsellContext` upsell modal instead of final render/export at 128/256 (preview still allowed).
+- [ ] **Pro gating (future):** replace UI-only upsell intercept with real membership check (Cognito group, entitlement API, or similar) before allowing final render + STL export at Med/High.
+- [ ] **Optional:** tile-builder-specific analytics (`stl_previewed` / `stl_downloaded` with `resolution`, `wall_profile`, etc.) and download filename parity (north vs east when mirrored).

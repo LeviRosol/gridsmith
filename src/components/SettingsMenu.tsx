@@ -20,6 +20,7 @@ export default function SettingsMenu({className, style}: {className?: string, st
   useEffect(() => {
     if (auth.loading) return;
     if (auth.isAdmin) return;
+    if (window.location.pathname.replace(/\/+$/, '') === '/tile-builder') return;
 
     const layout: any = state.view.layout;
     const editorVisible =
@@ -32,7 +33,7 @@ export default function SettingsMenu({className, style}: {className?: string, st
       s.view.layout = {
         mode: 'multi',
         editor: false,
-        viewer: true,
+        baseplate: true,
         customizer: true,
         showEditor: false,
       } as any;
@@ -60,7 +61,7 @@ export default function SettingsMenu({className, style}: {className?: string, st
               s.view.layout = {
                 mode: 'multi',
                 editor: false,
-                viewer: true,
+                baseplate: true,
                 customizer: true,
                 showEditor: false,
               } as any;

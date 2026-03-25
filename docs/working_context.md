@@ -35,7 +35,7 @@ Reference rule: `.cursor/rules/no-direct-main-commits.mdc`
   - footer includes Terms + Privacy links
 - Improved mobile UX:
   - responsive hamburger nav in header
-  - fixed initial mobile `/viewer` behavior so params panel/tab is discoverable on first load
+  - fixed initial mobile `/baseplate` behavior so params panel/tab is discoverable on first load
 - Viewer polish:
   - removed AR/camera launch affordance from model viewer on mobile
 - Removed axes feature entirely:

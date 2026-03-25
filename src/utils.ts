@@ -174,6 +174,12 @@ export async function fetchSource(fs: FS, {content, path, url}: Source): Promise
   }
 }
 
+/** Tile builder: 128 / 256 require Pro — block final render and STL export for free tier. */
+export function isTileBuilderProTierResolution(resolution: unknown): boolean {
+  const n = Number(resolution);
+  return n === 128 || n === 256;
+}
+
 export function readFileAsDataURL(file: File) {
   // TO data URI:
   return new Promise<string>((res, rej) => {

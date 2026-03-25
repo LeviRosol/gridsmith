@@ -1,16 +1,18 @@
 // Portions of this file are Copyright 2021 Google LLC, and licensed under GPL2+. See COPYING.
 
-import React, { CSSProperties, useEffect, useState, useRef } from 'react';
+import React, { CSSProperties, useEffect, useMemo, useState, useRef } from 'react';
 import {MultiLayoutComponentId, State, StatePersister} from '../state/app-state'
 import { Model } from '../state/model';
 import EditorPanel from './EditorPanel';
-import ViewerPanel from './ViewerPanel';
+import BaseplatePanel from './BaseplatePanel';
 import Footer from './Footer';
-import { ModelContext, FSContext } from './contexts';
+import { ModelContext, FSContext, TileBuilderUpsellContext } from './contexts';
 import { ConfirmDialog } from 'primereact/confirmdialog';
 import CustomizerPanel from './CustomizerPanel';
 import GridSmithPanel from './GridSmithPanel';
+import TileBuilderPanel from './TileBuilderPanel';
 import { Button } from 'primereact/button';
+import { Dialog } from 'primereact/dialog';
 import { Menu } from 'primereact/menu';
 import type { MenuItem } from 'primereact/menuitem';
 import HomePage from './HomePage';
@@ -23,6 +25,8 @@ import SiteFooter from './SiteFooter';
 import { AuthProvider, useAuth } from './AuthContext';
 import { ConsentProvider } from './ConsentProvider';
 import { trackPageView } from '../analytics';
+import { installTileStls } from '../tile-builder/install-tile-stls.ts';
+import { isTileBuilderProTierResolution } from '../utils.ts';
 
 const THEME_MODE_STORAGE_KEY = 'gridsmith.theme.darkMode';
 
@@ -55,10 +59,27 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   const mobileMenuRef = useRef<Menu | null>(null);
   const auth = useAuth();
 
+  const [buildChooserModalOpen, setBuildChooserModalOpen] = useState(false);
+  const [tileBuilderRenderDownloadUpsellOpen, setTileBuilderRenderDownloadUpsellOpen] = useState(false);
+  const tileBuilderUpsellApi = useMemo(
+    () => ({
+      openRenderDownloadUpsell: () => setTileBuilderRenderDownloadUpsellOpen(true),
+    }),
+    [],
+  );
+
   // Simple pathname-based routing
-  const rawPath = window.location.pathname;
-  const normalizedPath = rawPath.replace(/\/+$/, '') || '/';
+  let rawPath = window.location.pathname;
+  let normalizedPath = rawPath.replace(/\/+$/, '') || '/';
+  if (normalizedPath === '/viewer') {
+    const next = '/baseplate' + window.location.search + window.location.hash;
+    window.history.replaceState(window.history.state ?? {}, '', next);
+    rawPath = '/baseplate';
+    normalizedPath = '/baseplate';
+  }
   const pathname = normalizedPath === '' ? '/' : normalizedPath;
+  const isBuilderShell = pathname === '/baseplate' || pathname === '/tile-builder';
+  const ParamsSidebar = pathname === '/tile-builder' ? TileBuilderPanel : GridSmithPanel;
 
   const accountItems: MenuItem[] = [
     ...(auth.isSignedIn
@@ -96,7 +117,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
       label: 'Build',
       icon: 'pi pi-bolt',
       command: () => {
-        window.location.pathname = '/viewer';
+        setBuildChooserModalOpen(true);
       },
     },
     { label: 'Get Tiles', command: () => (window.location.pathname = '/tiles') },
@@ -115,20 +136,45 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   }, []);
 
   useEffect(() => {
-    if (pathname !== '/viewer') return;
+    if (!isBuilderShell) return;
     if (auth.loading) return;
     if (!auth.isSignedIn) return;
-    model.init();
+    let cancelled = false;
+    void (async () => {
+      if (pathname === '/tile-builder') {
+        await installTileStls(fs);
+      }
+      if (cancelled) return;
+      model.init();
+      if (cancelled) return;
+      if (pathname === '/tile-builder') {
+        const v = model.state.params.vars ?? {};
+        const wallsAllowed = v.wall_profile != null && v.wall_profile !== 'none';
+        const anyWall =
+          wallsAllowed &&
+          (v.use_north_wall === true ||
+            v.use_east_wall === true ||
+            v.use_south_wall === true ||
+            v.use_west_wall === true);
+        const canPreview = v.use_floor === true || anyWall;
+        if (canPreview) {
+          void model.render({ isPreview: true, now: true });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
     // We intentionally don't include `model` in deps: we only want initialization on route+auth changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, auth.loading, auth.isSignedIn]);
+  }, [pathname, auth.loading, auth.isSignedIn, isBuilderShell]);
 
   useEffect(() => {
-    if (pathname !== '/viewer') return;
+    if (pathname !== '/baseplate') return;
     if (state.view.layout.mode !== 'single') return;
     if (!window.matchMedia('(max-width: 767px)').matches) return;
 
-    // On initial mobile loads, force the viewer shell into the sidebar-capable layout
+    // On initial mobile loads, force the baseplate shell into the sidebar-capable layout
     // so params remain discoverable with the same slide-tab behavior as resized desktop.
     setState((prev) => ({
       ...prev,
@@ -137,7 +183,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
         layout: {
           mode: 'multi',
           editor: false,
-          viewer: true,
+          baseplate: true,
           customizer: true,
           showEditor: false,
         } as any,
@@ -148,16 +194,30 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (pathname !== '/viewer') return;
+      if (!isBuilderShell) return;
       if (auth.loading || !auth.isSignedIn) return;
       if (event.key === 'F5') {
         event.preventDefault();
         model.render({isPreview: true, now: true})
       } else if (event.key === 'F6') {
         event.preventDefault();
+        if (
+          pathname === '/tile-builder' &&
+          isTileBuilderProTierResolution(model.state.params.vars?.resolution)
+        ) {
+          setTileBuilderRenderDownloadUpsellOpen(true);
+          return;
+        }
         model.render({isPreview: false, now: true})
       } else if (event.key === 'F7') {
         event.preventDefault();
+        if (
+          pathname === '/tile-builder' &&
+          isTileBuilderProTierResolution(model.state.params.vars?.resolution)
+        ) {
+          setTileBuilderRenderDownloadUpsellOpen(true);
+          return;
+        }
         model.export();
       }
     };
@@ -165,7 +225,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [pathname, model, auth.loading, auth.isSignedIn]);
+  }, [pathname, model, auth.loading, auth.isSignedIn, isBuilderShell]);
 
   useEffect(() => {
     const body = document.body;
@@ -212,17 +272,17 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   const zIndexOfPanelsDependingOnFocus = {
     editor: {
       editor: 3,
-      viewer: 1,
+      baseplate: 1,
       customizer: 0,
     },
-    viewer: {
+    baseplate: {
       editor: 2,
-      viewer: 3,
+      baseplate: 3,
       customizer: 1,
     },
     customizer: {
       editor: 0,
-      viewer: 1,
+      baseplate: 1,
       customizer: 3,
     }
   }
@@ -242,62 +302,97 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   }
 
   const header = (
-    <header className="app-header">
-      <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-        <picture>
-          <source srcSet="/logo3_512.png" media="(min-width: 768px)" />
-          <source srcSet="/logo3_256.png" media="(max-width: 767px)" />
-          <img
-            src="/logo3_256.png"
-            alt="GridSmith logo"
-            style={{ height: 64, width: 'auto', borderRadius: 6, objectFit: 'contain' }}
-          />
-        </picture>
-      </a>
-      <nav className="app-header-nav">
-        <div className="app-header-nav-desktop">
-          <a href="/tiles" className="app-header-link">Get Tiles</a>
-          <a href="/about" className="app-header-link">About</a>
-          <Button
-            type="button"
-            label="Build"
-            icon="pi pi-bolt"
-            onClick={() => (window.location.pathname = '/viewer')}
-            className="app-header-link-button app-header-build-button"
-            style={{ paddingInline: '0.75rem' }}
-          />
-          <div style={{ position: 'relative' }}>
-            <Menu model={accountItems} popup ref={accountMenuRef} />
+    <>
+      <header className="app-header">
+        <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+          <picture>
+            <source srcSet="/logo3_512.png" media="(min-width: 768px)" />
+            <source srcSet="/logo3_256.png" media="(max-width: 767px)" />
+            <img
+              src="/logo3_256.png"
+              alt="GridSmith logo"
+              style={{ height: 64, width: 'auto', borderRadius: 6, objectFit: 'contain' }}
+            />
+          </picture>
+        </a>
+        <nav className="app-header-nav">
+          <div className="app-header-nav-desktop">
+            <a href="/tiles" className="app-header-link">Get Tiles</a>
+            <a href="/about" className="app-header-link">About</a>
             <Button
               type="button"
-              label={auth.isSignedIn ? (auth.user?.givenName ? auth.user.givenName : '') : ''}
-              icon="pi pi-user"
-              onClick={(e) => accountMenuRef.current && accountMenuRef.current.toggle(e)}
+              label="Build"
+              icon="pi pi-bolt"
+              onClick={() => setBuildChooserModalOpen(true)}
+              className="app-header-link-button app-header-build-button"
+              style={{ paddingInline: '0.75rem' }}
+            />
+            <div style={{ position: 'relative' }}>
+              <Menu model={accountItems} popup ref={accountMenuRef} />
+              <Button
+                type="button"
+                label={auth.isSignedIn ? (auth.user?.givenName ? auth.user.givenName : '') : ''}
+                icon="pi pi-user"
+                onClick={(e) => accountMenuRef.current && accountMenuRef.current.toggle(e)}
+                className="app-header-link-button"
+                iconPos="left"
+                text={!auth.isSignedIn || !!auth.user?.givenName}
+                aria-label={auth.isSignedIn ? 'Account' : 'Account'}
+                style={{ paddingInline: '0.25rem' }}
+              />
+            </div>
+          </div>
+
+          <div className="app-header-nav-mobile">
+            <Menu model={mobileMenuItems} popup ref={mobileMenuRef} />
+            <Button
+              type="button"
+              icon="pi pi-bars"
+              aria-label="Menu"
+              onClick={(e) => mobileMenuRef.current && mobileMenuRef.current.toggle(e)}
               className="app-header-link-button"
-              iconPos="left"
-              text={!auth.isSignedIn || !!auth.user?.givenName}
-              aria-label={auth.isSignedIn ? 'Account' : 'Account'}
               style={{ paddingInline: '0.25rem' }}
             />
           </div>
-        </div>
+        </nav>
+      </header>
 
-        <div className="app-header-nav-mobile">
-          <Menu model={mobileMenuItems} popup ref={mobileMenuRef} />
+      <Dialog
+        header="Let's get to work!"
+        visible={buildChooserModalOpen}
+        modal
+        dismissableMask
+        closable
+        onHide={() => setBuildChooserModalOpen(false)}
+        style={{ width: 'min(96vw, 420px)' }}
+      >
+        <div className="flex flex-column gap-3">
           <Button
             type="button"
-            icon="pi pi-bars"
-            aria-label="Menu"
-            onClick={(e) => mobileMenuRef.current && mobileMenuRef.current.toggle(e)}
-            className="app-header-link-button"
-            style={{ paddingInline: '0.25rem' }}
+            label="Baseplate Builder"
+            icon="pi pi-bolt"
+            className="w-full"
+            onClick={() => {
+              setBuildChooserModalOpen(false);
+              window.location.pathname = '/baseplate';
+            }}
+          />
+          <Button
+            type="button"
+            label="Tile Builder"
+            icon="pi pi-th-large"
+            className="w-full"
+            onClick={() => {
+              setBuildChooserModalOpen(false);
+              window.location.pathname = '/tile-builder';
+            }}
           />
         </div>
-      </nav>
-    </header>
+      </Dialog>
+    </>
   );
 
-  if (pathname === '/viewer') {
+  if (isBuilderShell) {
     if (auth.loading) {
       return (
         <div className="flex flex-column" style={{ flex: 1 }}>
@@ -321,6 +416,10 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     }
 
     if (!auth.isSignedIn) {
+      const signInBlurb =
+        pathname === '/tile-builder'
+          ? 'Please sign in to access the GridSmith tile builder and export tools.'
+          : 'Please sign in to access the GridSmith baseplate builder and export tools.';
       return (
         <div className="flex flex-column" style={{ flex: 1 }}>
           {header}
@@ -337,7 +436,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
           >
             <h1 style={{ marginBottom: '0.75rem' }}>Sign in required</h1>
             <p style={{ maxWidth: 640, opacity: 0.85, marginBottom: '1rem' }}>
-              Please sign in to access the GridSmith viewer and export tools.
+              {signInBlurb}
             </p>
             <Button
               type="button"
@@ -353,8 +452,8 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     }
   }
 
-  // Non-viewer routes render lightweight pages without mounting the heavy viewer/editor shell.
-  if (pathname !== '/viewer') {
+  // Non-builder routes render lightweight pages without mounting the heavy editor shell.
+  if (!isBuilderShell) {
     let page: JSX.Element;
     if (pathname === '/') {
       page = <HomePage />;
@@ -383,6 +482,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
 
   return (
     <ModelContext.Provider value={model}>
+      <TileBuilderUpsellContext.Provider value={tileBuilderUpsellApi}>
       <FSContext.Provider value={fs}>
         <div className='flex flex-column' style={{
             flex: 1,
@@ -420,7 +520,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
                           pointerEvents: customizerOpen ? 'auto' : 'none',
                         }}
                       >
-                        <GridSmithPanel
+                        <ParamsSidebar
                           className="opacity-animated"
                           style={{ height: '100%', maxHeight: 'unset', overflow: 'auto' }}
                         />
@@ -450,19 +550,19 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
                       </div>
                     </div>
 
-                    <ViewerPanel style={{ flex: 1 }} />
+                    <BaseplatePanel style={{ flex: 1 }} />
                   </div>
                 ) : (
-                  <ViewerPanel style={{ flex: 1 }} />
+                  <BaseplatePanel style={{ flex: 1 }} />
                 )}
               </>
             ) : (
               <>
                 {layout.mode === 'single' && (layout as any).focus === 'customizer' && (
-                  <GridSmithPanel className="absolute-fill" style={getPanelStyle('customizer')} />
+                  <ParamsSidebar className="absolute-fill" style={getPanelStyle('customizer')} />
                 )}
-                {layout.mode === 'single' && (layout as any).focus === 'viewer' && (
-                  <ViewerPanel className="absolute-fill" style={getPanelStyle('viewer')} />
+                {layout.mode === 'single' && (layout as any).focus === 'baseplate' && (
+                  <BaseplatePanel className="absolute-fill" style={getPanelStyle('baseplate')} />
                 )}
                 {layout.mode === 'single' && (layout as any).focus === 'editor' && (
                   <EditorPanel className="absolute-fill" style={getPanelStyle('editor')} />
@@ -474,8 +574,47 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
           <Footer />
           <SiteFooter />
           <ConfirmDialog />
+
+          <Dialog
+            header="Render & download"
+            visible={tileBuilderRenderDownloadUpsellOpen}
+            modal
+            dismissableMask
+            closable
+            onHide={() => setTileBuilderRenderDownloadUpsellOpen(false)}
+            style={{ width: 'min(96vw, 440px)' }}
+            footer={
+              <div className="flex flex-row gap-2 justify-content-end flex-wrap">
+                <Button
+                  type="button"
+                  label="Not Now"
+                  className="p-button-outlined"
+                  onClick={() => setTileBuilderRenderDownloadUpsellOpen(false)}
+                />
+                <Button
+                  type="button"
+                  label="Sign Me Up!"
+                  icon="pi pi-arrow-right"
+                  iconPos="right"
+                  severity="success"
+                  onClick={() => {
+                    setTileBuilderRenderDownloadUpsellOpen(false);
+                    window.location.pathname = '/tiles';
+                  }}
+                />
+              </div>
+            }
+          >
+            <p style={{ margin: 0, lineHeight: 1.55 }}>
+              Wouldn&apos;t it be nice to render and download that STL??
+            </p>
+            <p style={{ margin: '0.75rem 0 0', lineHeight: 1.55 }}>
+              Become a Pro Member to get access to Med and High resolution GridSmith tiles!
+            </p>
+          </Dialog>
         </div>
       </FSContext.Provider>
+      </TileBuilderUpsellContext.Provider>
     </ModelContext.Provider>
   );
 }

@@ -57,7 +57,7 @@ export interface PlaygroundState {
     }[],
   },
 
-  viewer: {
+  baseplate: {
     mode: 'normal' | 'maximized' | 'full-screen'
     // TODO: camera, zoom...
   },

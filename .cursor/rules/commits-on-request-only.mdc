@@ -1,0 +1,10 @@
+---
+description: Never create git commits unless the user explicitly asks to commit.
+alwaysApply: true
+---
+
+# Commits only on request
+
+- Do **not** run `git commit`, `git add` for the purpose of committing, or create commits automatically after finishing work.
+- Wait until the user clearly asks to commit (e.g. "commit this", "please commit", "go ahead and commit").
+- Other git read-only commands (`git status`, `git diff`, `git log`) are fine when needed for the task.

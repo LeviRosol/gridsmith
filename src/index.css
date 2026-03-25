@@ -57,6 +57,64 @@ body {
   color: #333333;
 }
 
+/* Compact density mode scoped to parameter sidebars only. */
+.params-slider-compact {
+  font-size: 0.9rem;
+}
+
+.params-slider-compact .p-fieldset {
+  margin: 4px 8px;
+}
+
+.params-slider-compact .p-fieldset .p-fieldset-legend-text {
+  font-size: 0.9rem;
+}
+
+.params-slider-compact label {
+  font-size: 0.85rem;
+}
+
+.params-slider-compact .p-dropdown,
+.params-slider-compact .p-inputnumber,
+.params-slider-compact .p-inputnumber-input,
+.params-slider-compact .p-inputtext {
+  font-size: 0.85rem;
+}
+
+.params-slider-compact .p-dropdown .p-dropdown-label,
+.params-slider-compact .p-inputnumber .p-inputtext {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
+.params-slider-compact .p-inputnumber-button {
+  width: 1.8rem;
+}
+
+.params-slider-compact .p-checkbox {
+  width: 1rem;
+  height: 1rem;
+}
+
+.params-slider-compact .p-button.p-button-sm {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.55rem;
+}
+
+.params-slider-compact .p-accordion .p-accordion-header .p-accordion-header-link {
+  padding: 0.45rem 0.55rem;
+  font-size: 0.85rem;
+}
+
+.params-slider-compact .p-accordion .p-accordion-content {
+  padding: 0.55rem;
+}
+
+.params-slider-compact .p-selectbutton .p-button {
+  font-size: 0.8rem;
+  padding: 0.28rem 0.5rem;
+}
+
 .app-header-link {
   text-decoration: none;
 }
