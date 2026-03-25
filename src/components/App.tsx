@@ -10,6 +10,7 @@ import { ModelContext, FSContext } from './contexts';
 import { ConfirmDialog } from 'primereact/confirmdialog';
 import CustomizerPanel from './CustomizerPanel';
 import GridSmithPanel from './GridSmithPanel';
+import TileBuilderPanel from './TileBuilderPanel';
 import { Button } from 'primereact/button';
 import { SplitButton } from 'primereact/splitbutton';
 import { Menu } from 'primereact/menu';
@@ -68,6 +69,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   }
   const pathname = normalizedPath === '' ? '/' : normalizedPath;
   const isBuilderShell = pathname === '/baseplate' || pathname === '/tile-builder';
+  const ParamsSidebar = pathname === '/tile-builder' ? TileBuilderPanel : GridSmithPanel;
 
   const accountItems: MenuItem[] = [
     ...(auth.isSignedIn
@@ -460,7 +462,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
                           pointerEvents: customizerOpen ? 'auto' : 'none',
                         }}
                       >
-                        <GridSmithPanel
+                        <ParamsSidebar
                           className="opacity-animated"
                           style={{ height: '100%', maxHeight: 'unset', overflow: 'auto' }}
                         />
@@ -499,7 +501,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
             ) : (
               <>
                 {layout.mode === 'single' && (layout as any).focus === 'customizer' && (
-                  <GridSmithPanel className="absolute-fill" style={getPanelStyle('customizer')} />
+                  <ParamsSidebar className="absolute-fill" style={getPanelStyle('customizer')} />
                 )}
                 {layout.mode === 'single' && (layout as any).focus === 'baseplate' && (
                   <BaseplatePanel className="absolute-fill" style={getPanelStyle('baseplate')} />

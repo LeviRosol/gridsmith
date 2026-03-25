@@ -15,7 +15,13 @@ export function createTileBuilderInitialState(): State {
       features: ['lazy-union'],
       exportFormat2D: 'svg',
       exportFormat3D: 'stl',
-      vars: {},
+      vars: {
+        resolution: 256,
+        use_floor: true,
+        floor_type: 'floor',
+        use_north_wall: true,
+        north_wall_type: 'curved_wall',
+      },
     },
     view: {
       layout: {

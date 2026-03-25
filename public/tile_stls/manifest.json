@@ -1,1 +1,17 @@
-[]
+[
+  "curved_wall_128.stl",
+  "curved_wall_256.stl",
+  "curved_wall_64.stl",
+  "door_128.stl",
+  "door_256.stl",
+  "door_64.stl",
+  "floor_128.stl",
+  "floor_256.stl",
+  "floor_64.stl",
+  "trapdoor_128.stl",
+  "trapdoor_256.stl",
+  "trapdoor_64.stl",
+  "wall_128.stl",
+  "wall_256.stl",
+  "wall_64.stl"
+]
