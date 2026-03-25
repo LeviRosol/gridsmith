@@ -8,6 +8,7 @@ import { registerOpenSCADLanguage } from './language/openscad-register-language.
 import { zipArchives } from './fs/zip-archives.ts';
 import {readStateFromFragment} from './state/fragment-state.ts'
 import { createInitialState } from './state/initial-state.ts';
+import { createTileBuilderInitialState } from './state/tile-builder-initial-state.ts';
 import './index.css';
 
 import debug from 'debug';
@@ -64,10 +65,15 @@ window.addEventListener('load', async () => {
 
   await registerOpenSCADLanguage(fs, '/', zipArchives);
 
+  const pathname = window.location.pathname.replace(/\/+$/, '') || '/';
+  const isTileBuilder = pathname === '/tile-builder';
+
   let statePersister: StatePersister;
   let persistedState: State | null = null;
 
-  if (isInStandaloneMode()) {
+  if (isTileBuilder) {
+    statePersister = { set: async () => {} };
+  } else if (isInStandaloneMode()) {
     const fs: FS = BrowserFS.BFSRequire('fs')
     try {
       const data = JSON.parse(new TextDecoder("utf-8").decode(fs.readFileSync('/state.json')));
@@ -88,7 +94,9 @@ window.addEventListener('load', async () => {
     };
   }
 
-  const initialState = createInitialState(persistedState);
+  const initialState = isTileBuilder
+    ? createTileBuilderInitialState()
+    : createInitialState(persistedState);
 
   const root = ReactDOM.createRoot(
     document.getElementById('root') as HTMLElement

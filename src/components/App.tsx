@@ -11,6 +11,7 @@ import { ConfirmDialog } from 'primereact/confirmdialog';
 import CustomizerPanel from './CustomizerPanel';
 import GridSmithPanel from './GridSmithPanel';
 import { Button } from 'primereact/button';
+import { SplitButton } from 'primereact/splitbutton';
 import { Menu } from 'primereact/menu';
 import type { MenuItem } from 'primereact/menuitem';
 import HomePage from './HomePage';
@@ -23,6 +24,7 @@ import SiteFooter from './SiteFooter';
 import { AuthProvider, useAuth } from './AuthContext';
 import { ConsentProvider } from './ConsentProvider';
 import { trackPageView } from '../analytics';
+import { installTileStls } from '../tile-builder/install-tile-stls.ts';
 
 const THEME_MODE_STORAGE_KEY = 'gridsmith.theme.darkMode';
 
@@ -65,6 +67,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     normalizedPath = '/baseplate';
   }
   const pathname = normalizedPath === '' ? '/' : normalizedPath;
+  const isBuilderShell = pathname === '/baseplate' || pathname === '/tile-builder';
 
   const accountItems: MenuItem[] = [
     ...(auth.isSignedIn
@@ -99,10 +102,17 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
 
   const mobileMenuItems: MenuItem[] = [
     {
-      label: 'Build',
+      label: 'Baseplate',
       icon: 'pi pi-bolt',
       command: () => {
         window.location.pathname = '/baseplate';
+      },
+    },
+    {
+      label: 'Tile builder',
+      icon: 'pi pi-th-large',
+      command: () => {
+        window.location.pathname = '/tile-builder';
       },
     },
     { label: 'Get Tiles', command: () => (window.location.pathname = '/tiles') },
@@ -121,13 +131,23 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   }, []);
 
   useEffect(() => {
-    if (pathname !== '/baseplate') return;
+    if (!isBuilderShell) return;
     if (auth.loading) return;
     if (!auth.isSignedIn) return;
-    model.init();
+    let cancelled = false;
+    void (async () => {
+      if (pathname === '/tile-builder') {
+        await installTileStls(fs);
+      }
+      if (cancelled) return;
+      model.init();
+    })();
+    return () => {
+      cancelled = true;
+    };
     // We intentionally don't include `model` in deps: we only want initialization on route+auth changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, auth.loading, auth.isSignedIn]);
+  }, [pathname, auth.loading, auth.isSignedIn, isBuilderShell]);
 
   useEffect(() => {
     if (pathname !== '/baseplate') return;
@@ -154,7 +174,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (pathname !== '/baseplate') return;
+      if (!isBuilderShell) return;
       if (auth.loading || !auth.isSignedIn) return;
       if (event.key === 'F5') {
         event.preventDefault();
@@ -171,7 +191,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [pathname, model, auth.loading, auth.isSignedIn]);
+  }, [pathname, model, auth.loading, auth.isSignedIn, isBuilderShell]);
 
   useEffect(() => {
     const body = document.body;
@@ -264,11 +284,21 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
         <div className="app-header-nav-desktop">
           <a href="/tiles" className="app-header-link">Get Tiles</a>
           <a href="/about" className="app-header-link">About</a>
-          <Button
-            type="button"
-            label="Build"
+          <SplitButton
+            label="Baseplate"
             icon="pi pi-bolt"
-            onClick={() => (window.location.pathname = '/baseplate')}
+            onClick={() => {
+              window.location.pathname = '/baseplate';
+            }}
+            model={[
+              {
+                label: 'Tile builder',
+                icon: 'pi pi-th-large',
+                command: () => {
+                  window.location.pathname = '/tile-builder';
+                },
+              },
+            ]}
             className="app-header-link-button app-header-build-button"
             style={{ paddingInline: '0.75rem' }}
           />
@@ -303,7 +333,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     </header>
   );
 
-  if (pathname === '/baseplate') {
+  if (isBuilderShell) {
     if (auth.loading) {
       return (
         <div className="flex flex-column" style={{ flex: 1 }}>
@@ -327,6 +357,10 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     }
 
     if (!auth.isSignedIn) {
+      const signInBlurb =
+        pathname === '/tile-builder'
+          ? 'Please sign in to access the GridSmith tile builder and export tools.'
+          : 'Please sign in to access the GridSmith baseplate builder and export tools.';
       return (
         <div className="flex flex-column" style={{ flex: 1 }}>
           {header}
@@ -343,7 +377,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
           >
             <h1 style={{ marginBottom: '0.75rem' }}>Sign in required</h1>
             <p style={{ maxWidth: 640, opacity: 0.85, marginBottom: '1rem' }}>
-              Please sign in to access the GridSmith baseplate builder and export tools.
+              {signInBlurb}
             </p>
             <Button
               type="button"
@@ -359,8 +393,8 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     }
   }
 
-  // Non-baseplate routes render lightweight pages without mounting the heavy baseplate/editor shell.
-  if (pathname !== '/baseplate') {
+  // Non-builder routes render lightweight pages without mounting the heavy editor shell.
+  if (!isBuilderShell) {
     let page: JSX.Element;
     if (pathname === '/') {
       page = <HomePage />;

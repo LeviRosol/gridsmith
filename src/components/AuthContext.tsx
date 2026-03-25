@@ -167,10 +167,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const verifier = sessionStorage.getItem(SESSION_KEYS.pkceVerifier);
+      const path = window.location.pathname.replace(/\/+$/, '') || '/';
+      const defaultOAuthRedirect =
+        path === '/tile-builder'
+          ? `${window.location.origin}/tile-builder`
+          : `${window.location.origin}/baseplate`;
       const redirectUri =
         sessionStorage.getItem(SESSION_KEYS.redirectUri) ??
         (process.env.COGNITO_REDIRECT_URI as string | undefined) ??
-        `${window.location.origin}/baseplate`;
+        defaultOAuthRedirect;
 
       if (!verifier) {
         throw new Error('Missing PKCE code verifier in sessionStorage.');
@@ -422,9 +427,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      const path = window.location.pathname.replace(/\/+$/, '') || '/';
+      const defaultOAuthRedirect =
+        path === '/tile-builder'
+          ? `${window.location.origin}/tile-builder`
+          : `${window.location.origin}/baseplate`;
       const redirectUri =
         (process.env.COGNITO_REDIRECT_URI as string | undefined) ??
-        `${window.location.origin}/baseplate`;
+        defaultOAuthRedirect;
 
       const codeVerifier = randomCodeVerifier(64);
       const codeChallenge = await sha256Base64Url(codeVerifier);

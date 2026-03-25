@@ -20,6 +20,7 @@ export default function SettingsMenu({className, style}: {className?: string, st
   useEffect(() => {
     if (auth.loading) return;
     if (auth.isAdmin) return;
+    if (window.location.pathname.replace(/\/+$/, '') === '/tile-builder') return;
 
     const layout: any = state.view.layout;
     const editorVisible =
