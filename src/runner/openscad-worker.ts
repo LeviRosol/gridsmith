@@ -103,7 +103,6 @@ self.addEventListener('message', async (e: MessageEvent<OpenSCADInvocation>) => 
     if (inputs) {
       for (const source of inputs) {
         try {
-          console.log(`Writing ${source.path}`);
           if (source.content == null && source.path != null && source.url == null) {
             if (!instance.FS.isFile(source.path)) {
               console.error(`File ${source.path} does not exist!`);
@@ -119,7 +118,6 @@ self.addEventListener('message', async (e: MessageEvent<OpenSCADInvocation>) => 
       }
     }
 
-    console.log('Invoking OpenSCAD with: ', args)
     let exitCode;
     try {
       exitCode = instance.callMain(args);

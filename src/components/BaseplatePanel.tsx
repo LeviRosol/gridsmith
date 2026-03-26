@@ -81,16 +81,14 @@ export default function BaseplatePanel({className, style}: {className?: string, 
     setCachedImageHash(undefined);
   }
 
-  const onLoad = useCallback(async (e: any) => {
+  const onLoad = useCallback(async () => {
     setLoadedUri(modelUri);
-    console.log('onLoad', e);
 
     if (!modelViewerRef.current) return;
 
     const uri = await modelViewerRef.current.toDataURL('image/png', 0.5);
     const preview = {blurhash: await imageToBlurhash(uri)};
     // const preview = {thumbhash: await imageToThumbhash(uri)};
-    console.log(preview);
     
     model?.mutate(s => s.preview = preview);
   }, [model, modelUri, setLoadedUri, modelViewerRef.current]);
