@@ -27,6 +27,7 @@ import { ConsentProvider } from './ConsentProvider';
 import { trackPageView } from '../analytics';
 import { installTileStls } from '../tile-builder/install-tile-stls.ts';
 import { isTileBuilderProTierResolution } from '../utils.ts';
+import { FaDiscord } from 'react-icons/fa6';
 
 const THEME_MODE_STORAGE_KEY = 'gridsmith.theme.darkMode';
 
@@ -327,6 +328,17 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
               className="app-header-link-button app-header-build-button"
               style={{ paddingInline: '0.75rem' }}
             />
+            <a
+              href="https://discord.gg/AeBpv33ru"
+              className="app-header-link"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Discord"
+              title="Discord"
+              style={{ display: 'inline-flex', alignItems: 'center' }}
+            >
+              <FaDiscord size={18} aria-hidden="true" />
+            </a>
             <div style={{ position: 'relative' }}>
               <Menu model={accountItems} popup ref={accountMenuRef} />
               <Button
