@@ -12,7 +12,7 @@ export async function installTileStls(fs: FS): Promise<void> {
 
   let manifest: unknown;
   try {
-    const res = await fetch('./tile_stls/manifest.json');
+    const res = await fetch('/tile_stls/manifest.json');
     if (!res.ok) return;
     manifest = await res.json();
   } catch {
@@ -42,7 +42,7 @@ export async function installTileStls(fs: FS): Promise<void> {
     if (safeName !== entry) continue;
 
     try {
-      const res = await fetch(`./tile_stls/${encodeURIComponent(safeName)}`);
+      const res = await fetch(`/tile_stls/${encodeURIComponent(safeName)}`);
       if (!res.ok) continue;
       const buf = Buffer.from(await res.arrayBuffer());
       fsSync.writeFileSync(`/tile_stls/${safeName}`, buf);

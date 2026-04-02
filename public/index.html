@@ -6,40 +6,41 @@
     <title>GridSmith — Modular Terrain for Tabletop Play</title>
     <meta name="description" content="Generate 3D-printable terrain base grids, download free starter tiles, and build modular tabletop worlds with GridSmith.">
 
-    <link rel="icon" href="favicon.ico">
-    <link rel="apple-touch-icon" href="logo192.png">
+    <!-- Root-absolute paths so assets resolve correctly on nested routes (e.g. /tile-details/slug). -->
+    <link rel="icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/logo192.png">
     <!-- https://developers.google.com/web/fundamentals/web-app-manifest/ -->
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#000000">
 
     <!-- dataLayer for GTM (script loads only after analytics consent in the app) -->
     <script>window.dataLayer = window.dataLayer || [];</script>
 
-    <link rel="prefetch" href="openscad.wasm">
-    <link rel="prefetch" href="openscad-worker.js">
-    <link rel="prefetch" href="libraries/fonts.zip">
+    <link rel="prefetch" href="/openscad.wasm">
+    <link rel="prefetch" href="/openscad-worker.js">
+    <link rel="prefetch" href="/libraries/fonts.zip">
 
-    <link rel="prefetch" href="libraries/MCAD.zip">
-    <link rel="prefetch" href="libraries/BOSL2.zip">
-    <link rel="prefetch" href="libraries/BOSL.zip">
-    <link rel="prefetch" href="libraries/NopSCADlib.zip">
-    <link rel="prefetch" href="libraries/FunctionalOpenSCAD.zip">
-    <link rel="prefetch" href="libraries/funcutils.zip">
-    <link rel="prefetch" href="libraries/smooth-prim.zip">
-    <link rel="prefetch" href="libraries/closepoints.zip">
-    <link rel="prefetch" href="libraries/plot-function.zip">
-    <link rel="prefetch" href="libraries/YAPP_Box.zip">
-    <link rel="prefetch" href="libraries/Stemfie_OpenSCAD.zip">
-    <link rel="prefetch" href="libraries/UB.scad.zip">
-    <link rel="prefetch" href="libraries/openscad-tray.zip">
+    <link rel="prefetch" href="/libraries/MCAD.zip">
+    <link rel="prefetch" href="/libraries/BOSL2.zip">
+    <link rel="prefetch" href="/libraries/BOSL.zip">
+    <link rel="prefetch" href="/libraries/NopSCADlib.zip">
+    <link rel="prefetch" href="/libraries/FunctionalOpenSCAD.zip">
+    <link rel="prefetch" href="/libraries/funcutils.zip">
+    <link rel="prefetch" href="/libraries/smooth-prim.zip">
+    <link rel="prefetch" href="/libraries/closepoints.zip">
+    <link rel="prefetch" href="/libraries/plot-function.zip">
+    <link rel="prefetch" href="/libraries/YAPP_Box.zip">
+    <link rel="prefetch" href="/libraries/Stemfie_OpenSCAD.zip">
+    <link rel="prefetch" href="/libraries/UB.scad.zip">
+    <link rel="prefetch" href="/libraries/openscad-tray.zip">
 
     <!-- <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js" defer></script> -->
-    <script type="module" src="./model-viewer.min.js" defer></script>
+    <script type="module" src="/model-viewer.min.js" defer></script>
     
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/BrowserFS/2.0.0/browserfs.min.js" defer></script> -->
-    <script src="./browserfs.min.js" defer></script>
+    <script src="/browserfs.min.js" defer></script>
 
-    <script src="./index.js" defer></script>
+    <script src="/index.js" defer></script>
 
     <!-- GitHub fork ribbon styles removed for GridSmith branding -->
 
@@ -113,7 +114,7 @@
   </head>
   <body>
     <audio id="complete-sound">
-      <source src="complete.wav" type="audio/wav">
+      <source src="/complete.wav" type="audio/wav">
       Your browser does not support the audio element.
     </audio>
     <noscript>You need to enable JavaScript to run the OpenSCAD Playground.</noscript>

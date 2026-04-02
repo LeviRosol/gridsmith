@@ -263,6 +263,47 @@ code {
   color: #ffffff !important;
 }
 
+/*
+ * Child / inner pages: same hero imagery as the home hero, but ~one-third the vertical presence.
+ * Opt in per section with home-section-hero home-section-hero--child (home page keeps the default hero only).
+ */
+.home-section-hero.home-section-hero--child {
+  padding-top: 1rem;
+  padding-bottom: 1.25rem;
+  min-height: min(24vh, 12.5rem);
+}
+
+.home-section-hero.home-section-hero--child .home-h1 {
+  font-size: clamp(1.65rem, 4vw, 2.25rem);
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.home-section-hero.home-section-hero--child .home-subhead {
+  margin-bottom: 0;
+}
+
+/* About-style hero: compact variant for non-home routes */
+.home-section-about-hero.home-section-about-hero--child {
+  padding-top: 1rem;
+  padding-bottom: 1.25rem;
+  min-height: clamp(7rem, 14vh, 10.5rem);
+}
+
+.home-section-about-hero.home-section-about-hero--child .home-h1 {
+  font-size: clamp(1.65rem, 4vw, 2.25rem);
+  margin-top: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.home-section-about-hero.home-section-about-hero--child .home-prose {
+  margin-bottom: 0;
+}
+
+.home-section-about-hero.home-section-about-hero--child .home-prose p {
+  margin-bottom: 0;
+}
+
 /* Background: public/combined_hero_even.png — panoramic grid progression */
 .home-section-how-it-works {
   position: relative;
@@ -350,6 +391,13 @@ code {
     background-position: center 22%;
   }
 
+  .home-section-hero.home-section-hero--child {
+    min-height: clamp(7rem, 17vh, 10rem);
+    padding-top: 0.85rem;
+    padding-bottom: 1.1rem;
+    background-position: center 22%;
+  }
+
   .home-section-how-it-works {
     min-height: clamp(19rem, 46vh, 34rem);
     padding-top: 2.25rem;
@@ -363,6 +411,12 @@ code {
     padding-top: 1.75rem;
     padding-bottom: 2rem;
   }
+
+  .home-section-about-hero.home-section-about-hero--child {
+    min-height: clamp(7rem, 12.5vh, 8.75rem);
+    padding-top: 0.85rem;
+    padding-bottom: 1.1rem;
+  }
 }
 
 @media (max-width: 896px) and (orientation: landscape) {
@@ -370,6 +424,13 @@ code {
     min-height: clamp(13rem, 88vh, 24rem);
     padding-top: 1rem;
     padding-bottom: 1.5rem;
+    background-position: center 35%;
+  }
+
+  .home-section-hero.home-section-hero--child {
+    min-height: clamp(6.5rem, 29vh, 8rem);
+    padding-top: 0.65rem;
+    padding-bottom: 0.85rem;
     background-position: center 35%;
   }
 
@@ -384,12 +445,24 @@ code {
     padding-top: 1.25rem;
     padding-bottom: 1.5rem;
   }
+
+  .home-section-about-hero.home-section-about-hero--child {
+    min-height: clamp(6.5rem, 20vh, 7.5rem);
+    padding-top: 0.65rem;
+    padding-bottom: 0.85rem;
+  }
 }
 
 @media (min-width: 768px) and (max-width: 1199px) {
   .home-section-hero {
     min-height: min(68vh, 37rem);
     background-position: center 35%;
+  }
+
+  .home-section-hero.home-section-hero--child {
+    min-height: min(22vh, 12rem);
+    padding-top: 1rem;
+    padding-bottom: 1.2rem;
   }
 
   .home-section-how-it-works {
@@ -399,12 +472,22 @@ code {
   .home-section-about-hero {
     min-height: clamp(20rem, 40vh, 30rem);
   }
+
+  .home-section-about-hero.home-section-about-hero--child {
+    min-height: clamp(7rem, 13vh, 10rem);
+  }
 }
 
 @media (min-width: 1200px) {
   .home-section-hero {
     min-height: min(78vh, 44rem);
     background-position: center center;
+  }
+
+  .home-section-hero.home-section-hero--child {
+    min-height: min(26vh, 14.5rem);
+    padding-top: 1.1rem;
+    padding-bottom: 1.35rem;
   }
 
   .home-section-how-it-works {
@@ -414,11 +497,19 @@ code {
   .home-section-about-hero {
     min-height: clamp(22rem, 42vh, 34rem);
   }
+
+  .home-section-about-hero.home-section-about-hero--child {
+    min-height: clamp(7.25rem, 14vh, 11.25rem);
+  }
 }
 
 @media (min-width: 1600px) {
   .home-section-hero {
     min-height: min(80vh, 48rem);
+  }
+
+  .home-section-hero.home-section-hero--child {
+    min-height: min(27vh, 15.5rem);
   }
 
   .home-section-how-it-works {
@@ -427,6 +518,10 @@ code {
 
   .home-section-about-hero {
     min-height: clamp(24rem, 44vh, 38rem);
+  }
+
+  .home-section-about-hero.home-section-about-hero--child {
+    min-height: clamp(7.5rem, 14.5vh, 11.75rem);
   }
 }
 
@@ -466,6 +561,379 @@ code {
 
 .home-section-cta {
   padding-bottom: 4rem;
+}
+
+/* Tile shop: shell for optional overlays (e.g. “Coming soon”) above the card */
+.tile-shop-card-shell {
+  position: relative;
+  height: 100%;
+}
+
+.tile-shop-card-shell > .tile-shop-card.p-card.h-full {
+  height: 100%;
+}
+
+/* Tile set detail — product overview layout (PrimeBlocks-style gallery + buy box) */
+.tile-detail-container {
+  max-width: min(100%, 72rem);
+}
+
+.tile-detail-section {
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+}
+
+/* Two-column product row: each column scrolls independently on large screens */
+@media (min-width: 992px) {
+  .tile-detail-main-row {
+    align-items: stretch;
+  }
+
+  .tile-detail-main-row > .tile-detail-main-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .tile-detail-column {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: calc(100vh - 11rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.5rem;
+  }
+
+  .tile-detail-column--left {
+    padding-right: 0.5rem;
+  }
+
+  .tile-detail-column--right {
+    padding-right: 0.15rem;
+  }
+}
+
+.tile-detail-breadcrumb .p-breadcrumb {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.tile-detail-breadcrumb .p-breadcrumb ol.p-breadcrumb-list {
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  font-size: 0.9rem;
+}
+
+.tile-detail-breadcrumb .p-menuitem-link {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.tile-detail-breadcrumb .p-menuitem-link:hover {
+  text-decoration: underline;
+}
+
+.tile-detail-breadcrumb .p-breadcrumb-chevron {
+  opacity: 0.45;
+}
+
+.tile-detail-rule {
+  border: 0;
+  border-top: 1px solid var(--surface-border);
+  margin: 0;
+}
+
+.tile-detail-pack-row .p-button {
+  flex: 1 1 auto;
+  min-width: 5.75rem;
+  justify-content: center;
+}
+
+.tile-detail-qty-input.p-inputnumber {
+  width: 100%;
+  max-width: 12rem;
+}
+
+.tile-detail-qty-input.p-inputnumber .p-inputnumber-input {
+  width: 100%;
+}
+
+.tile-detail-image-frame {
+  position: relative;
+  width: 100%;
+  padding: 1.25rem;
+  border-radius: 10px;
+  background: var(--surface-100);
+  box-sizing: border-box;
+}
+
+.tile-detail-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.tile-detail-image-badge {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 1;
+}
+
+.tile-detail-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.tile-detail-thumb {
+  margin: 0;
+  padding: 0.25rem;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tile-detail-thumb img {
+  display: block;
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: contain;
+  border-radius: 6px;
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+
+.tile-detail-thumb:hover img {
+  opacity: 0.85;
+}
+
+.tile-detail-thumb--active {
+  border-color: var(--primary-color);
+}
+
+.tile-detail-thumb--active img {
+  opacity: 1;
+}
+
+.tile-detail-buybox {
+  padding: 0 0 1rem;
+}
+
+@media (min-width: 992px) {
+  .tile-detail-buybox {
+    padding: 0.5rem 0 1rem 1.5rem;
+  }
+}
+
+.tile-detail-title {
+  margin: 0 0 0.65rem;
+  font-size: clamp(1.65rem, 3.5vw, 2.35rem);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.tile-detail-price {
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 0.25rem;
+}
+
+.tile-detail-price--muted {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--text-color-secondary);
+}
+
+.tile-detail-field-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.72;
+  margin-bottom: 0.5rem;
+}
+
+.tile-detail-add-cart {
+  padding-top: 0.85rem;
+  padding-bottom: 0.85rem;
+}
+
+.tile-detail-description-block {
+  max-width: 52rem;
+}
+
+.tile-detail-description-heading {
+  margin: 0 0 1rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.tile-detail-description-body {
+  font-size: 0.98rem;
+  opacity: 0.92;
+}
+
+.tile-detail-spec-section {
+  margin: 0;
+}
+
+.tile-detail-spec-heading {
+  margin: 0 0 0.65rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.tile-detail-spec-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  opacity: 0.92;
+}
+
+.tile-detail-spec-list li {
+  margin-bottom: 0.35rem;
+}
+
+.tile-detail-spec-list li:last-child {
+  margin-bottom: 0;
+}
+
+.tile-detail-spec-prose {
+  font-size: 0.98rem;
+  opacity: 0.92;
+}
+
+.tile-detail-what-you-get .tile-detail-spec-prose--preline {
+  white-space: pre-line;
+}
+
+.tile-detail-what-you-get .tile-detail-spec-list li {
+  white-space: pre-line;
+}
+
+.tile-shop-card-coming-soon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  pointer-events: none;
+  padding: 0.4rem 1.25rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(0, 0, 0, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+/* Tile shop: square media area on catalog cards */
+/*
+ * Card elevation: do not use PrimeFlex shadow-* on these cards — those utilities use !important
+ * and cannot be overridden for dark mode. Match shadow-2 in light mode; custom lift in dark mode.
+ */
+.tile-shop-card.p-card {
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.03),
+    0 0 2px rgba(0, 0, 0, 0.06),
+    0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+/* Padding (not margin on the wrap) so the top gap doesn’t collapse; reveals card radius on top + sides. */
+.tile-shop-card.p-card .p-card-header {
+  padding: 5px 5px 0 5px;
+}
+
+.tile-shop-card-image-wrap {
+  --tile-shop-image-inset: 20px;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: var(--tile-shop-image-inset);
+  background: var(--surface-100);
+}
+
+a.tile-shop-card-image-hit {
+  display: block;
+  width: 100%;
+  height: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+
+a.tile-shop-card-image-hit:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.tile-shop-card-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.tile-shop-card-tag {
+  position: absolute;
+  top: calc(var(--tile-shop-image-inset) + 0.5rem);
+  right: calc(var(--tile-shop-image-inset) + 0.5rem);
+  z-index: 1;
+}
+
+.tile-shop-card-blurb {
+  white-space: pre-line;
+}
+
+/* Dark mode: inverse elevation — deeper shadow + faint light rim (theme .p-card is in @layer; this wins by specificity). */
+.dark-mode .tile-shop-card.p-card {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 2px 4px rgba(0, 0, 0, 0.55),
+    0 8px 20px rgba(0, 0, 0, 0.5),
+    0 16px 40px rgba(0, 0, 0, 0.38);
+}
+
+/* Optional full-card accent border — matches Lara primary / default button fill (see --primary-color on :root). */
+.tile-shop-card.p-card.tile-shop-card--border-red {
+  border: 5px solid var(--primary-color);
+  box-sizing: border-box;
+}
+
+/* Unavailable product: dark scrim over card; pair with PrimeReact <Button disabled> for CTA. */
+.tile-shop-card.p-card.tile-shop-card--disabled {
+  position: relative;
+  overflow: hidden;
+}
+
+.tile-shop-card.p-card.tile-shop-card--disabled::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(0, 0, 0, 0.52);
+  z-index: 4;
+  pointer-events: auto;
+  cursor: not-allowed;
 }
 
 .home-eyebrow {
@@ -674,6 +1142,40 @@ code {
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+.cookie-banner-marketing {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+.cookie-banner-marketing .p-inputswitch {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.cookie-banner-marketing-copy {
+  min-width: 0;
+}
+
+.cookie-banner-marketing-label {
+  display: block;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  font-weight: 500;
+  cursor: pointer;
+  opacity: 0.95;
+}
+
+.cookie-banner-marketing-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  opacity: 0.82;
 }
 
 .cookie-banner-actions {
