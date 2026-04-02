@@ -17,7 +17,7 @@ export default function AboutPage() {
 
   return (
     <main className="home-page">
-      <section className="home-section home-section-about-hero">
+      <section className="home-section home-section-about-hero home-section-about-hero--child">
         <div className="home-page-container">
           <h1 className="home-h1">Build Your World. One Tile at a Time.</h1>
           <div className="home-prose">

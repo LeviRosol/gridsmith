@@ -1,6 +1,14 @@
 // Portions of this file are Copyright 2021 Google LLC, and licensed under GPL2+. See COPYING.
 
-import React, { CSSProperties, useEffect, useMemo, useState, useRef } from 'react';
+import React, {
+  CSSProperties,
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+  type ErrorInfo,
+  type ReactNode,
+} from 'react';
 import {MultiLayoutComponentId, State, StatePersister} from '../state/app-state'
 import { Model } from '../state/model';
 import EditorPanel from './EditorPanel';
@@ -18,6 +26,7 @@ import type { MenuItem } from 'primereact/menuitem';
 import HomePage from './HomePage';
 import AboutPage from './AboutPage';
 import TilesPage from './TilesPage';
+import TileSetDetailPage from './TileSetDetailPage';
 import ProfilePage from './ProfilePage';
 import TosPage from './TosPage';
 import PrivacyPage from './PrivacyPage';
@@ -30,6 +39,36 @@ import { isTileBuilderProTierResolution } from '../utils.ts';
 import { FaDiscord } from 'react-icons/fa6';
 
 const THEME_MODE_STORAGE_KEY = 'gridsmith.theme.darkMode';
+
+/** Catches render errors on lightweight marketing routes (e.g. tile detail) so the app does not white-screen. */
+class MarketingPageErrorBoundary extends React.Component<{ children: ReactNode }, { error: Error | null }> {
+  state: { error: Error | null } = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('MarketingPageErrorBoundary:', error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <main className="home-page" style={{ padding: '2rem 1rem' }}>
+          <div className="home-page-container">
+            <h1 className="home-h1">This page couldn&apos;t load</h1>
+            <p className="home-subhead">{this.state.error.message}</p>
+            <a href="/tiles" className="p-button p-component mt-3 inline-block">
+              <span className="p-button-label">Back to tile sets</span>
+            </a>
+          </div>
+        </main>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export function App({initialState, statePersister, fs}: {initialState: State, statePersister: StatePersister, fs: FS}) {
   return (
@@ -473,6 +512,16 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
       page = <AboutPage />;
     } else if (pathname === '/tiles') {
       page = <TilesPage />;
+    } else if (pathname === '/tile-details' || pathname.startsWith('/tile-details/')) {
+      const slug =
+        pathname === '/tile-details'
+          ? ''
+          : decodeURIComponent(pathname.slice('/tile-details/'.length).split('/').filter(Boolean)[0] ?? '');
+      page = (
+        <MarketingPageErrorBoundary key={slug || 'missing'}>
+          <TileSetDetailPage slug={slug} />
+        </MarketingPageErrorBoundary>
+      );
     } else if (pathname === '/profile') {
       page = <ProfilePage />;
     } else if (pathname === '/tos') {

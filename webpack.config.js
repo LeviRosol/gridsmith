@@ -41,19 +41,40 @@ const config = [
           exclude: /node_modules/,
         },
         {
-          test: /\.css$/i,
-          use: [
-            'style-loader',
-            {
-              loader: 'css-loader',
-              options: { url: false },
-            }
-          ]
+          // PrimeIcons @font-face uses relative ./fonts/... URLs; with style-loader those
+          // resolve against the document path, so nested routes (e.g. /tile-details/slug)
+          // break. Resolving URLs here emits /fonts/... via publicPath below.
+          test: /\.(woff2?|eot|ttf|svg)$/i,
+          issuer: /node_modules[\\/]primeicons[\\/]/,
+          type: 'asset/resource',
+          generator: {
+            filename: 'fonts/[name][ext]',
+          },
         },
-        // {
-        //   test: /\.(png|gif|woff|woff2|eot|ttf|svg)$/,
-        //   loader: 'url-loader?limit=100000'
-        // },
+        {
+          test: /\.css$/i,
+          oneOf: [
+            {
+              include: /node_modules[\\/]primeicons/,
+              use: [
+                'style-loader',
+                {
+                  loader: 'css-loader',
+                  options: { url: true },
+                },
+              ],
+            },
+            {
+              use: [
+                'style-loader',
+                {
+                  loader: 'css-loader',
+                  options: { url: false },
+                },
+              ],
+            },
+          ],
+        },
       ],
     },
     resolve: {
@@ -62,6 +83,7 @@ const config = [
     output: {
       filename: 'index.js',
       path: path.resolve(__dirname, 'dist'),
+      publicPath: '/',
     },
     devServer: {
       static: path.join(__dirname, 'dist'),
@@ -105,11 +127,6 @@ const config = [
         patterns: [
           {
             from: path.resolve(__dirname, 'public'),
-            toType: 'dir',
-          },
-          {
-            from: path.resolve(__dirname, 'node_modules/primeicons/fonts'),
-            to: path.resolve(__dirname, 'dist/fonts'),
             toType: 'dir',
           },
           {

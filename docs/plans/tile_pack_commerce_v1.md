@@ -1,10 +1,10 @@
 ---
 name: Tile pack commerce v1
-overview: Stripe one-time Tile Pack purchases (catalog + order history from Stripe API only), S3 STL delivery via logged-in download API, shop at /tiles and /tile-details, in-app Cognito-gated admin, and persistence only when a feature needs it. **First ship** is placeholder storefront UI (grid + detail) to prod so early visitors see direction; then wire Lambda/Stripe behind the same components.
+overview: Stripe one-time Tile Pack purchases (catalog + order history from Stripe API only), S3 STL delivery via logged-in download API, shop at /tiles and /tile-details, in-app Cognito-gated admin, and persistence only when a feature needs it. **Placeholder storefront UI** (grid + detail) is in-repo and **shipped / shipping to prod**; next is Lambda/Stripe behind the same components.
 todos:
   - id: storefront-ui-placeholder
     content: Build /tiles grid + /tile-details route in App.tsx with local placeholder tile-set data and images (no backend); match intended layout; deploy to prod for early users
-    status: pending
+    status: completed
   - id: lambda-stripe-apis
     content: "Add API Gateway + Lambda: catalog from Stripe, checkout-session (JWT), capabilities/me via Stripe Customer + purchase history (no order mirror DB)"
     status: pending
@@ -132,7 +132,11 @@ Goal: **local webpack / Vite never “accidentally” calls prod API Gateway or 
 
 ## Routes and UI (frontend)
 
-- **Phase 1 (ship first):** Implement `/tiles` **grid** and **`/tile-details/...`** using **in-repo placeholder data** (typed array or small module) and **placeholder images** (e.g. `public/` assets). Buttons like “Add to cart” can be disabled or show “Coming soon” until checkout exists—goal is **visible direction** for users already hitting the site.
+- **Phase 1 (UI — done in repo):**
+  - **`/tiles`:** PrimeReact grid (`Card`, `Tag`, etc.) backed by [`src/data/placeholderTileSets.ts`](../../src/data/placeholderTileSets.ts): sort `order`, optional `disabled` (dimmed card, coming-soon overlay, no link to detail), optional `priceLabel`, shared placeholder copy/images as needed.
+  - **`/tile-details/:slug`:** Product layout (breadcrumb, gallery + thumbs, description beside/below hero, PrimeReact `Dialog` / `Button` / `Divider`). Listing `disabled` drives merchandising copy (e.g. price fallback); **`addToCartDisabled`** is separate—button stays enabled; when true, **Add to cart** opens a **coming soon** modal (finishing touches + check back / create account copy, **Ok** dismisses). When false, checkout is still **not** wired (Stripe in later phases).
+  - **Nested routes:** Webpack `publicPath: '/'`, root-absolute `public/index.html` asset tags, and resolved `url()` for PrimeIcons so WASM/fonts/scripts do not 404 under `/tile-details/...`.
+  - **Prod:** Storefront shell deployed (or deploying) so visitors see `/tiles` and `/tile-details`; commerce APIs remain future work.
 - **Phase 2:** Swap the data source to `GET /api/catalog/tile-packs` without redesigning the layout.
 - [`App.tsx`](../../src/components/App.tsx): routing for both phases; stable id in the detail URL (slug or future `product_id`).
 - **Cart**: client-only line items → one Checkout Session (after backend exists).
@@ -164,7 +168,7 @@ Goal: **local webpack / Vite never “accidentally” calls prod API Gateway or 
 
 ## Suggested implementation order
 
-1. **Storefront UI (placeholders):** `/tiles` grid + `/tile-details` + placeholder content; deploy to **prod** so incoming users see where the shop is headed.
+1. ~~**Storefront UI (placeholders):** `/tiles` grid + `/tile-details` + placeholder content + prod deploy of the shell~~ **Done (see Phase 1 above).**
 2. **Lambda + API Gateway:** Stripe-backed **catalog** endpoint first; then **checkout-session** and **capabilities/me** (Cognito `custom:stripe_customer_id` when needed).
 3. **Wire catalog:** replace placeholder module with `GET /api/catalog/tile-packs` in the existing components.
 4. **Cart → checkout** in the UI once `POST /api/billing/checkout-session` exists.
@@ -175,5 +179,5 @@ Goal: **local webpack / Vite never “accidentally” calls prod API Gateway or 
 
 ## Handoff for a new agent
 
-- Start with todo **`storefront-ui-placeholder`** (see YAML frontmatter above).
+- **Storefront UI placeholder** is complete; start with todo **`lambda-stripe-apis`** (or **`catalog-wire-live`** after APIs exist).
 - Point the agent at this file: **`docs/plans/tile_pack_commerce_v1.md`**.

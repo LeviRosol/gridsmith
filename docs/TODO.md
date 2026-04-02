@@ -122,7 +122,12 @@ High-level roadmap; full design, sequence, and YAML todos live in **[`docs/plans
 
 **Principles:** Stripe is source of truth for products and paid orders (no local mirror DB). Add persistence (e.g. DynamoDB) only when a feature needs it (e.g. render telemetry). Signed-in checkout. S3 for STL files; downloads via JWT + server-side Stripe entitlement check + short-lived presigned URL. Separate dev/prod API URLs and Stripe test vs live keys.
 
-- [ ] **Phase 1 — Storefront UI (placeholders):** `/tiles` grid + `/tile-details` with in-repo placeholder data and images; “Add to cart” disabled or “Coming soon” until checkout exists; **ship to prod** so visitors see where the shop is going.
+- [x] **Phase 1 — Storefront UI (placeholders):** Done in repo.
+  - [x] `/tiles` grid (PrimeReact cards), placeholder catalog [`src/data/placeholderTileSets.ts`](../src/data/placeholderTileSets.ts) with `order`, `disabled`, `addToCartDisabled`, `priceLabel`, etc.
+  - [x] `/tile-details/:slug` product page (breadcrumb, gallery, description, CTAs).
+  - [x] **Add to cart:** always enabled; if `addToCartDisabled`, PrimeReact **Dialog** (coming-soon copy + check back / account line, **Ok** closes). If not disabled, button is still a no-op until checkout exists.
+  - [x] Nested-route fixes: webpack `publicPath: '/'`, root-absolute `public/index.html` assets, PrimeIcons `url()` handling so fonts/scripts/WASM load under `/tile-details/...`.
+  - [x] Deploy storefront UI to prod so live visitors see the shop shell.
 - [ ] **Phase 2 — AWS API:** API Gateway + Lambda: `GET /api/catalog/tile-packs` (Stripe list), then `POST /api/billing/checkout-session` and `GET /api/capabilities/me` (Stripe customer + purchase history; optional `custom:stripe_customer_id` on Cognito).
 - [ ] **Phase 3 — Wire catalog:** Replace placeholders with live catalog API; keep same components/routes.
 - [ ] **Phase 4 — Cart & checkout:** Client cart → Checkout Session (signed-in only).
