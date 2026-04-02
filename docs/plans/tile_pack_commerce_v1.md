@@ -23,6 +23,9 @@ todos:
   - id: admin-in-app
     content: /admin lookup UI; backend uses admin JWT + Stripe API (Dashboard parity for read paths) without mirroring orders locally
     status: pending
+  - id: marketing-opt-in-cognito
+    content: "Cognito custom:marketing_opt_in; Profile page; UpdateUserAttributes + InitiateAuth refresh; OAuth PKCE/redirect fixes; aws.cognito.signin.user.admin scope"
+    status: completed
 isProject: false
 ---
 
@@ -150,16 +153,16 @@ Goal: **local webpack / Vite never “accidentally” calls prod API Gateway or 
 
 ## Marketing newsletter opt-in (store in Cognito)
 
-**Yes.** With your current **User Pool + Hosted UI + Google** setup, you can keep a marketing flag on the **Cognito user record**—no separate “emails DB” required for the boolean.
+**Shipped in the SPA** (no separate “emails DB” for the boolean). Pool custom attribute **`custom:marketing_opt_in`** (`"true"` / `"false"`); **default opt-in** when the claim is missing (UI + one-time first-session write when possible).
 
-- **How:** Add **custom attributes** on the user pool, e.g. `custom:marketing_opt_in` (`"true"` / `"false"`) and optionally `custom:marketing_opt_in_at` (ISO timestamp) and/or a **policy version** string for consent auditing.
-- **Pool schema:** Define these in the Cognito user pool (Console or IaC). Optional attributes can often be added to an existing pool; confirm in your account’s Cognito console.
-- **Where users opt in:** Google’s account chooser **does not** include your checkbox. Collect consent **inside GridSmith** after sign-in (e.g. banner/modal on first visit, or **Profile / Settings**), with required legal copy and link to privacy policy.
-- **Writing the value:** The browser **cannot** safely call Cognito admin APIs. Use a **small authenticated API** (future Lambda): verify the user’s JWT, then call **`AdminUpdateUserAttributes`** for **that** `sub` only (map `email` → username if you use federated identities, or use the **sub** as needed per your pool’s username scheme).
-- **Reading in the app:** If the SPA should read the flag without an extra API call, add the custom attribute(s) to the **app client’s “read attributes”** so they appear in the **ID token**; extend [`AuthContext.tsx`](../../src/components/AuthContext.tsx) to parse them. Alternatively, expose `GET /api/me/marketing` that reads Cognito server-side.
-- **Export / campaigns:** **`ListUsers`** (paginated) or Cognito **CSV export** (where supported) can include custom attributes for ops. For real newsletters, you may still **sync** opted-in users to an ESP (Brevo, etc.) for sends and **unsubscribe** links—Cognito holds consent; the ESP holds campaign state.
+- **Pool / client (console):** User pool **Sign-up** → custom attribute `marketing_opt_in`; app client **read + write** + optional **ID token** claim; authorize scope **`aws.cognito.signin.user.admin`** so the user’s **access token** can call **`UpdateUserAttributes`** (not `AdminUpdateUserAttributes`).
+- **App:** [`AuthContext.tsx`](../../src/components/AuthContext.tsx) parses the ID token, syncs default `true` when the attribute is absent, refreshes tokens via **`InitiateAuth` (REFRESH_TOKEN_AUTH)** on **`cognito-idp`** after updates (same host as `UpdateUserAttributes`; avoids Hosted UI **`oauth2/token`** browser CORS pitfalls). OAuth **PKCE** callback: strip **`code`** from the URL **before** the async exchange to avoid **`invalid_grant`** (e.g. React Strict Mode double mount); **redirect_uri** resolution: session → env → current callback URL.
+- **Profile:** [`ProfilePage.tsx`](../../src/components/ProfilePage.tsx) toggle + save.
+- **Hosted UI sign-up:** Google / classic Hosted UI **do not** expose a marketing checkbox; consent is **Profile** (and optional future banner). Optional **Post confirmation** Lambda can still set the attribute server-side for auditing.
+- **Alternative (not required here):** Lambda + **`AdminUpdateUserAttributes`** if you prefer not to grant **`aws.cognito.signin.user.admin`** on the public client.
+- **Export / campaigns:** **`ListUsers`** / CSV export for ops; sync to an **ESP** later for sends—Cognito holds consent; ESP often holds campaign/unsubscribe links.
 
-**Caveat:** For strict compliance, some teams duplicate **consent timestamp + version** in both Cognito and the ESP, or treat the ESP as the unsubscribe source of truth after first sync. Cognito alone is enough for “on file in our auth directory” opt-in state.
+**Caveat:** For strict compliance, some teams duplicate **consent timestamp + version** in Cognito and the ESP, or treat the ESP as unsubscribe source of truth after first sync.
 
 ## Open choices during implementation
 

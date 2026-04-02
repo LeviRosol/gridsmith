@@ -80,6 +80,7 @@ Based on `docs/gridsmith-context.md`.
   - [x] Request `offline_access` in Cognito authorize flow.
   - [x] Persist refresh token and renew id/access tokens at app init when needed.
   - [x] Proactively refresh before token expiry for long-lived open tabs.
+- [x] **Marketing email opt-in (Cognito):** optional custom attribute `custom:marketing_opt_in` (`"true"` / `"false"`); default opt-in when unset; first-session sync + **Profile** toggle via browser **`UpdateUserAttributes`**; token refresh after updates uses **`InitiateAuth` (REFRESH_TOKEN_AUTH)** on `cognito-idp` (avoids Hosted UI token URL CORS); authorize scope includes **`aws.cognito.signin.user.admin`**; OAuth code exchange hardened (strip `code` before async to avoid double exchange / `invalid_grant`; redirect URI resolution aligned with callback URL).
 - [ ] Add a short deployment runbook (Cognito callback/sign-out URL matching, Vercel env vars, DNS notes).
 
 ## 8. Future Work / Nice-to-Haves
@@ -136,4 +137,5 @@ High-level roadmap; full design, sequence, and YAML todos live in **[`docs/plans
 - [ ] **Phase 6 — Tile Builder:** Wire Med/High render/download gates to **`/api/capabilities/me`** (real entitlements, not UI-only).
 - [ ] **Phase 7 — Admin:** In-app `/admin/*` (Cognito `admin` group); user lookup + Stripe read paths (no local order table).
 - [ ] **Phase 8 — Telemetry:** When built: chosen store (likely Dynamo) + `POST /api/telemetry/render` with non-PII `analytics_subject_id`—**do not create tables before this**.
-- [ ] **Later / optional:** Marketing newsletter opt-in via Cognito custom attributes + small authenticated API to set them; local dev never targets prod API Lambdas or live Stripe (see plan).
+- [x] **Marketing opt-in:** Shipped in app—`custom:marketing_opt_in` on the user pool, Profile UI, in-browser attribute updates (no Lambda required for the boolean). Optional later: Post confirmation Lambda for server-side default, or ESP sync for campaigns (see **`docs/plans/tile_pack_commerce_v1.md`**).
+- [ ] **Ops reminder:** Local dev never targets prod API Lambdas or live Stripe once those exist (see plan).

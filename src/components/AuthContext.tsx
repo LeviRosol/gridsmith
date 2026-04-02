@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  MARKETING_OPT_IN_ATTRIBUTE,
+  cognitoRefreshWithRefreshToken,
+  cognitoUpdateUserAttributes,
+  parseMarketingOptInFromIdTokenPayload,
+} from '../cognito/cognitoClient';
 
 type AuthUser = {
   sub?: string;
@@ -12,6 +18,9 @@ type AuthContextValue = {
   isSignedIn: boolean;
   isAdmin: boolean;
   user?: AuthUser;
+  /** Resolved marketing preference; when signed out, undefined. Missing JWT claim defaults to true. */
+  marketingOptIn?: boolean;
+  setMarketingOptIn: (value: boolean) => Promise<void>;
   login: () => void;
   logout: () => void;
 };
@@ -89,6 +98,39 @@ function isExpiredJwt(token?: string): boolean {
   return exp <= nowSeconds;
 }
 
+function applyOAuthTokenResponse(
+  json: { id_token?: string; access_token?: string; refresh_token?: string },
+  setIdToken: React.Dispatch<React.SetStateAction<string | null>>,
+  setAccessToken: React.Dispatch<React.SetStateAction<string | null>>,
+): void {
+  const nextId = json?.id_token ?? null;
+  const nextAccess = json?.access_token ?? null;
+  const storedRefresh = localStorage.getItem(STORAGE_KEYS.refreshToken);
+  const nextRefresh = json?.refresh_token ?? storedRefresh;
+
+  if (nextId && !isExpiredJwt(nextId)) {
+    localStorage.setItem(STORAGE_KEYS.idToken, nextId);
+    setIdToken(nextId);
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.idToken);
+    setIdToken(null);
+  }
+
+  if (nextAccess && !isExpiredJwt(nextAccess)) {
+    localStorage.setItem(STORAGE_KEYS.accessToken, nextAccess);
+    setAccessToken(nextAccess);
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.accessToken);
+    setAccessToken(null);
+  }
+
+  if (nextRefresh) {
+    localStorage.setItem(STORAGE_KEYS.refreshToken, nextRefresh);
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.refreshToken);
+  }
+}
+
 function getRoleFromTokenPayload(payload: any): boolean {
   const groupsClaim = payload?.['cognito:groups'] ?? payload?.groups ?? payload?.role;
   const groups = normalizeGroups(groupsClaim);
@@ -102,6 +144,35 @@ function getCognitoDomainPrefix(domain: string | undefined): string | undefined 
   const match = trimmed.match(/^(?:https?:\/\/)?([^.]+)\.auth\./i);
   if (match) return match[1];
   return trimmed;
+}
+
+/** Default callback when env COGNITO_REDIRECT_URI is unset (matches login page path rules). */
+function defaultRedirectUriForPathname(pathname: string): string {
+  const path = pathname.replace(/\/+$/, '') || '/';
+  if (path === '/tile-builder') {
+    return `${window.location.origin}/tile-builder`;
+  }
+  return `${window.location.origin}/baseplate`;
+}
+
+function redirectUriForLogin(): string {
+  const env = (process.env.COGNITO_REDIRECT_URI as string | undefined)?.trim();
+  if (env) return env;
+  return defaultRedirectUriForPathname(window.location.pathname);
+}
+
+/**
+ * Must exactly match the redirect_uri sent to /oauth2/authorize. Order: session (from login),
+ * env, then current page (handles lost sessionStorage while still on the callback URL).
+ */
+function redirectUriForCodeExchange(): string {
+  const stored = sessionStorage.getItem(SESSION_KEYS.redirectUri)?.trim();
+  if (stored) return stored;
+  const env = (process.env.COGNITO_REDIRECT_URI as string | undefined)?.trim();
+  if (env) return env;
+  const { origin, pathname } = window.location;
+  const p = pathname.replace(/\/+$/, '') || '/';
+  return `${origin}${p}`;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -167,15 +238,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const verifier = sessionStorage.getItem(SESSION_KEYS.pkceVerifier);
-      const path = window.location.pathname.replace(/\/+$/, '') || '/';
-      const defaultOAuthRedirect =
-        path === '/tile-builder'
-          ? `${window.location.origin}/tile-builder`
-          : `${window.location.origin}/baseplate`;
-      const redirectUri =
-        sessionStorage.getItem(SESSION_KEYS.redirectUri) ??
-        (process.env.COGNITO_REDIRECT_URI as string | undefined) ??
-        defaultOAuthRedirect;
+      const redirectUri = redirectUriForCodeExchange();
 
       if (!verifier) {
         throw new Error('Missing PKCE code verifier in sessionStorage.');
@@ -198,13 +261,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const json = await res.json();
       if (!res.ok) {
-        throw new Error(`Token exchange failed: ${json?.error ?? res.status}`);
+        const hint =
+          typeof json?.error_description === 'string' ? ` (${json.error_description})` : '';
+        throw new Error(`Token exchange failed: ${json?.error ?? res.status}${hint}`);
       }
 
       const nextId = json?.id_token ?? null;
       const nextAccess = json?.access_token ?? null;
       const nextRefresh = json?.refresh_token ?? null;
       applyTokens(nextId, nextAccess, nextRefresh);
+      sessionStorage.removeItem(SESSION_KEYS.pkceVerifier);
+      sessionStorage.removeItem(SESSION_KEYS.redirectUri);
     };
 
     const refreshTokens = async (refreshToken: string) => {
@@ -248,9 +315,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       try {
         if (code) {
-          await exchangeCodeForTokens(code);
-          const cleanUrl = window.location.pathname + window.location.hash;
-          window.history.replaceState(null, '', cleanUrl);
+          // Drop code from the URL synchronously so React Strict Mode / a second init cannot
+          // exchange the same one-time code (Cognito returns invalid_grant).
+          const oauthCode = code;
+          const url = new URL(window.location.href);
+          url.searchParams.delete('code');
+          url.searchParams.delete('state');
+          window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+          await exchangeCodeForTokens(oauthCode);
         } else if (error) {
           console.warn('Cognito OAuth error:', error);
           const cleanUrl = window.location.pathname + window.location.hash;
@@ -373,31 +445,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             throw new Error(`Token refresh failed: ${json?.error ?? res.status}`);
           }
 
-          const nextId = json?.id_token ?? null;
-          const nextAccess = json?.access_token ?? null;
-          const nextRefresh = json?.refresh_token ?? refreshToken;
-
-          if (nextId && !isExpiredJwt(nextId)) {
-            localStorage.setItem(STORAGE_KEYS.idToken, nextId);
-            setIdToken(nextId);
-          } else {
-            localStorage.removeItem(STORAGE_KEYS.idToken);
-            setIdToken(null);
-          }
-
-          if (nextAccess && !isExpiredJwt(nextAccess)) {
-            localStorage.setItem(STORAGE_KEYS.accessToken, nextAccess);
-            setAccessToken(nextAccess);
-          } else {
-            localStorage.removeItem(STORAGE_KEYS.accessToken);
-            setAccessToken(null);
-          }
-
-          if (nextRefresh) {
-            localStorage.setItem(STORAGE_KEYS.refreshToken, nextRefresh);
-          } else {
-            localStorage.removeItem(STORAGE_KEYS.refreshToken);
-          }
+          applyOAuthTokenResponse(
+            {
+              id_token: json?.id_token,
+              access_token: json?.access_token,
+              refresh_token: json?.refresh_token ?? refreshToken,
+            },
+            setIdToken,
+            setAccessToken,
+          );
         } catch (e) {
           console.warn('Proactive token refresh failed:', e);
           localStorage.removeItem(STORAGE_KEYS.idToken);
@@ -427,14 +483,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const path = window.location.pathname.replace(/\/+$/, '') || '/';
-      const defaultOAuthRedirect =
-        path === '/tile-builder'
-          ? `${window.location.origin}/tile-builder`
-          : `${window.location.origin}/baseplate`;
-      const redirectUri =
-        (process.env.COGNITO_REDIRECT_URI as string | undefined) ??
-        defaultOAuthRedirect;
+      const redirectUri = redirectUriForLogin();
 
       const codeVerifier = randomCodeVerifier(64);
       const codeChallenge = await sha256Base64Url(codeVerifier);
@@ -448,7 +497,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         `https://${domainPrefix}.auth.${region}.amazoncognito.com/oauth2/authorize` +
         `?client_id=${encodeURIComponent(clientId)}` +
         `&response_type=code` +
-        `&scope=${encodeURIComponent('openid email profile')}` +
+        // `aws.cognito.signin.user.admin` is required for Cognito IDP APIs that use the access token
+        // (e.g. UpdateUserAttributes for marketing opt-in). Allow this scope on the app client in Cognito.
+        `&scope=${encodeURIComponent('openid email profile aws.cognito.signin.user.admin')}` +
         `&redirect_uri=${encodeURIComponent(redirectUri)}` +
         `&state=${encodeURIComponent(state)}` +
         `&code_challenge=${encodeURIComponent(codeChallenge)}` +
@@ -481,17 +532,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.location.href = logoutUrl;
   };
 
+  const setMarketingOptIn = useCallback(async (value: boolean) => {
+    const region = process.env.COGNITO_REGION as string | undefined;
+    const clientId = process.env.COGNITO_CLIENT_ID as string | undefined;
+    const access = localStorage.getItem(STORAGE_KEYS.accessToken);
+    const refresh = localStorage.getItem(STORAGE_KEYS.refreshToken);
+    if (!region || !clientId || !access || !refresh) {
+      throw new Error('Cognito is not configured or you are not signed in.');
+    }
+    await cognitoUpdateUserAttributes(region, access, [
+      { Name: MARKETING_OPT_IN_ATTRIBUTE, Value: value ? 'true' : 'false' },
+    ]);
+    const json = await cognitoRefreshWithRefreshToken({ region, clientId, refreshToken: refresh });
+    applyOAuthTokenResponse(json, setIdToken, setAccessToken);
+  }, []);
+
+  const marketingDefaultSyncedSubRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (loading) return;
+    const effectiveIdToken = localStorage.getItem(STORAGE_KEYS.idToken);
+    if (!effectiveIdToken || isExpiredJwt(effectiveIdToken)) return;
+    const payload = decodeJwt(effectiveIdToken) ?? {};
+    const sub = typeof payload.sub === 'string' ? payload.sub : undefined;
+    if (!sub) return;
+    if (payload[MARKETING_OPT_IN_ATTRIBUTE] !== undefined) {
+      marketingDefaultSyncedSubRef.current = sub;
+      return;
+    }
+    if (marketingDefaultSyncedSubRef.current === sub) return;
+    marketingDefaultSyncedSubRef.current = sub;
+
+    const region = process.env.COGNITO_REGION as string | undefined;
+    const clientId = process.env.COGNITO_CLIENT_ID as string | undefined;
+    const access = localStorage.getItem(STORAGE_KEYS.accessToken);
+    const refresh = localStorage.getItem(STORAGE_KEYS.refreshToken);
+
+    if (!region || !clientId || !access || !refresh) return;
+
+    void (async () => {
+      try {
+        await cognitoUpdateUserAttributes(region, access, [
+          { Name: MARKETING_OPT_IN_ATTRIBUTE, Value: 'true' },
+        ]);
+        const json = await cognitoRefreshWithRefreshToken({ region, clientId, refreshToken: refresh });
+        applyOAuthTokenResponse(json, setIdToken, setAccessToken);
+      } catch (e) {
+        console.warn('Marketing opt-in default could not be synced to Cognito:', e);
+      }
+    })();
+  }, [loading, idToken]);
+
   const value = useMemo<AuthContextValue>(() => {
     const signedIn = !!idToken && !isExpiredJwt(idToken);
+    const marketingOptIn = signedIn
+      ? parseMarketingOptInFromIdTokenPayload(decodeJwt(idToken ?? ''))
+      : undefined;
     return {
       loading,
       isSignedIn: signedIn,
       isAdmin: signedIn ? isAdmin : false,
       user,
+      marketingOptIn,
+      setMarketingOptIn,
       login,
       logout,
     };
-  }, [idToken, isAdmin, loading, user]);
+  }, [idToken, isAdmin, loading, user, setMarketingOptIn]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
