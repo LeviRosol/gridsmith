@@ -5,6 +5,7 @@ import {
   cognitoUpdateUserAttributes,
   parseMarketingOptInFromIdTokenPayload,
 } from '../cognito/cognitoClient';
+import { getStoredConsent } from '../consent';
 
 type AuthUser = {
   sub?: string;
@@ -560,6 +561,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       marketingDefaultSyncedSubRef.current = sub;
       return;
     }
+    if (getStoredConsent()?.marketingEmails === false) {
+      marketingDefaultSyncedSubRef.current = sub;
+      return;
+    }
     if (marketingDefaultSyncedSubRef.current === sub) return;
     marketingDefaultSyncedSubRef.current = sub;
 
@@ -582,6 +587,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     })();
   }, [loading, idToken]);
+
+  const bannerMarketingOutAppliedRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (loading) return;
+    const effectiveIdToken = localStorage.getItem(STORAGE_KEYS.idToken);
+    if (!effectiveIdToken || isExpiredJwt(effectiveIdToken)) return;
+    const payload = decodeJwt(effectiveIdToken) ?? {};
+    const sub = typeof payload.sub === 'string' ? payload.sub : undefined;
+    if (!sub) return;
+    if (getStoredConsent()?.marketingEmails !== false) {
+      bannerMarketingOutAppliedRef.current = undefined;
+      return;
+    }
+    if (payload[MARKETING_OPT_IN_ATTRIBUTE] === 'false') {
+      bannerMarketingOutAppliedRef.current = sub;
+      return;
+    }
+    if (bannerMarketingOutAppliedRef.current === sub) return;
+    bannerMarketingOutAppliedRef.current = sub;
+    void (async () => {
+      try {
+        await setMarketingOptIn(false);
+      } catch (e) {
+        console.warn('Could not apply cookie-banner marketing opt-out:', e);
+        bannerMarketingOutAppliedRef.current = undefined;
+      }
+    })();
+  }, [loading, idToken, setMarketingOptIn]);
 
   const value = useMemo<AuthContextValue>(() => {
     const signedIn = !!idToken && !isExpiredJwt(idToken);

@@ -3,6 +3,8 @@ const GTM_ID = 'GTM-T2RWQFR4';
 
 export type StoredConsent = {
   analytics: boolean;
+  /** Product/marketing email opt-in; legacy payloads without this field default to true. */
+  marketingEmails: boolean;
 };
 
 export function getStoredConsent(): StoredConsent | undefined {
@@ -14,7 +16,9 @@ export function getStoredConsent(): StoredConsent | undefined {
     if (parsed && typeof parsed === 'object' && 'analytics' in parsed) {
       const a = (parsed as { analytics: unknown }).analytics;
       if (typeof a === 'boolean') {
-        return { analytics: a };
+        const m = (parsed as { marketingEmails?: unknown }).marketingEmails;
+        const marketingEmails = typeof m === 'boolean' ? m : true;
+        return { analytics: a, marketingEmails };
       }
     }
   } catch {
@@ -23,9 +27,9 @@ export function getStoredConsent(): StoredConsent | undefined {
   return undefined;
 }
 
-export function setStoredConsent(analytics: boolean): void {
+export function setStoredConsent(next: Pick<StoredConsent, 'analytics' | 'marketingEmails'>): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ analytics }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   } catch {
     // ignore quota / private mode
   }

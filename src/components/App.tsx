@@ -72,11 +72,11 @@ class MarketingPageErrorBoundary extends React.Component<{ children: ReactNode }
 
 export function App({initialState, statePersister, fs}: {initialState: State, statePersister: StatePersister, fs: FS}) {
   return (
-    <ConsentProvider>
-      <AuthProvider>
+    <AuthProvider>
+      <ConsentProvider>
         <AppImpl initialState={initialState} statePersister={statePersister} fs={fs} />
-      </AuthProvider>
-    </ConsentProvider>
+      </ConsentProvider>
+    </AuthProvider>
   );
 }
 

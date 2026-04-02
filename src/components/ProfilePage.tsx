@@ -39,7 +39,7 @@ export default function ProfilePage() {
 
   return (
     <main className="home-page">
-      <section className="home-section home-section-about-hero home-section-about-hero--child">
+      <section className="home-section home-section-alt">
         <div className="home-page-container">
           <h1 className="home-h1">Profile</h1>
           <div className="home-prose" style={{ maxWidth: 560 }}>
