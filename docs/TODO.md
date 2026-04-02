@@ -113,5 +113,21 @@ Based on `docs/gridsmith-context.md`.
 - [x] **SCAD:** `tile_builder.scad` assembler with `wall_profile` (`none` / `flat` / `curved`), `curved_wall_mirror`, per-side `use_*_wall` and `*_wall_type`, flat STL names `wall`/`door` vs curved `curved_wall`/`curved_door`, resolution-driven `tile_file()`.
 - [x] **UI (`TileBuilderPanel`):** accordion Core (default open) / Floor / Walls; resolution labels Low / Med / High (64 / 128 / 256); flat walls: per-side dropdown (None / Wall / Door) drives toggles; curved: **Type** (north) + **Mirror** checkbox (`curved_wall_mirror`): mirrored uses `use_east_wall` + `east_wall_type` instead of north; profile switch normalizes flat ↔ curved types and clears side toggles when entering curved.
 - [x] **Free tier (Med/High):** first dialog when selecting Med/High explains Pro (selection stays for preview); **Render** / **Download** / F6 / F7 open `TileBuilderUpsellContext` upsell modal instead of final render/export at 128/256 (preview still allowed).
-- [ ] **Pro gating (future):** replace UI-only upsell intercept with real membership check (Cognito group, entitlement API, or similar) before allowing final render + STL export at Med/High.
+- [ ] **Pro gating (future):** replace UI-only upsell intercept with real membership check (Cognito group, entitlement API, or similar) before allowing final render + STL export at Med/High. (Aligned with **section 12 (Tile pack commerce)**—capabilities from Stripe-backed API.)
 - [ ] **Optional:** tile-builder-specific analytics (`stl_previewed` / `stl_downloaded` with `resolution`, `wall_profile`, etc.) and download filename parity (north vs east when mirrored).
+
+## 12. Tile pack commerce & backend (digital packs)
+
+High-level roadmap; full design, sequence, and YAML todos live in **[`docs/plans/tile_pack_commerce_v1.md`](plans/tile_pack_commerce_v1.md)**.
+
+**Principles:** Stripe is source of truth for products and paid orders (no local mirror DB). Add persistence (e.g. DynamoDB) only when a feature needs it (e.g. render telemetry). Signed-in checkout. S3 for STL files; downloads via JWT + server-side Stripe entitlement check + short-lived presigned URL. Separate dev/prod API URLs and Stripe test vs live keys.
+
+- [ ] **Phase 1 — Storefront UI (placeholders):** `/tiles` grid + `/tile-details` with in-repo placeholder data and images; “Add to cart” disabled or “Coming soon” until checkout exists; **ship to prod** so visitors see where the shop is going.
+- [ ] **Phase 2 — AWS API:** API Gateway + Lambda: `GET /api/catalog/tile-packs` (Stripe list), then `POST /api/billing/checkout-session` and `GET /api/capabilities/me` (Stripe customer + purchase history; optional `custom:stripe_customer_id` on Cognito).
+- [ ] **Phase 3 — Wire catalog:** Replace placeholders with live catalog API; keep same components/routes.
+- [ ] **Phase 4 — Cart & checkout:** Client cart → Checkout Session (signed-in only).
+- [ ] **Phase 5 — Downloads:** Private S3; `POST` download endpoint validates JWT, confirms purchase in Stripe, returns presigned URL.
+- [ ] **Phase 6 — Tile Builder:** Wire Med/High render/download gates to **`/api/capabilities/me`** (real entitlements, not UI-only).
+- [ ] **Phase 7 — Admin:** In-app `/admin/*` (Cognito `admin` group); user lookup + Stripe read paths (no local order table).
+- [ ] **Phase 8 — Telemetry:** When built: chosen store (likely Dynamo) + `POST /api/telemetry/render` with non-PII `analytics_subject_id`—**do not create tables before this**.
+- [ ] **Later / optional:** Marketing newsletter opt-in via Cognito custom attributes + small authenticated API to set them; local dev never targets prod API Lambdas or live Stripe (see plan).
