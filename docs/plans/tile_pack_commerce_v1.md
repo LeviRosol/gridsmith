@@ -1,9 +1,9 @@
 ---
 name: Tile pack commerce v1
-overview: Stripe one-time Tile Pack purchases (catalog + order history from Stripe API only), S3 STL delivery via logged-in download API, shop at /tiles and /tile-details, in-app Cognito-gated admin, and persistence only when a feature needs it. **Placeholder storefront UI** (grid + detail) is in-repo and **shipped / shipping to prod**; next is Lambda/Stripe behind the same components.
+overview: Stripe one-time Tile Pack purchases (catalog + order history from Stripe API only), S3 STL delivery via logged-in download API, shop at /tiles and /tile-details, in-app Cognito-gated admin, and persistence only when a feature needs it. **Storefront UI** (grid, rich product detail, catalog module with optional `whatYouGet`) is in-repo and **shipped to prod**; next is Lambda/Stripe behind the same components.
 todos:
   - id: storefront-ui-placeholder
-    content: Build /tiles grid + /tile-details route in App.tsx with local placeholder tile-set data and images (no backend); match intended layout; deploy to prod for early users
+    content: "/tiles + /tile-details/:slug with local catalog (incl. optional whatYouGet), two-column detail w/ independent scroll on lg, coming-soon modal, prod deploy—no Stripe yet"
     status: completed
   - id: lambda-stripe-apis
     content: "Add API Gateway + Lambda: catalog from Stripe, checkout-session (JWT), capabilities/me via Stripe Customer + purchase history (no order mirror DB)"
@@ -133,10 +133,11 @@ Goal: **local webpack / Vite never “accidentally” calls prod API Gateway or 
 ## Routes and UI (frontend)
 
 - **Phase 1 (UI — done in repo):**
-  - **`/tiles`:** PrimeReact grid (`Card`, `Tag`, etc.) backed by [`src/data/placeholderTileSets.ts`](../../src/data/placeholderTileSets.ts): sort `order`, optional `disabled` (dimmed card, coming-soon overlay, no link to detail), optional `priceLabel`, shared placeholder copy/images as needed.
-  - **`/tile-details/:slug`:** Product layout (breadcrumb, gallery + thumbs, description beside/below hero, PrimeReact `Dialog` / `Button` / `Divider`). Listing `disabled` drives merchandising copy (e.g. price fallback); **`addToCartDisabled`** is separate—button stays enabled; when true, **Add to cart** opens a **coming soon** modal (finishing touches + check back / create account copy, **Ok** dismisses). When false, checkout is still **not** wired (Stripe in later phases).
+  - **`/tiles`:** PrimeReact grid (`Card`, `Tag`, etc.) backed by [`src/data/placeholderTileSets.ts`](../../src/data/placeholderTileSets.ts): sort `order`, optional `disabled`, optional `priceLabel`, **`addToCartDisabled`**, optional **`whatYouGet`** (set-specific “What you get” block on detail). Card description excerpts preserve **line breaks** where the copy uses newlines.
+  - **`/tile-details/:slug`:** Breadcrumb; **two columns at `lg+`** with **separate scroll** per column (`max-height` / `overflow-y`); **left:** hero image, thumb strip, static **Designed for the Table** (+ follow-on prose); **right:** tag, title, price, multi-paragraph description, **Add to cart** / Continue shopping, static **Included Files**, optional **What you get** from `whatYouGet` (multiline intro/closing/bullets), duplicate **Add to cart** at bottom. Stacked layout below `lg`. Listing **`disabled`** vs **`addToCartDisabled`** unchanged; **Add to cart** → coming-soon **Dialog** when `addToCartDisabled`; checkout not wired otherwise.
   - **Nested routes:** Webpack `publicPath: '/'`, root-absolute `public/index.html` asset tags, and resolved `url()` for PrimeIcons so WASM/fonts/scripts do not 404 under `/tile-details/...`.
-  - **Prod:** Storefront shell deployed (or deploying) so visitors see `/tiles` and `/tile-details`; commerce APIs remain future work.
+  - **Footer:** **`SiteFooter`** stays global under `<main>` only (not duplicated inside the scroll column); users finish the in-column scroll, then scroll the document to reach the footer.
+  - **Prod:** Storefront deployed so visitors see `/tiles` and `/tile-details`; commerce APIs remain future work.
 - **Phase 2:** Swap the data source to `GET /api/catalog/tile-packs` without redesigning the layout.
 - [`App.tsx`](../../src/components/App.tsx): routing for both phases; stable id in the detail URL (slug or future `product_id`).
 - **Cart**: client-only line items → one Checkout Session (after backend exists).
