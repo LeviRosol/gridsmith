@@ -583,6 +583,37 @@ code {
   padding-bottom: 3rem;
 }
 
+/* Two-column product row: each column scrolls independently on large screens */
+@media (min-width: 992px) {
+  .tile-detail-main-row {
+    align-items: stretch;
+  }
+
+  .tile-detail-main-row > .tile-detail-main-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .tile-detail-column {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: calc(100vh - 11rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.5rem;
+  }
+
+  .tile-detail-column--left {
+    padding-right: 0.5rem;
+  }
+
+  .tile-detail-column--right {
+    padding-right: 0.15rem;
+  }
+}
+
 .tile-detail-breadcrumb .p-breadcrumb {
   background: transparent;
   border: none;
@@ -627,11 +658,6 @@ code {
 
 .tile-detail-qty-input.p-inputnumber .p-inputnumber-input {
   width: 100%;
-}
-
-.tile-detail-gallery {
-  position: sticky;
-  top: 1rem;
 }
 
 .tile-detail-image-frame {
@@ -758,6 +784,46 @@ code {
   opacity: 0.92;
 }
 
+.tile-detail-spec-section {
+  margin: 0;
+}
+
+.tile-detail-spec-heading {
+  margin: 0 0 0.65rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.tile-detail-spec-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  opacity: 0.92;
+}
+
+.tile-detail-spec-list li {
+  margin-bottom: 0.35rem;
+}
+
+.tile-detail-spec-list li:last-child {
+  margin-bottom: 0;
+}
+
+.tile-detail-spec-prose {
+  font-size: 0.98rem;
+  opacity: 0.92;
+}
+
+.tile-detail-what-you-get .tile-detail-spec-prose--preline {
+  white-space: pre-line;
+}
+
+.tile-detail-what-you-get .tile-detail-spec-list li {
+  white-space: pre-line;
+}
+
 .tile-shop-card-coming-soon {
   position: absolute;
   top: 50%;
@@ -832,6 +898,10 @@ a.tile-shop-card-image-hit:focus-visible {
   top: calc(var(--tile-shop-image-inset) + 0.5rem);
   right: calc(var(--tile-shop-image-inset) + 0.5rem);
   z-index: 1;
+}
+
+.tile-shop-card-blurb {
+  white-space: pre-line;
 }
 
 /* Dark mode: inverse elevation — deeper shadow + faint light rim (theme .p-card is in @layer; this wins by specificity). */

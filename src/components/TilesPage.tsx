@@ -12,7 +12,12 @@ const EXCERPT_LEN = 160;
 function excerpt(text: string, maxLen: number) {
   const t = text.trim();
   if (t.length <= maxLen) return t;
-  return `${t.slice(0, maxLen).trim()}…`;
+  let cut = t.slice(0, maxLen);
+  const lastBreak = Math.max(cut.lastIndexOf('\n'), cut.lastIndexOf(' '));
+  if (lastBreak >= Math.floor(maxLen * 0.55)) {
+    cut = cut.slice(0, lastBreak);
+  }
+  return `${cut.trimEnd()}…`;
 }
 
 function TileSetCardImage({ set }: { set: TileSetCatalogItem }) {
