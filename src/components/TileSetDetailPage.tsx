@@ -22,6 +22,13 @@ const INCLUDED_FILES_BULLETS = [
   'Clean geometry optimized for slicing',
 ];
 
+/** Shown under the price on every tile set detail page. */
+const BUYBOX_HIGHLIGHT_BULLETS = [
+  "True 5' hallways",
+  'Tiles stay locked in place (no magnets or bulky bases)',
+  'Designed for real gameplay, not display',
+];
+
 function TileDetailSpecList({
   heading,
   items,
@@ -120,6 +127,12 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
 
   const priceDisplay = set.priceLabel ?? (set.disabled ? 'Coming soon' : null);
 
+  const priceForAddToCart = set.priceLabel ?? priceDisplay;
+  const addToCartLabel =
+    priceForAddToCart != null && priceForAddToCart !== ''
+      ? `Add ${set.name}\u2013 ${priceForAddToCart}`
+      : `Add ${set.name}`;
+
   const handleAddToCartClick = () => {
     if (set.addToCartDisabled) {
       setComingSoonDialogVisible(true);
@@ -203,6 +216,15 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
                     </div>
                   ) : null}
 
+                  <ul
+                    className={`tile-detail-spec-list m-0${priceDisplay ? ' mt-2' : ' mt-3'}`}
+                    aria-label="Product highlights"
+                  >
+                    {BUYBOX_HIGHLIGHT_BULLETS.map((item, i) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ul>
+
                   <div className="tile-detail-description-block mt-3">
                     <h2 className="tile-detail-description-heading">Description</h2>
                     {set.description
@@ -222,7 +244,7 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
 
                   <Button
                     type="button"
-                    label="Add to cart"
+                    label={addToCartLabel}
                     icon="pi pi-shopping-cart"
                     className="w-full font-bold tile-detail-add-cart"
                     onClick={handleAddToCartClick}
@@ -277,7 +299,7 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
 
                   <Button
                     type="button"
-                    label="Add to cart"
+                    label={addToCartLabel}
                     icon="pi pi-shopping-cart"
                     className="w-full font-bold tile-detail-add-cart"
                     onClick={handleAddToCartClick}

@@ -13,7 +13,7 @@ const BASE_DEFAULTS = {
   gap: 0.2,
   wall: 1,
   ext_wall_pct: 0.5,
-  height: 2,
+  height: 3.2,
   underlay_thick: 0.6,
   shelf_height: 1.0,
   shelf_width: 1.0,

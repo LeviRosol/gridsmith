@@ -28,6 +28,8 @@ export interface State {
   params: {
     activePath: string,
     sources: Source[],
+    /** When this differs from the app bundle, embedded /baseplate.scad source is refreshed from default-scad.ts */
+    baseplateTemplateRevision?: number,
     vars?: {[name: string]: any},
     features: string[],
     exportFormat2D: keyof typeof VALID_EXPORT_FORMATS_2D,

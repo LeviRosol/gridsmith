@@ -78,6 +78,10 @@ export async function readStateFromFragment(): Promise<State | null> {
           activePath: validateString(params?.activePath, () => defaultSourcePath),
           features: validateArray(params?.features, validateString),
           vars: params?.vars, // TODO: validate!
+          baseplateTemplateRevision:
+            typeof params?.baseplateTemplateRevision === 'number'
+              ? params.baseplateTemplateRevision
+              : undefined,
           // Source deserialization also handles legacy links (source + sourcePath)
           sources: params?.sources ?? (params?.source ? [{path: params?.sourcePath, content: params?.source}] : undefined), // TODO: validate!
           exportFormat2D: validateStringEnum(params?.exportFormat2D, Object.keys(VALID_EXPORT_FORMATS_2D), s => 'svg'),

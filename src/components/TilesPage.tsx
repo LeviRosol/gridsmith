@@ -73,7 +73,7 @@ export default function TilesPage() {
         <div className="home-page-container">
           <div className="grid">
             {PLACEHOLDER_TILE_SETS.map((set) => (
-              <div key={set.slug} className="col-12 sm:col-6 xl:col-4">
+              <div key={set.slug} className="col-12 sm:col-6 lg:col-4 xl:col-3">
                 <div className="tile-shop-card-shell">
                   {set.disabled ? (
                     <div className="tile-shop-card-coming-soon" role="status">
