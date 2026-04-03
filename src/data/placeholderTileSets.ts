@@ -35,7 +35,9 @@ const PLACEHOLDER_TILE_SETS_RAW: TileSetCatalogItem[] = [
     name: 'Tavern Set',
     priceLabel: '$15',
     imageSrc: '/logo512.png',
-    description: `Welcome to the tavern.
+    description: `Build fully modular taverns that actually work at the table.
+
+Welcome to the tavern.
 
 This is where most adventures start—and now you can build it exactly how you want.
 
