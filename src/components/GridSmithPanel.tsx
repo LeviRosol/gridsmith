@@ -9,7 +9,7 @@ import { Dropdown } from 'primereact/dropdown';
 const BASE_DEFAULTS = {
   rows: 2,
   cols: 2,
-  cell: 30.5,
+  cell: 30.2,
   gap: 0.2,
   wall: 1,
   ext_wall_pct: 0.5,
@@ -21,8 +21,8 @@ const BASE_DEFAULTS = {
 };
 
 const TILE_TYPE_OPTIONS = [
-  { label: 'GridSmith', value: 30.5 },
-  { label: 'OpenForge', value: 50 },
+  { label: 'GridSmith', value: 30.2 },
+  { label: 'OpenForge', value: 50.4 },
 ];
 
 type BaseDefaultsKey = keyof typeof BASE_DEFAULTS;

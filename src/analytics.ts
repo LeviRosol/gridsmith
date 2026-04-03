@@ -9,11 +9,14 @@ declare global {
 
 const DEFAULT_ROWS = 2;
 const DEFAULT_COLUMNS = 2;
-const DEFAULT_CELL_SIZE = 30.5;
+const DEFAULT_CELL_SIZE = 30.2;
 
 const TILE_TYPE_BY_CELL: Record<number, string> = {
-  30.5: 'GridSmith',
+  30.2: 'GridSmith',
+  30.4: 'GridSmith',
+  30.5: 'GridSmith', // legacy bookmarks
   50: 'OpenForge',
+  50.4: 'OpenForge',
 };
 
 let initialized = false;

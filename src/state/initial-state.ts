@@ -14,7 +14,7 @@ export const defaultModelColor = '#f9d72c';
  * **Whenever you change `default-scad.ts`, increment this number in the same change** so
  * users and saved links pick up the new geometry. Future agents: treat this as required.
  */
-export const BASEPLATE_TEMPLATE_REVISION = 1;
+export const BASEPLATE_TEMPLATE_REVISION = 2;
 
 const defaultBlurhash = "|KSPX^%3~qtjMx$lR*x]t7n,R%xuxbM{WBt7ayfk_3bY9FnAt8XOxanjNF%fxbMyIn%3t7NFoLaeoeV[WBo{xar^IoS1xbxcR*S0xbofRjV[j[kCNGofxaWBNHW-xasDR*WTkBxuWBM{s:t7bYahRjfkozWUadofbIW:jZ";
 
@@ -62,7 +62,7 @@ export function createInitialState(state: State | null, source?: {content?: stri
         vars: {
           rows: 2,
           cols: 2,
-          cell: 30.4,
+          cell: 30.2,
           gap: 0.2,
           wall: 1,
           ext_wall_pct: 0.5,
