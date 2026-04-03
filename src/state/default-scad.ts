@@ -30,7 +30,7 @@ ledge_thickness = 1.0; // thickness of the shelf rib (mm)
 // rib_z_offset is measured from the TOP of the ledge to the TOP of the rib.
 // The rib is then built downward from that reference.
 // rib_radius rounds all exposed rib edges; keep it <= min(rib_height, rib_projection)/2.
-rib_enabled = true;
+rib_enabled = true;    // Customizer / -Drib_enabled; app sets false for OpenForge tile type
 rib_z_offset = 1.8;    // top of rib above the top of the ledge (mm)
 rib_width = 10.0;      // length of each rib along the wall face (mm)
 rib_height = 0.5;      // vertical height of the rib (mm)

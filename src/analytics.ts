@@ -1,4 +1,5 @@
 import { getStoredConsent } from './consent';
+import { GRIDSMITH_CELL_MM, OPENFORGE_CELL_MM } from './state/initial-state.ts';
 
 type AnalyticsValue = string | number | boolean;
 declare global {
@@ -9,14 +10,14 @@ declare global {
 
 const DEFAULT_ROWS = 2;
 const DEFAULT_COLUMNS = 2;
-const DEFAULT_CELL_SIZE = 30.2;
+const DEFAULT_CELL_SIZE = GRIDSMITH_CELL_MM;
 
 const TILE_TYPE_BY_CELL: Record<number, string> = {
-  30.2: 'GridSmith',
+  [GRIDSMITH_CELL_MM]: 'GridSmith',
   30.4: 'GridSmith',
   30.5: 'GridSmith', // legacy bookmarks
   50: 'OpenForge',
-  50.4: 'OpenForge',
+  [OPENFORGE_CELL_MM]: 'OpenForge',
 };
 
 let initialized = false;

@@ -6,6 +6,10 @@ import { State } from './app-state.ts';
 export const defaultSourcePath = '/baseplate.scad';
 export const defaultModelColor = '#f9d72c';
 
+/** Nominal cell size (mm) for the Tile Type presets in GridSmithPanel. */
+export const GRIDSMITH_CELL_MM = 30.2;
+export const OPENFORGE_CELL_MM = 50.4;
+
 /**
  * Monotonic revision of the bundled `/baseplate.scad` text from `default-scad.ts`.
  * Persisted sessions store SCAD in the URL hash; when this value increases, the app
@@ -14,7 +18,7 @@ export const defaultModelColor = '#f9d72c';
  * **Whenever you change `default-scad.ts`, increment this number in the same change** so
  * users and saved links pick up the new geometry. Future agents: treat this as required.
  */
-export const BASEPLATE_TEMPLATE_REVISION = 2;
+export const BASEPLATE_TEMPLATE_REVISION = 3;
 
 const defaultBlurhash = "|KSPX^%3~qtjMx$lR*x]t7n,R%xuxbM{WBt7ayfk_3bY9FnAt8XOxanjNF%fxbMyIn%3t7NFoLaeoeV[WBo{xar^IoS1xbxcR*S0xbofRjV[j[kCNGofxaWBNHW-xasDR*WTkBxuWBM{s:t7bYahRjfkozWUadofbIW:jZ";
 
@@ -24,6 +28,14 @@ function refreshBundledBaseplateSourceIfStale(s: State) {
   if (s.params.baseplateTemplateRevision === BASEPLATE_TEMPLATE_REVISION) return;
   src0.content = defaultScad;
   s.params.baseplateTemplateRevision = BASEPLATE_TEMPLATE_REVISION;
+}
+
+/** Snap ribs on for GridSmith cells, off for OpenForge preset sizes. */
+function syncRibEnabledToPresetTileType(s: State) {
+  const v = s.params.vars;
+  if (!v || s.params.activePath !== defaultSourcePath) return;
+  if (v.cell === GRIDSMITH_CELL_MM) v.rib_enabled = true;
+  else if (v.cell === OPENFORGE_CELL_MM) v.rib_enabled = false;
 }
 
 export function createInitialState(state: State | null, source?: {content?: string, path?: string, url?: string, blurhash?: string}): State {
@@ -62,7 +74,8 @@ export function createInitialState(state: State | null, source?: {content?: stri
         vars: {
           rows: 2,
           cols: 2,
-          cell: 30.2,
+          cell: GRIDSMITH_CELL_MM,
+          rib_enabled: true,
           gap: 0.2,
           wall: 1,
           ext_wall_pct: 0.5,
@@ -112,6 +125,7 @@ export function createInitialState(state: State | null, source?: {content?: stri
   // }
 
   refreshBundledBaseplateSourceIfStale(initialState);
+  syncRibEnabledToPresetTileType(initialState);
 
   const defaultFeatures = ['lazy-union'];
   defaultFeatures.forEach(f => {
