@@ -15,7 +15,7 @@ export default `// GridSmith baseplate
 rows = 2;
 cols = 2;
 
-cell_size = 30.4;      // nominal cell size (mm)
+cell = 30.2;           // nominal cell size (mm); Customizer passes -Dcell
 wall_thickness = 1;    // interior wall thickness between cells (mm)
 exterior_wall = 0.5;   // exterior wall thickness on all 4 outside edges (mm)
 wall_height = 3;       // wall height ABOVE the top of the shelf (mm)
@@ -30,7 +30,7 @@ ledge_thickness = 1.0; // thickness of the shelf rib (mm)
 // rib_z_offset is measured from the TOP of the ledge to the TOP of the rib.
 // The rib is then built downward from that reference.
 // rib_radius rounds all exposed rib edges; keep it <= min(rib_height, rib_projection)/2.
-rib_enabled = true;
+rib_enabled = true;    // Customizer / -Drib_enabled; app sets false for OpenForge tile type
 rib_z_offset = 1.8;    // top of rib above the top of the ledge (mm)
 rib_width = 10.0;      // length of each rib along the wall face (mm)
 rib_height = 0.5;      // vertical height of the rib (mm)
@@ -43,10 +43,10 @@ rib_radius = 0.2;      // rounding radius on exposed rib edges (mm)
 interior_top_round_radius = 0.5; // radius of top roundover on interior wall edges (mm)
 
 // Derived dimensions
-cell_opening = cell_size - 2*clearance;
-pitch = cell_size + wall_thickness;
-plate_width = cols*cell_size + (cols-1)*wall_thickness + 2*exterior_wall;
-plate_depth = rows*cell_size + (rows-1)*wall_thickness + 2*exterior_wall;
+cell_opening = cell - 2*clearance;
+pitch = cell + wall_thickness;
+plate_width = cols*cell + (cols-1)*wall_thickness + 2*exterior_wall;
+plate_depth = rows*cell + (rows-1)*wall_thickness + 2*exterior_wall;
 
 // Single source of truth for the structural floor.
 // Option A: the base thickness follows the ledge thickness so tile seat height

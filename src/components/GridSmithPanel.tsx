@@ -1,15 +1,17 @@
 import React, { CSSProperties, useContext } from 'react';
 import { ModelContext } from './contexts.ts';
+import { GRIDSMITH_CELL_MM, OPENFORGE_CELL_MM } from '../state/initial-state.ts';
 import { Fieldset } from 'primereact/fieldset';
 import { InputNumber } from 'primereact/inputnumber';
 import { Slider } from 'primereact/slider';
 import { Button } from 'primereact/button';
 import { Dropdown } from 'primereact/dropdown';
+import { Message } from 'primereact/message';
 
 const BASE_DEFAULTS = {
   rows: 2,
   cols: 2,
-  cell: 30.5,
+  cell: GRIDSMITH_CELL_MM,
   gap: 0.2,
   wall: 1,
   ext_wall_pct: 0.5,
@@ -21,8 +23,8 @@ const BASE_DEFAULTS = {
 };
 
 const TILE_TYPE_OPTIONS = [
-  { label: 'GridSmith', value: 30.5 },
-  { label: 'OpenForge', value: 50 },
+  { label: 'GridSmith', value: GRIDSMITH_CELL_MM },
+  { label: 'OpenForge', value: OPENFORGE_CELL_MM },
 ];
 
 type BaseDefaultsKey = keyof typeof BASE_DEFAULTS;
@@ -48,6 +50,16 @@ function computePlateSize(vars: { [k: string]: any } | undefined) {
   };
 }
 
+/** Small plate: both edges under 200 mm. Large: any edge over 340 mm. Mid: between. */
+function plateSizeMessageSeverity(
+  width: number,
+  depth: number,
+): 'success' | 'warn' | 'error' {
+  if (width > 340 || depth > 340) return 'error';
+  if (width < 200 && depth < 200) return 'success';
+  return 'warn';
+}
+
 export default function GridSmithPanel({ className, style }: { className?: string; style?: CSSProperties }) {
   const model = useContext(ModelContext);
   if (!model) throw new Error('No model');
@@ -55,12 +67,27 @@ export default function GridSmithPanel({ className, style }: { className?: strin
   const state = model.state;
   const vars = state.params.vars ?? {};
 
+  const TILE_BUILDER_SCAD_PATH = '/tile_builder.scad';
+
   const handleChange = (key: BaseDefaultsKey, value: number | null | undefined) => {
     if (value == null || Number.isNaN(value)) {
       model.setVar(key, BASE_DEFAULTS[key]);
     } else {
       model.setVar(key, value);
     }
+  };
+
+  const handleTileTypeChange = (cell: number) => {
+    const rib_enabled = cell === GRIDSMITH_CELL_MM;
+    model.mutate((s) => {
+      s.params.vars = {
+        ...(s.params.vars ?? {}),
+        cell,
+        rib_enabled,
+      };
+    });
+    if (model.state.params.activePath === TILE_BUILDER_SCAD_PATH) return;
+    void model.render({ isPreview: true, now: false });
   };
 
   const applyPreset = (values: Partial<typeof BASE_DEFAULTS>) => {
@@ -73,6 +100,7 @@ export default function GridSmithPanel({ className, style }: { className?: strin
   };
 
   const currentSize = computePlateSize(vars);
+  const plateSizeSeverity = plateSizeMessageSeverity(currentSize.width, currentSize.depth);
 
   const basicInputs = (
     <div className="flex flex-column gap-3">
@@ -143,23 +171,33 @@ export default function GridSmithPanel({ className, style }: { className?: strin
         <Dropdown
           value={getVarValue(vars, 'cell')}
           options={TILE_TYPE_OPTIONS}
-          onChange={(e) => handleChange('cell', e.value)}
+          onChange={(e) => {
+            const v = e.value;
+            if (typeof v !== 'number' || Number.isNaN(v)) return;
+            handleTileTypeChange(v);
+          }}
           style={{ width: '60%' }}
         />
       </div>
 
-      <div
-        style={{
-          marginTop: '0.5rem',
-          fontSize: '0.85rem',
-          color: '#444',
+      <Message
+        severity={plateSizeSeverity}
+        className="w-full mt-2"
+        pt={{
+          icon: { className: 'hidden', 'aria-hidden': true },
+          text: {
+            style: { fontSize: '0.75rem', lineHeight: 1.35 },
+          },
         }}
-      >
-        <div style={{ fontWeight: 600 }}>Approximate plate size</div>
-        <div>
-          Width: {currentSize.width} mm · Depth: {currentSize.depth} mm
-        </div>
-      </div>
+        text={
+          <>
+            <span className="font-semibold block mb-1">Approximate plate size</span>
+            <span className="block">
+              Width: {currentSize.width} mm · Depth: {currentSize.depth} mm
+            </span>
+          </>
+        }
+      />
     </div>
   );
 
