@@ -5,6 +5,7 @@ import { Dialog } from 'primereact/dialog';
 import { Divider } from 'primereact/divider';
 import { Tag } from 'primereact/tag';
 import type { MenuItem } from 'primereact/menuitem';
+import { trackTileSetAddClick } from '../analytics.ts';
 import { getTileSetBySlug } from '../data/placeholderTileSets';
 
 const THUMB_KEYS = [0, 1, 2] as const;
@@ -134,6 +135,7 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
       : `Add ${set.name}`;
 
   const handleAddToCartClick = () => {
+    trackTileSetAddClick(set.name);
     if (set.addToCartDisabled) {
       setComingSoonDialogVisible(true);
     }
