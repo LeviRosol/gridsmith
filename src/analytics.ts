@@ -59,6 +59,16 @@ export function trackEvent(eventName: string, params: Record<string, AnalyticsVa
   pushDataLayerEvent(eventName, sanitizeEventParams(params));
 }
 
+/** User opened a tile set detail from the /tiles shop grid (button or card image). */
+export function trackTileSetViewDetails(tileSetName: string): void {
+  trackEvent('tile_set_view_details', { tile_set_name: tileSetName });
+}
+
+/** User clicked Add (cart) on a tile set detail page. */
+export function trackTileSetAddClick(tileSetName: string): void {
+  trackEvent('tile_set_add_click', { tile_set_name: tileSetName });
+}
+
 export function trackPageView(path: string): void {
   if (typeof document === 'undefined' || typeof window === 'undefined') return;
   pushDataLayerEvent('page_view', {

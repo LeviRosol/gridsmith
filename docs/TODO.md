@@ -93,6 +93,9 @@ Based on `docs/gridsmith-context.md`.
 - [ ] Add optional in-app typography presets/font toggle only if needed for design iteration.
 
 ## 9. Analytics & Observability
+- [x] GA4/GTM reference:
+  - [x] GA4 Measurement ID: `G-07J44WE7N0`
+  - [x] GTM Container ID: `GTM-T2RWQFR4`
 - [x] Add Google Analytics across the full site:
   - [x] Track page views on all routes.
   - [x] Track custom events:

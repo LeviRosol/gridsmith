@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Tag } from 'primereact/tag';
+import { trackTileSetViewDetails } from '../analytics.ts';
 import { PLACEHOLDER_TILE_SETS, type TileSetCatalogItem } from '../data/placeholderTileSets';
 
 const TITLE = 'GridSmith — Tile sets';
@@ -39,6 +40,7 @@ function TileSetCardImage({ set }: { set: TileSetCatalogItem }) {
       href={`/tile-details/${set.slug}`}
       className="tile-shop-card-image-hit"
       aria-label={`View details for ${set.name}`}
+      onClick={() => trackTileSetViewDetails(set.name)}
     >
       {img}
     </a>
@@ -109,6 +111,7 @@ export default function TilesPage() {
                         <a
                           href={`/tile-details/${set.slug}`}
                           className="p-button p-component font-bold w-full text-center block"
+                          onClick={() => trackTileSetViewDetails(set.name)}
                         >
                           <span className="p-button-label">View Details</span>
                         </a>
