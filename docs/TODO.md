@@ -126,6 +126,9 @@ High-level roadmap; full design, sequence, and YAML todos live in **[`docs/plans
 
 **Principles:** Stripe is source of truth for products and paid orders (no local mirror DB). Add persistence (e.g. DynamoDB) only when a feature needs it (e.g. render telemetry). Signed-in checkout. S3 for STL files; downloads via JWT + server-side Stripe entitlement check + short-lived presigned URL. Separate dev/prod API URLs and Stripe test vs live keys.
 
+- [x] **Stripe Dashboard:** Account set up; **custom checkout domain** `checkout.gridsmith.io` for Stripe Hosted Checkout (align success/cancel URLs when Checkout Session API ships).
+
+- [ ] **Phase 2a — API deployment pipeline:** Add AWS API deploy workflow in CI (separate from web deploy): auto deploy to dev on branch push, manual/approved prod deploy, stage-specific secrets/config (`sk_test_` outside prod, `sk_live_` in prod only), optional local fallback scripts.
 - [x] **Phase 1 — Storefront UI (placeholders):** Done in repo.
   - [x] `/tiles` grid (PrimeReact cards), catalog [`src/data/placeholderTileSets.ts`](../src/data/placeholderTileSets.ts): `order`, `disabled`, `addToCartDisabled`, `priceLabel`, optional per-set **`whatYouGet`** (heading, intro, bullets, closing); real **Tavern Set** description copy. Card blurbs honor **line breaks** (`excerpt` + `pre-line` CSS).
   - [x] `/tile-details/:slug`: breadcrumb; **two columns from `lg` up** with **independent scroll** (`max-height` + `overflow-y` on each column); left = gallery + thumbs + **Designed for the Table**; right = title, price, multi-paragraph description, **Add to cart** / Continue shopping, **Included Files**, optional **What You Get** from data, second **Add to cart**. Below `lg`, columns stack and use normal page scroll.

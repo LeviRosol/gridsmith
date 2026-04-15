@@ -8,6 +8,9 @@ todos:
   - id: lambda-stripe-apis
     content: "Add API Gateway + Lambda: catalog from Stripe, checkout-session (JWT), capabilities/me via Stripe Customer + purchase history (no order mirror DB)"
     status: pending
+  - id: api-deploy-pipeline
+    content: "Add CI deployment pipeline for API Gateway/Lambda (auto dev deploys on branch push, manual/approved prod deploys, stage-specific secrets)"
+    status: pending
   - id: catalog-wire-live
     content: Replace placeholder catalog with GET /api/catalog/tile-packs; keep the same UI components and routing
     status: pending
@@ -26,6 +29,9 @@ todos:
   - id: marketing-opt-in-cognito
     content: "Cognito custom:marketing_opt_in; Profile page; UpdateUserAttributes + InitiateAuth refresh; OAuth PKCE/redirect fixes; aws.cognito.signin.user.admin scope"
     status: completed
+  - id: stripe-account-checkout-domain
+    content: "Stripe account active; custom Hosted Checkout domain checkout.gridsmith.io configured in Dashboard"
+    status: completed
 isProject: false
 ---
 
@@ -39,6 +45,7 @@ Repo copy of the GridSmith **Tile pack commerce v1** plan (version-controlled). 
 - **Checkout**: **signed-in only**; link purchases to users via **Cognito `sub`** and **Stripe Customer** (see below).
 - **Products and orders**: **Stripe is the system of record**—no local mirror tables for catalog, orders, line items, or entitlements. **Capabilities and admin views** resolve ownership by calling the **Stripe API** at request time (with sensible caching later if needed).
 - **Persistence**: **Do not create database tables until a feature actually needs them** (e.g. telemetry ingestion). No stub schemas for future saves/Room Builder until those features are implemented.
+- **Stripe (Dashboard):** Account provisioned; **custom Hosted Checkout domain** **`checkout.gridsmith.io`**. When wiring `POST /api/billing/checkout-session`, align success/cancel URLs and customer-facing checkout links with this domain.
 
 ## Relationship to the old “Stripe subscriptions” plan
 
@@ -133,6 +140,23 @@ Goal: **local webpack / Vite never “accidentally” calls prod API Gateway or 
 - **Operational guardrails**
   - Restrict who can deploy to prod; use **IAM** so dev laptops cannot invoke **prod** Lambdas by default. API keys in docs are **dev** only.
 
+## API deployment process (AWS)
+
+Goal: deployments are repeatable and auditable (no copy/paste console setup), with API release flow decoupled from static web deploys.
+
+- **Separate pipelines**
+  - Keep **web deploy** and **API deploy** as separate workflows/jobs. Pushes to `main` can continue deploying the web app, while API deploys run from a dedicated workflow.
+- **GitHub-triggered API deploys**
+  - Preferred default: branch push (e.g. `feature-*`, `bug-*`, or `develop`) deploys the API to **dev** stage automatically via CI.
+- **Prod API deploy control**
+  - Use **manual trigger** (`workflow_dispatch`) and/or protected environment approvals for **prod** API deploys. Avoid automatic prod API deploys on every web release unless explicitly desired later.
+- **Stage-specific config/secrets**
+  - CI injects stage-specific env vars/secrets (Stripe key, API URLs, S3 bucket, Cognito IDs). Non-prod stages use Stripe test keys only; prod uses live keys only.
+- **Local fallback (optional)**
+  - Keep scriptable local commands (e.g. `deploy:api:dev`) for emergency/manual deploys, but CI remains the source of truth for normal releases.
+- **Infra as code only**
+  - API Gateway routes, Lambda config, IAM roles, and stage outputs live in CDK/SAM/Terraform (or equivalent) committed to git; no one-off console-only changes.
+
 ## Routes and UI (frontend)
 
 - **Phase 1 (UI — done in repo):**
@@ -173,13 +197,14 @@ Goal: **local webpack / Vite never “accidentally” calls prod API Gateway or 
 ## Suggested implementation order
 
 1. ~~**Storefront UI (placeholders):** `/tiles` grid + `/tile-details` + placeholder content + prod deploy of the shell~~ **Done (see Phase 1 above).**
-2. **Lambda + API Gateway:** Stripe-backed **catalog** endpoint first; then **checkout-session** and **capabilities/me** (Cognito `custom:stripe_customer_id` when needed).
-3. **Wire catalog:** replace placeholder module with `GET /api/catalog/tile-packs` in the existing components.
-4. **Cart → checkout** in the UI once `POST /api/billing/checkout-session` exists.
-5. **Download API** + S3 presign + Stripe purchase verification.
-6. Tile Builder wired to capabilities.
-7. **Admin** read paths (Stripe + Cognito).
-8. **Telemetry**: add **DynamoDB** (or chosen store) **when** implementing `POST /api/telemetry/render`—not before.
+2. **API deploy pipeline first:** establish CI workflow for Lambda/API Gateway deploys (auto dev + manual/approved prod) with stage-specific secrets.
+3. **Lambda + API Gateway:** Stripe-backed **catalog** endpoint first; then **checkout-session** and **capabilities/me** (Cognito `custom:stripe_customer_id` when needed).
+4. **Wire catalog:** replace placeholder module with `GET /api/catalog/tile-packs` in the existing components.
+5. **Cart → checkout** in the UI once `POST /api/billing/checkout-session` exists.
+6. **Download API** + S3 presign + Stripe purchase verification.
+7. Tile Builder wired to capabilities.
+8. **Admin** read paths (Stripe + Cognito).
+9. **Telemetry**: add **DynamoDB** (or chosen store) **when** implementing `POST /api/telemetry/render`—not before.
 
 ## Handoff for a new agent
 
