@@ -1,0 +1,100 @@
+name: API Deploy
+
+on:
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - "infra/api/**"
+      - "scripts/deploy-api.sh"
+      - ".github/workflows/api-deploy.yml"
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "Target stage"
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-dev-on-branch-push:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    environment: dev
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME_DEV }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+      - name: Check deploy prerequisites
+        id: prereq
+        run: |
+          if [ -z "${AWS_ROLE_TO_ASSUME}" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping deploy: AWS_ROLE_TO_ASSUME_DEV is not configured."
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Setup AWS SAM
+        if: steps.prereq.outputs.ready == 'true'
+        uses: aws-actions/setup-sam@v2
+      - name: Configure AWS credentials (dev)
+        if: steps.prereq.outputs.ready == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Install dependencies
+        if: steps.prereq.outputs.ready == 'true'
+        run: npm ci
+      - name: Deploy API (dev)
+        if: steps.prereq.outputs.ready == 'true'
+        run: npm run deploy:api:dev
+
+  deploy-manual:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    environment: ${{ inputs.stage }}
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      STAGE: ${{ inputs.stage }}
+      AWS_ROLE_TO_ASSUME: ${{ inputs.stage == 'prod' && secrets.AWS_ROLE_TO_ASSUME_PROD || inputs.stage == 'staging' && secrets.AWS_ROLE_TO_ASSUME_STAGING || secrets.AWS_ROLE_TO_ASSUME_DEV }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+      - name: Check deploy prerequisites
+        id: prereq
+        run: |
+          if [ -z "${AWS_ROLE_TO_ASSUME}" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping deploy: role secret missing for stage '${STAGE}'."
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Setup AWS SAM
+        if: steps.prereq.outputs.ready == 'true'
+        uses: aws-actions/setup-sam@v2
+      - name: Configure AWS credentials (${{ env.STAGE }})
+        if: steps.prereq.outputs.ready == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Install dependencies
+        if: steps.prereq.outputs.ready == 'true'
+        run: npm ci
+      - name: Deploy API (${{ env.STAGE }})
+        if: steps.prereq.outputs.ready == 'true'
+        run: npm run deploy:api -- --stage "${STAGE}"

@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: GridSmith API (catalog + commerce scaffolding)
+
+Parameters:
+  Stage:
+    Type: String
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Default: dev
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 10
+    MemorySize: 256
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        STAGE: !Ref Stage
+
+Resources:
+  GridSmithHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref Stage
+      CorsConfiguration:
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - authorization
+          - content-type
+        AllowOrigins:
+          - "*"
+
+  CatalogFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/catalog/
+      Handler: index.handler
+      Events:
+        GetCatalog:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref GridSmithHttpApi
+            Path: /api/catalog/tile-packs
+            Method: GET
+
+  CheckoutSessionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/checkout-session/
+      Handler: index.handler
+      Events:
+        CreateCheckoutSession:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref GridSmithHttpApi
+            Path: /api/billing/checkout-session
+            Method: POST
+
+  CapabilitiesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/capabilities/
+      Handler: index.handler
+      Events:
+        GetCapabilities:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref GridSmithHttpApi
+            Path: /api/capabilities/me
+            Method: GET
+
+Outputs:
+  ApiBaseUrl:
+    Description: Base URL for this stage
+    Value: !Sub "https://${GridSmithHttpApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}"
+  CatalogEndpoint:
+    Description: Catalog endpoint URL
+    Value: !Sub "https://${GridSmithHttpApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/api/catalog/tile-packs"
