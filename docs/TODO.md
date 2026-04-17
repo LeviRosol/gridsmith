@@ -145,3 +145,12 @@ High-level roadmap; full design, sequence, and YAML todos live in **[`docs/plans
 - [ ] **Phase 8 — Telemetry:** When built: chosen store (likely Dynamo) + `POST /api/telemetry/render` with non-PII `analytics_subject_id`—**do not create tables before this**.
 - [x] **Marketing opt-in:** Shipped in app—`custom:marketing_opt_in` on the user pool, Profile UI, in-browser attribute updates (no Lambda required for the boolean). Optional later: Post confirmation Lambda for server-side default, or ESP sync for campaigns (see **`docs/plans/tile_pack_commerce_v1.md`**).
 - [ ] **Ops reminder:** Local dev never targets prod API Lambdas or live Stripe once those exist (see plan).
+
+## 13. Testing & release gates (commerce readiness)
+
+As Stripe and real-user flows land, CI should catch regressions before production.
+
+- [ ] **Keep existing OpenSCAD playground smoke tests healthy:** `tests/e2e.test.js` + GitHub Actions **`Test Build`** (`npm run build:all`, puppeteer e2e in dev + prod modes). Fix harness drift when UI routing or preview markup changes (e.g. builder routes, `model-viewer` selectors).
+- [ ] **Block releases on red CI:** Configure **`main`** branch protection (or equivalent) so merges/deploys require a green **`Test Build`** (and any future required workflows). Goal: a failing test fails the workflow and **does not ship** the static app to prod.
+- [ ] **API automated tests (no extra UI e2e for now):** Add a focused test suite for Lambda handlers / billing logic—request validation, JWT behavior (happy + invalid token), Stripe client usage (mocked; **never** hit live Stripe in unit tests), and entitlement decisions. Run these tests in CI on every push/PR (separate job or folded into `Test Build` once the API code lives in-repo).
+- [ ] **Stripe test-mode fixtures:** Standardize on **`sk_test_` / restricted keys** for CI and local; prod secrets only in prod deploy environments.
