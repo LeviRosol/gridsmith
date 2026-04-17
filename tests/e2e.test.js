@@ -34,6 +34,7 @@ afterEach(async () => {
     // Chromium/model-viewer HDR JPEG fallback noise in headless CI (still renders SDR).
     if (t.includes('HDRJPGLoader') || t.includes('Gain map metadata not found')) return false;
     if (t.includes('Automatic fallback to software WebGL has been deprecated')) return false;
+    if (t.includes('GL Driver Message') || t.includes('GPU stall due to ReadPixels')) return false;
     return true;
   });
   expect(errors).toHaveLength(0);
@@ -55,6 +56,15 @@ async function waitForViewer() {
       document.querySelector('model-viewer.main-baseplate-model') ?? document.querySelector('model-viewer');
     return Boolean(viewer && viewer.getAttribute('src'));
   });
+}
+
+async function waitForDetectedScadParameter(name) {
+  await page.waitForFunction((paramName) => {
+    const hook = window.__GRIDSMITH_TEST__;
+    const params = hook?.model?.state?.parameterSet?.parameters;
+    if (!Array.isArray(params)) return false;
+    return params.some((p) => p && p.name === paramName);
+  }, { timeout: 45000 }, name);
 }
 function expectMessage(messages, line) {
   const successMessage = messages.filter(msg => msg.type === 'debug' && msg.text === line);
@@ -105,7 +115,8 @@ describe('e2e', () => {
   test('load the default page', async () => {
     await page.goto(baseUrl);
     await waitForViewer();
-    expectObjectList();
+    // Default GridSmith baseplate template compiles to a manifold (not a top-level object list).
+    expect3DManifold();
   }, longTimeout);
 
   test('can render cube', async () => {
@@ -152,16 +163,9 @@ describe('e2e', () => {
     await waitForViewer();
     expect3DPolySet();
 
-    // Wait for syntax checking to complete and parameters to be detected
-    await page.waitForFunction(() => {
-      // Look for any indication that parameters have been processed
-      const messages = Array.from(document.querySelectorAll('*')).map(el => el.textContent || '').join(' ');
-      return messages.includes('myVar') || messages.includes('Customize');
-    }, { timeout: 30000 });
-
-    await (await waitForCustomizeButton()).click();
-    await page.waitForSelector('fieldset');
-    await waitForLabel('myVar');
+    // `/baseplate` uses GridSmithPanel (not the legacy Customizer tab UI). Still validate that
+    // OpenSCAD customizer parameter extraction ran by reading the live Model state via a dev/CI hook.
+    await waitForDetectedScadParameter('myVar');
   }, longTimeout);
 });
 
