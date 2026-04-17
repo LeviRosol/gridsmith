@@ -2,7 +2,8 @@ const longTimeout = 60000;
 
 const isProd = process.env.NODE_ENV === 'production';
 // The marketing home route (`/`) does not mount the OpenSCAD preview; baseplate builder does.
-const baseUrl = isProd ? 'http://localhost:3000/dist/baseplate' : 'http://localhost:4000/baseplate';
+// `start:production` runs `serve -s dist`, so assets are rooted at `/` (not `/dist/...`).
+const baseUrl = isProd ? 'http://localhost:3000/baseplate' : 'http://localhost:4000/baseplate';
 
 const messages = [];
 
