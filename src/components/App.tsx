@@ -127,11 +127,10 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
         (process.env.COGNITO_REGION as string | undefined)?.trim() &&
         (process.env.COGNITO_CLIENT_ID as string | undefined)?.trim(),
     );
+  // Puppeteer e2e runs `NODE_ENV=production` against a local `serve` of `dist/`.
+  // Allow unsigned `/baseplate` only in CI when Cognito env isn't baked into the bundle.
   const allowAnonymousBaseplateInCi =
-    process.env.CI === 'true' &&
-    process.env.NODE_ENV !== 'production' &&
-    pathname === '/baseplate' &&
-    !cognitoConfigured;
+    process.env.CI === 'true' && pathname === '/baseplate' && !cognitoConfigured;
 
   const accountItems: MenuItem[] = [
     ...(auth.isSignedIn
