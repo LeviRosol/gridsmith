@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-24.04
     environment: dev
     env:
-      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-2' }}
       AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME_DEV }}
     steps:
       - uses: actions/checkout@v6
@@ -56,7 +56,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       - name: Install dependencies
         if: steps.prereq.outputs.ready == 'true'
-        run: npm ci
+        run: npm install --no-audit --no-fund
       - name: Deploy API (dev)
         if: steps.prereq.outputs.ready == 'true'
         run: npm run deploy:api:dev
@@ -66,7 +66,7 @@ jobs:
     runs-on: ubuntu-24.04
     environment: ${{ inputs.stage }}
     env:
-      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-2' }}
       STAGE: ${{ inputs.stage }}
       AWS_ROLE_TO_ASSUME: ${{ inputs.stage == 'prod' && secrets.AWS_ROLE_TO_ASSUME_PROD || inputs.stage == 'staging' && secrets.AWS_ROLE_TO_ASSUME_STAGING || secrets.AWS_ROLE_TO_ASSUME_DEV }}
     steps:
@@ -94,7 +94,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       - name: Install dependencies
         if: steps.prereq.outputs.ready == 'true'
-        run: npm ci
+        run: npm install --no-audit --no-fund
       - name: Deploy API (${{ env.STAGE }})
         if: steps.prereq.outputs.ready == 'true'
         run: npm run deploy:api -- --stage "${STAGE}"
