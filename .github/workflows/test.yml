@@ -8,21 +8,21 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    name: Test Build (Node latest)
+    name: Test Build (Node from .nvmrc)
     env:
       CI: true
     steps:
       - uses: actions/checkout@v6
-      - name: Setup Node.js (latest)
+      - name: Setup Node.js (.nvmrc)
         uses: actions/setup-node@v6
         with:
-          node-version: latest
+          node-version-file: .nvmrc
       - run: npm install
       - run: npm run build:all
       - name: Archive production artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: dist-node-latest
+          name: dist-node-nvmrc
           path: dist
           retention-days: 30
       - run: NODE_ENV=development npm run test:e2e
