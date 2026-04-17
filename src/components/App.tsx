@@ -121,6 +121,18 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   const isBuilderShell = pathname === '/baseplate' || pathname === '/tile-builder';
   const ParamsSidebar = pathname === '/tile-builder' ? TileBuilderPanel : GridSmithPanel;
 
+  const cognitoConfigured =
+    Boolean(
+      (process.env.COGNITO_DOMAIN as string | undefined)?.trim() &&
+        (process.env.COGNITO_REGION as string | undefined)?.trim() &&
+        (process.env.COGNITO_CLIENT_ID as string | undefined)?.trim(),
+    );
+  const allowAnonymousBaseplateInCi =
+    process.env.CI === 'true' &&
+    process.env.NODE_ENV !== 'production' &&
+    pathname === '/baseplate' &&
+    !cognitoConfigured;
+
   const accountItems: MenuItem[] = [
     ...(auth.isSignedIn
       ? [
@@ -178,7 +190,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   useEffect(() => {
     if (!isBuilderShell) return;
     if (auth.loading) return;
-    if (!auth.isSignedIn) return;
+    if (!auth.isSignedIn && !allowAnonymousBaseplateInCi) return;
     let cancelled = false;
     void (async () => {
       if (pathname === '/tile-builder') {
@@ -207,7 +219,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     };
     // We intentionally don't include `model` in deps: we only want initialization on route+auth changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, auth.loading, auth.isSignedIn, isBuilderShell]);
+  }, [pathname, auth.loading, auth.isSignedIn, isBuilderShell, allowAnonymousBaseplateInCi]);
 
   useEffect(() => {
     if (pathname !== '/baseplate') return;
@@ -235,7 +247,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!isBuilderShell) return;
-      if (auth.loading || !auth.isSignedIn) return;
+      if (auth.loading || (!auth.isSignedIn && !allowAnonymousBaseplateInCi)) return;
       if (event.key === 'F5') {
         event.preventDefault();
         model.render({isPreview: true, now: true})
@@ -265,7 +277,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [pathname, model, auth.loading, auth.isSignedIn, isBuilderShell]);
+  }, [pathname, model, auth.loading, auth.isSignedIn, isBuilderShell, allowAnonymousBaseplateInCi]);
 
   useEffect(() => {
     const body = document.body;
@@ -466,7 +478,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
       );
     }
 
-    if (!auth.isSignedIn) {
+    if (!auth.isSignedIn && !allowAnonymousBaseplateInCi) {
       const signInBlurb =
         pathname === '/tile-builder'
           ? 'Please sign in to access the GridSmith tile builder and export tools.'

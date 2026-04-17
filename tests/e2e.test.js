@@ -1,7 +1,8 @@
 const longTimeout = 60000;
 
 const isProd = process.env.NODE_ENV === 'production';
-const baseUrl = isProd ? 'http://localhost:3000/dist/' : 'http://localhost:4000/';
+// The marketing home route (`/`) does not mount the OpenSCAD preview; baseplate builder does.
+const baseUrl = isProd ? 'http://localhost:3000/dist/baseplate' : 'http://localhost:4000/baseplate';
 
 const messages = [];
 
