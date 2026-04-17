@@ -23,8 +23,14 @@ import "primeflex/primeflex.min.css";
 const log = debug('app:log');
 
 if (process.env.NODE_ENV !== 'production') {
-  debug.enable('*');
-  log('Logging is enabled!');
+  // In CI e2e, avoid `debug.enable('*')` — third-party namespaces can emit `console.error`
+  // noise that fails the Puppeteer console harness in `tests/e2e.test.js`.
+  if (process.env.CI === 'true') {
+    debug.disable();
+  } else {
+    debug.enable('*');
+    log('Logging is enabled!');
+  }
 } else {
   debug.disable();
 }

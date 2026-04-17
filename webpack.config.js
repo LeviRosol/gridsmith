@@ -93,9 +93,15 @@ const config = [
     },
     plugins: [
       // Load .env and inject process.env.COGNITO_* (and any other process.env.X used in code) into the bundle
-      new Dotenv({ path: path.resolve(__dirname, '.env'), systemvars: true }),
+      new Dotenv({
+        path: path.resolve(__dirname, '.env'),
+        systemvars: true,
+        // CI/checkout often has no local `.env`; don't fail or spam warnings for a file we gitignore.
+        silent: true,
+      }),
       new webpack.EnvironmentPlugin({
         'process.env.NODE_ENV': process.env.NODE_ENV ?? 'development',
+        'process.env.CI': process.env.CI ?? 'false',
       }),
       ...(process.env.NODE_ENV === 'production' ? [
         new WorkboxPlugin.GenerateSW({
@@ -202,6 +208,7 @@ const config = [
     plugins: [
       new webpack.EnvironmentPlugin({
         'process.env.NODE_ENV': process.env.NODE_ENV ?? 'development',
+        'process.env.CI': process.env.CI ?? 'false',
         'process.env.COGNITO_DOMAIN': process.env.COGNITO_DOMAIN ?? '',
         'process.env.COGNITO_REGION': process.env.COGNITO_REGION ?? '',
         'process.env.COGNITO_CLIENT_ID': process.env.COGNITO_CLIENT_ID ?? '',

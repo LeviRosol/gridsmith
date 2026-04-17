@@ -29,7 +29,7 @@
   },
   "scripts": {
     "test:e2e": "jest",
-    "start:development": "dotenv -e .env -- npx webpack serve --mode=development",
+    "start:development": "sh -c 'if [ -f .env ]; then exec dotenv -e .env -- npx webpack serve --mode=development; else exec npx webpack serve --mode=development; fi'",
     "start:production": "NODE_ENV=production npm run build && npx serve -s dist -l 3000",
     "start:test": "npm run start:development",
     "start": "npm run start:development",
