@@ -128,23 +128,24 @@ High-level roadmap; full design, sequence, and YAML todos live in **[`docs/plans
 
 - [x] **Stripe Dashboard:** Account set up; **custom checkout domain** `checkout.gridsmith.io` for Stripe Hosted Checkout (align success/cancel URLs when Checkout Session API ships).
 
-- [ ] **Phase 2a — API deployment pipeline:** Add AWS API deploy workflow in CI (separate from web deploy): auto deploy to dev on branch push, manual/approved prod deploy, stage-specific secrets/config (`sk_test_` outside prod, `sk_live_` in prod only), optional local fallback scripts.
+- [ ] **Phase 2a — API deployment pipeline:** Add AWS API deploy workflow in CI (separate from web deploy): auto deploy to dev on branch push, manual/approved prod deploy, stage-specific secrets/config (`sk_test_` outside prod, `sk_live_` in prod only), optional local fallback scripts. **Today:** manual `npm run deploy:api:dev|staging|prod` (`scripts/deploy-api.sh`); Cursor rule `.cursor/rules/api-deploy-after-infra-changes.mdc` reminds to call out deploy after `infra/api/**` edits.
 - [x] **Phase 1 — Storefront UI (placeholders):** Done in repo.
   - [x] `/tiles` grid (PrimeReact cards), catalog [`src/data/placeholderTileSets.ts`](../src/data/placeholderTileSets.ts): `order`, `disabled`, `addToCartDisabled`, `priceLabel`, optional per-set **`whatYouGet`** (heading, intro, bullets, closing); real **Tavern Set** description copy. Card blurbs honor **line breaks** (`excerpt` + `pre-line` CSS).
   - [x] `/tile-details/:slug`: breadcrumb; **two columns from `lg` up** with **independent scroll** (`max-height` + `overflow-y` on each column); left = gallery + thumbs + **Designed for the Table**; right = title, price, multi-paragraph description, **Add to cart** / Continue shopping, **Included Files**, optional **What You Get** from data, second **Add to cart**. Below `lg`, columns stack and use normal page scroll.
-  - [x] **Add to cart:** always enabled; if `addToCartDisabled`, PrimeReact **Dialog** (coming-soon + check back / account; **Ok** closes). If not disabled, no-op until checkout exists.
+  - [x] **Add to cart:** always enabled; if `addToCartDisabled`, PrimeReact **Dialog** (coming-soon + check back / account; **Ok** closes). Otherwise adds to client cart / checkout when API is configured.
   - [x] Nested-route fixes: webpack `publicPath: '/'`, root-absolute `public/index.html` assets, PrimeIcons `url()` handling so fonts/scripts/WASM load under `/tile-details/...`.
   - [x] **Footer:** global **`SiteFooter`** only (below `<main>`). Inner-column footer was tried and reverted; long right-column content still scrolls inside the column, then the user scrolls the page to reach the footer.
   - [x] Deploy storefront UI to prod so live visitors see the shop shell.
-- [ ] **Phase 2 — AWS API:** API Gateway + Lambda: `GET /api/catalog/tile-packs` (Stripe list), then `POST /api/billing/checkout-session` and `GET /api/capabilities/me` (Stripe customer + purchase history; optional `custom:stripe_customer_id` on Cognito).
-- [ ] **Phase 3 — Wire catalog:** Replace placeholders with live catalog API; keep same components/routes.
-- [ ] **Phase 4 — Cart & checkout:** Client cart → Checkout Session (signed-in only).
+- [x] **Phase 2b — AWS API (SAM + Lambdas):** In-repo API Gateway + Lambda: `GET /api/catalog/tile-packs`, `POST /api/billing/checkout-session` (JWT; single `priceId` or `lineItems` for multi-pack cart), `GET /api/capabilities/me` (`ownedPriceIds`, `ownedProductIds`, `ownedPurchases[]` with per-price `purchasedAt` from paid Checkout Sessions). Cognito → Stripe via **Stripe Customer `metadata.cognito_sub`** + Customer Search (no Cognito `custom:stripe_customer_id` required for v1).
+- [x] **Phase 3 — Wire catalog:** Live catalog when `GRIDSMITH_API_BASE_URL` is set (`src/data/tilePackCatalog.ts`); same `/tiles` and `/tile-details` components; placeholder merge for select slugs until fully Stripe-metadata-driven.
+- [x] **Phase 4 — Cart & checkout:** Client cart (`TileCartContext`, drawer + `/cart`), Stripe Hosted Checkout; success/cancel handling on cart page.
 - [ ] **Phase 5 — Downloads:** Private S3; `POST` download endpoint validates JWT, confirms purchase in Stripe, returns presigned URL.
 - [ ] **Phase 6 — Tile Builder:** Wire Med/High render/download gates to **`/api/capabilities/me`** (real entitlements, not UI-only).
 - [ ] **Phase 7 — Admin:** In-app `/admin/*` (Cognito `admin` group); user lookup + Stripe read paths (no local order table).
 - [ ] **Phase 8 — Telemetry:** When built: chosen store (likely Dynamo) + `POST /api/telemetry/render` with non-PII `analytics_subject_id`—**do not create tables before this**.
 - [x] **Marketing opt-in:** Shipped in app—`custom:marketing_opt_in` on the user pool, Profile UI, in-browser attribute updates (no Lambda required for the boolean). Optional later: Post confirmation Lambda for server-side default, or ESP sync for campaigns (see **`docs/plans/tile_pack_commerce_v1.md`**).
-- [ ] **Ops reminder:** Local dev never targets prod API Lambdas or live Stripe once those exist (see plan).
+- [x] **Profile owned packs:** When signed in and API configured, Profile lists owned catalog rows from capabilities; shows **Purchased** date when deployed capabilities returns `ownedPurchases` (`src/data/ownedPacksMatch.ts`, `ProfilePage`).
+- [ ] **Ops reminder:** Local `.env` should target the intended API stage and Stripe mode (see commerce plan); never mix prod keys with dev Lambdas.
 
 ## 13. Testing & release gates (commerce readiness)
 

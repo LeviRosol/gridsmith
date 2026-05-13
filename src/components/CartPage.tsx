@@ -81,11 +81,17 @@ export default function CartPage() {
       <section className="home-section home-section-alt">
         <div className="home-page-container" style={{ maxWidth: 720 }}>
           {flashSuccess ? (
-            <Message
-              severity="success"
-              text="Thanks! Your cart was cleared after checkout. Stripe will email your receipt when payment completes."
-              className="w-full mb-3"
-            />
+            <div className="flex flex-column gap-2 w-full mb-3">
+              <Message
+                severity="success"
+                text="Thanks! Your cart was cleared after checkout. Stripe will email your receipt when payment completes."
+                className="w-full"
+              />
+              <a href="/profile#owned-packs" className="p-button p-component p-button-outlined align-self-start">
+                <span className="p-button-icon pi pi-box" />
+                <span className="p-button-label">View owned packs</span>
+              </a>
+            </div>
           ) : null}
           {flashCancel ? (
             <Message

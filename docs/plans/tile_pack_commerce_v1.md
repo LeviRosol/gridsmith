@@ -1,22 +1,25 @@
 ---
 name: Tile pack commerce v1
-overview: Stripe one-time Tile Pack purchases (catalog + order history from Stripe API only), S3 STL delivery via logged-in download API, shop at /tiles and /tile-details, in-app Cognito-gated admin, and persistence only when a feature needs it. **Storefront UI** (grid, rich product detail, catalog module with optional `whatYouGet`) is in-repo and **shipped to prod**; next is Lambda/Stripe behind the same components.
+overview: >-
+  Stripe one-time tile packs; Stripe is the commercial source of truth (no order mirror DB).
+  **Shipped in repo + manual API deploy:** SAM/API Gateway Lambdas for `GET /api/catalog/tile-packs`, `POST /api/billing/checkout-session` (single price + multi-line cart), and `GET /api/capabilities/me` (owned price/product IDs plus `ownedPurchases[]` with `purchasedAt` from paid Checkout Sessions). SPA loads live catalog when `GRIDSMITH_API_BASE_URL` is set, cart → Stripe Checkout, Profile **Owned Packs** lists purchases with **purchase date** after capabilities Lambda is deployed. Cognito users are linked to Stripe via **Customer `metadata.cognito_sub`** + Customer Search (no `custom:stripe_customer_id` required for v1).
+  **Still open:** CI API deploy pipeline, S3 download API + presigned URLs, Tile Builder entitlement wiring from capabilities, `/admin` read paths, telemetry + Dynamo only when that feature ships.
 todos:
   - id: storefront-ui-placeholder
     content: "/tiles + /tile-details/:slug with local catalog (incl. optional whatYouGet), two-column detail w/ independent scroll on lg, coming-soon modal, prod deploy—no Stripe yet"
     status: completed
   - id: lambda-stripe-apis
-    content: "Add API Gateway + Lambda: catalog from Stripe, checkout-session (JWT), capabilities/me via Stripe Customer + purchase history (no order mirror DB)"
-    status: pending
+    content: "SAM + API Gateway in-repo: catalog, checkout-session (JWT; multi-line lineItems), capabilities/me. Deploy per stage with npm run deploy:api:dev|staging|prod (see scripts/deploy-api.sh). CI automation still under api-deploy-pipeline."
+    status: completed
   - id: api-deploy-pipeline
     content: "Add CI deployment pipeline for API Gateway/Lambda (auto dev deploys on branch push, manual/approved prod deploys, stage-specific secrets)"
     status: pending
   - id: catalog-wire-live
     content: Replace placeholder catalog with GET /api/catalog/tile-packs; keep the same UI components and routing
-    status: pending
+    status: completed
   - id: capabilities-api
-    content: Implement GET /api/capabilities/me (JWT) and POST /api/billing/checkout-session; persist Stripe customer id on Cognito user (custom attribute) at first checkout if needed
-    status: pending
+    content: "GET /api/capabilities/me (JWT) + POST /api/billing/checkout-session shipped; Stripe Customer keyed by metadata cognito_sub (search), not Cognito custom attribute"
+    status: completed
   - id: builder-gating-downloads
     content: Tile Builder gates from capabilities API; POST /api/downloads/... validates JWT + live Stripe entitlement then returns short-lived S3 presigned URL
     status: pending
@@ -61,8 +64,8 @@ Keep: **API Gateway + Lambda**, **`GET /api/capabilities/me`**, **non-PII `analy
 
 You typically need **one stable association**, not a full order database:
 
-- **Recommended**: store **`stripe_customer_id`** in a **Cognito custom attribute** (e.g. `custom:stripe_customer_id`), set on first checkout/session creation. This is an **opaque identifier**, not a user-held secret and not a password.
-- **Alternative**: put `cognito_sub` on **Stripe Customer `metadata`** and use **Stripe Customer Search** to resolve `sub` → customer when the custom attribute is empty (slightly more API work on cold start).
+- **Implemented (v1):** put **`cognito_sub`** on **Stripe Customer `metadata`** and use **Stripe Customer Search** in Lambdas (`checkout-session`, `capabilities`) to resolve `sub` → customer.
+- **Optional later:** store **`stripe_customer_id`** in a **Cognito custom attribute** (e.g. `custom:stripe_customer_id`) to avoid search on hot paths—only if latency or Stripe search limits become an issue.
 
 **What you do *not* need to store per user for v1:**
 
@@ -165,7 +168,8 @@ Goal: deployments are repeatable and auditable (no copy/paste console setup), wi
   - **Nested routes:** Webpack `publicPath: '/'`, root-absolute `public/index.html` asset tags, and resolved `url()` for PrimeIcons so WASM/fonts/scripts do not 404 under `/tile-details/...`.
   - **Footer:** **`SiteFooter`** stays global under `<main>` only (not duplicated inside the scroll column); users finish the in-column scroll, then scroll the document to reach the footer.
   - **Prod:** Storefront deployed so visitors see `/tiles` and `/tile-details`; commerce APIs remain future work.
-- **Phase 2:** Swap the data source to `GET /api/catalog/tile-packs` without redesigning the layout.
+- **Phase 2:** Swap the data source to `GET /api/catalog/tile-packs` without redesigning the layout — **done** when `GRIDSMITH_API_BASE_URL` is configured (`src/data/tilePackCatalog.ts`); placeholder enrichment remains for select slugs.
+- **Phase 2b (checkout + ownership):** Client cart (`TileCartContext` + `/cart`), Stripe Checkout via `POST /api/billing/checkout-session`, Profile **Owned Packs** from `GET /api/capabilities/me` including optional **Purchased** date from `ownedPurchases` (requires deployed capabilities Lambda).
 - [`App.tsx`](../../src/components/App.tsx): routing for both phases; stable id in the detail URL (slug or future `product_id`).
 - **Cart**: client-only line items → one Checkout Session (after backend exists).
 - [`AuthContext.tsx`](../../src/components/AuthContext.tsx): require sign-in for checkout and download.
@@ -197,10 +201,10 @@ Goal: deployments are repeatable and auditable (no copy/paste console setup), wi
 ## Suggested implementation order
 
 1. ~~**Storefront UI (placeholders):** `/tiles` grid + `/tile-details` + placeholder content + prod deploy of the shell~~ **Done (see Phase 1 above).**
-2. **API deploy pipeline first:** establish CI workflow for Lambda/API Gateway deploys (auto dev + manual/approved prod) with stage-specific secrets.
-3. **Lambda + API Gateway:** Stripe-backed **catalog** endpoint first; then **checkout-session** and **capabilities/me** (Cognito `custom:stripe_customer_id` when needed).
-4. **Wire catalog:** replace placeholder module with `GET /api/catalog/tile-packs` in the existing components.
-5. **Cart → checkout** in the UI once `POST /api/billing/checkout-session` exists.
+2. **API deploy pipeline:** establish CI workflow for Lambda/API Gateway deploys (auto dev + manual/approved prod) with stage-specific secrets — **still the main infra gap** (today: `npm run deploy:api:*` from dev machines; Cursor rule `.cursor/rules/api-deploy-after-infra-changes.mdc` reminds agents to call out deploy after `infra/api/` edits).
+3. ~~**Lambda + API Gateway:** Stripe-backed **catalog**; **checkout-session**; **capabilities/me** (Customer Search on `metadata.cognito_sub`).~~ **Done in repo**; must **deploy** for each environment.
+4. ~~**Wire catalog:** `GET /api/catalog/tile-packs` in the existing components.~~ **Done.**
+5. ~~**Cart → checkout** in the UI (`POST /api/billing/checkout-session`, multi-line supported).~~ **Done.**
 6. **Download API** + S3 presign + Stripe purchase verification.
 7. Tile Builder wired to capabilities.
 8. **Admin** read paths (Stripe + Cognito).
@@ -208,5 +212,6 @@ Goal: deployments are repeatable and auditable (no copy/paste console setup), wi
 
 ## Handoff for a new agent
 
-- **Storefront UI placeholder** is complete; start with todo **`lambda-stripe-apis`** (or **`catalog-wire-live`** after APIs exist).
+- **Storefront, live catalog fetch, cart/checkout, and capabilities-backed Profile (owned packs + purchase dates)** are in place; **deploy the API** after changing `infra/api/`.
+- **Next concrete work:** **`api-deploy-pipeline`** (CI), then **`builder-gating-downloads`** (presigned download API + S3), unless product priority is **admin** first.
 - Point the agent at this file: **`docs/plans/tile_pack_commerce_v1.md`**.

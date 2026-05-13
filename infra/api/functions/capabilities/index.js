@@ -33,11 +33,13 @@ async function findCustomerId(stripe, sub) {
 }
 
 /**
- * Collect paid one-time price IDs from completed Checkout Sessions for this customer.
- * Session list does not expand line_items; retrieve each paid session (bounded).
+ * From paid Checkout Sessions, collect each Stripe price ID with the latest completion time
+ * (Checkout Session `created` used as purchase timestamp; typically within seconds of payment).
+ * @returns {{ priceId: string, purchasedAtUnix: number }[]}
  */
-async function collectOwnedPriceIds(stripe, customerId) {
-  const owned = new Set();
+async function collectOwnedPurchasesFromSessions(stripe, customerId) {
+  /** @type {Map<string, number>} */
+  const best = new Map();
   const list = await stripe.checkout.sessions.list({
     customer: customerId,
     status: 'complete',
@@ -48,16 +50,58 @@ async function collectOwnedPriceIds(stripe, customerId) {
     paid.map((s) => stripe.checkout.sessions.retrieve(s.id, { expand: ['line_items'] })),
   );
   for (const full of expanded) {
+    const t = typeof full.created === 'number' ? full.created : 0;
     const rows = full.line_items && full.line_items.data ? full.line_items.data : [];
     for (const li of rows) {
+      let priceId = null;
       if (li.price && typeof li.price === 'object' && li.price.id) {
-        owned.add(li.price.id);
+        priceId = li.price.id;
       } else if (typeof li.price === 'string') {
-        owned.add(li.price);
+        priceId = li.price;
+      }
+      if (!priceId || !String(priceId).startsWith('price_')) continue;
+      const prev = best.get(priceId);
+      if (prev == null || t > prev) {
+        best.set(priceId, t);
       }
     }
   }
-  return [...owned];
+  return [...best.entries()].map(([priceId, purchasedAtUnix]) => ({ priceId, purchasedAtUnix }));
+}
+
+async function resolveOwnedPurchasesPayload(stripe, fromSessions) {
+  const unixByPrice = new Map(fromSessions.map((r) => [r.priceId, r.purchasedAtUnix]));
+  const productIds = new Set();
+  /** @type {{ priceId: string, purchasedAt: string, productId?: string }[]} */
+  const ownedPurchases = [];
+
+  for (const pid of unixByPrice.keys()) {
+    try {
+      const price = await stripe.prices.retrieve(pid);
+      const unix = unixByPrice.get(pid);
+      const purchasedAt =
+        typeof unix === 'number' ? new Date(unix * 1000).toISOString() : new Date(0).toISOString();
+      let productId;
+      if (price.product && typeof price.product === 'string') {
+        productId = price.product;
+        productIds.add(price.product);
+      } else if (price.product && typeof price.product === 'object' && price.product.id) {
+        productId = price.product.id;
+        productIds.add(price.product.id);
+      }
+      const row = { priceId: pid, purchasedAt };
+      if (productId) row.productId = productId;
+      ownedPurchases.push(row);
+    } catch (e) {
+      console.warn('capabilities price retrieve', pid, e.message);
+    }
+  }
+
+  return {
+    ownedPriceIds: ownedPurchases.map((r) => r.priceId),
+    ownedProductIds: [...productIds],
+    ownedPurchases,
+  };
 }
 
 exports.handler = async (event) => {
@@ -76,30 +120,23 @@ exports.handler = async (event) => {
         stripeCustomerId: null,
         ownedPriceIds: [],
         ownedProductIds: [],
+        ownedPurchases: [],
         stage,
       });
     }
 
-    const ownedPriceIds = await collectOwnedPriceIds(stripe, customerId);
-    const productIds = new Set();
-    for (const pid of ownedPriceIds) {
-      try {
-        const price = await stripe.prices.retrieve(pid);
-        if (price.product && typeof price.product === 'string') {
-          productIds.add(price.product);
-        } else if (price.product && typeof price.product === 'object' && price.product.id) {
-          productIds.add(price.product.id);
-        }
-      } catch (e) {
-        console.warn('capabilities price retrieve', pid, e.message);
-      }
-    }
+    const fromSessions = await collectOwnedPurchasesFromSessions(stripe, customerId);
+    const { ownedPriceIds, ownedProductIds, ownedPurchases } = await resolveOwnedPurchasesPayload(
+      stripe,
+      fromSessions,
+    );
 
     return json(200, {
       sub,
       stripeCustomerId: customerId,
       ownedPriceIds,
-      ownedProductIds: [...productIds],
+      ownedProductIds,
+      ownedPurchases,
       stage,
     });
   } catch (err) {

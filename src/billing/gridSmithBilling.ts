@@ -148,11 +148,20 @@ export async function startGridSmithCheckoutForCartPriceIds(
   }
 }
 
+export type OwnedPurchaseRow = {
+  priceId: string;
+  /** ISO 8601 from Checkout Session completion (see capabilities Lambda). */
+  purchasedAt: string;
+  productId?: string;
+};
+
 export type GridSmithCapabilities = {
   sub: string;
   stripeCustomerId: string | null;
   ownedPriceIds: string[];
   ownedProductIds: string[];
+  /** Per-price purchase times from paid Checkout Sessions (newer capabilities API). */
+  ownedPurchases?: OwnedPurchaseRow[];
 };
 
 export async function fetchGridSmithCapabilities(): Promise<GridSmithCapabilities> {
@@ -183,5 +192,17 @@ export async function fetchGridSmithCapabilities(): Promise<GridSmithCapabilitie
     }
     throw new Error(`${r.status}: ${detail}`);
   }
-  return JSON.parse(text) as GridSmithCapabilities;
+  const data = JSON.parse(text) as GridSmithCapabilities;
+  const ownedPurchases = Array.isArray(data.ownedPurchases)
+    ? data.ownedPurchases.filter(
+        (row): row is OwnedPurchaseRow =>
+          !!row &&
+          typeof row === 'object' &&
+          typeof row.priceId === 'string' &&
+          row.priceId.startsWith('price_') &&
+          typeof row.purchasedAt === 'string' &&
+          row.purchasedAt.length > 0,
+      )
+    : [];
+  return { ...data, ownedPurchases };
 }
