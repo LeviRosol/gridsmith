@@ -2,17 +2,18 @@
 name: Tile pack commerce v1
 overview: >-
   Stripe one-time tile packs; Stripe is the commercial source of truth (no order mirror DB).
-  **Shipped in repo + manual API deploy:** SAM/API Gateway Lambdas for `GET /api/catalog/tile-packs`, `POST /api/billing/checkout-session` (single price + multi-line cart), and `GET /api/capabilities/me` (owned price/product IDs plus `ownedPurchases[]` with `purchasedAt` from paid Checkout Sessions). SPA loads live catalog when `GRIDSMITH_API_BASE_URL` is set, cart → Stripe Checkout, Profile **Owned Packs** lists purchases with **purchase date** after capabilities Lambda is deployed. Cognito users are linked to Stripe via **Customer `metadata.cognito_sub`** + Customer Search (no `custom:stripe_customer_id` required for v1).
-  **Still open:** CI API deploy pipeline, S3 download API + presigned URLs, Tile Builder entitlement wiring from capabilities, `/admin` read paths, telemetry + Dynamo only when that feature ships.
+  **Shipped:** SAM/API Gateway Lambdas (`GET /api/catalog/tile-packs`, `POST /api/billing/checkout-session`, `GET /api/capabilities/me` with `ownedPurchases[]` / `purchasedAt`), SPA live catalog, cart → Checkout, Profile owned packs with purchase dates when capabilities is deployed. Cognito↔Stripe via **Customer `metadata.cognito_sub`** + Customer Search (no Cognito `custom:stripe_customer_id` for v1).
+  **Deploy:** Local `npm run deploy:api:*` anytime. **CI:** `.github/workflows/api-deploy.yml` — **prod** API on **path-filtered push to `main`** (`infra/api/**`, `scripts/deploy-api.sh`, or that workflow file); **`workflow_dispatch`** for manual **dev** / staging / prod. Requires GitHub Environment secrets + OIDC per stage (`api-deploy-pipeline` todo until verified).
+  **Still open:** S3 download API + presigned URLs; Tile Builder gates from capabilities; `/admin`; telemetry + Dynamo only when that feature ships.
 todos:
   - id: storefront-ui-placeholder
     content: "/tiles + /tile-details/:slug with local catalog (incl. optional whatYouGet), two-column detail w/ independent scroll on lg, coming-soon modal, prod deploy—no Stripe yet"
     status: completed
   - id: lambda-stripe-apis
-    content: "SAM + API Gateway in-repo: catalog, checkout-session (JWT; multi-line lineItems), capabilities/me. Deploy per stage with npm run deploy:api:dev|staging|prod (see scripts/deploy-api.sh). CI automation still under api-deploy-pipeline."
+    content: "SAM + API Gateway in-repo: catalog, checkout-session (JWT; multi-line lineItems), capabilities/me. Local/manual: npm run deploy:api:dev|staging|prod. CI: path-filtered push to main → prod API (see .github/workflows/api-deploy.yml); finish GitHub prod env secrets + OIDC (api-deploy-pipeline todo)."
     status: completed
   - id: api-deploy-pipeline
-    content: "Add CI deployment pipeline for API Gateway/Lambda (auto dev deploys on branch push, manual/approved prod deploys, stage-specific secrets)"
+    content: "GitHub Actions: prod API on main push (path-filtered infra/api); manual workflow_dispatch for dev/staging/prod. Wire GitHub prod environment secrets + OIDC; optional branch protection."
     status: pending
   - id: catalog-wire-live
     content: Replace placeholder catalog with GET /api/catalog/tile-packs; keep the same UI components and routing
@@ -149,14 +150,15 @@ Goal: deployments are repeatable and auditable (no copy/paste console setup), wi
 
 - **Separate pipelines**
   - Keep **web deploy** and **API deploy** as separate workflows/jobs. Pushes to `main` can continue deploying the web app, while API deploys run from a dedicated workflow.
-- **GitHub-triggered API deploys**
-  - Preferred default: branch push (e.g. `feature-*`, `bug-*`, or `develop`) deploys the API to **dev** stage automatically via CI.
+- **GitHub Actions (`/.github/workflows/api-deploy.yml`)**
+  - **Push to `main`** touching `infra/api/**`, `scripts/deploy-api.sh`, or the workflow file → deploy API to **prod** (uses GitHub **prod** environment secrets: `AWS_ROLE_TO_ASSUME_PROD`, Stripe/Cognito/origin, etc.). Does **not** run when only SPA/src changes land on `main`.
+  - **Manual** `workflow_dispatch` → pick **dev**, **staging**, or **prod** (use for dev API deploys; staging optional).
 - **Prod API deploy control**
-  - Use **manual trigger** (`workflow_dispatch`) and/or protected environment approvals for **prod** API deploys. Avoid automatic prod API deploys on every web release unless explicitly desired later.
+  - Automated on the path-filtered `main` pushes above once secrets and OIDC trust are configured. Re-run or hotfix still available via `workflow_dispatch` to **prod**.
 - **Stage-specific config/secrets**
   - CI injects stage-specific env vars/secrets (Stripe key, API URLs, S3 bucket, Cognito IDs). Non-prod stages use Stripe test keys only; prod uses live keys only.
-- **Local fallback (optional)**
-  - Keep scriptable local commands (e.g. `deploy:api:dev`) for emergency/manual deploys, but CI remains the source of truth for normal releases.
+- **Local fallback**
+  - Keep `npm run deploy:api:*` for dev/prod when you want to deploy outside CI. **Prod:** after merge to `main`, GitHub Actions deploys the API automatically **only when** `infra/api/**`, `scripts/deploy-api.sh`, or the API workflow file changed (same path filter as the workflow); if prerequisites are missing, the job skips and logs why.
 - **Infra as code only**
   - API Gateway routes, Lambda config, IAM roles, and stage outputs live in CDK/SAM/Terraform (or equivalent) committed to git; no one-off console-only changes.
 
@@ -201,7 +203,7 @@ Goal: deployments are repeatable and auditable (no copy/paste console setup), wi
 ## Suggested implementation order
 
 1. ~~**Storefront UI (placeholders):** `/tiles` grid + `/tile-details` + placeholder content + prod deploy of the shell~~ **Done (see Phase 1 above).**
-2. **API deploy pipeline:** establish CI workflow for Lambda/API Gateway deploys (auto dev + manual/approved prod) with stage-specific secrets — **still the main infra gap** (today: `npm run deploy:api:*` from dev machines; Cursor rule `.cursor/rules/api-deploy-after-infra-changes.mdc` reminds agents to call out deploy after `infra/api/` edits).
+2. **API deploy pipeline:** GitHub workflow exists (**prod** API on **`main`** push when `infra/api/**` or related paths change; **`workflow_dispatch`** for **dev** / staging / prod). Finish wiring **GitHub Environment `prod`** (OIDC `AWS_ROLE_TO_ASSUME_PROD`, Stripe secret ARN, Cognito ids, `PUBLIC_APP_ORIGIN`). Until prod secrets work, use local `npm run deploy:api:prod` after merges that touch the API.
 3. ~~**Lambda + API Gateway:** Stripe-backed **catalog**; **checkout-session**; **capabilities/me** (Customer Search on `metadata.cognito_sub`).~~ **Done in repo**; must **deploy** for each environment.
 4. ~~**Wire catalog:** `GET /api/catalog/tile-packs` in the existing components.~~ **Done.**
 5. ~~**Cart → checkout** in the UI (`POST /api/billing/checkout-session`, multi-line supported).~~ **Done.**
