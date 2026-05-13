@@ -31,6 +31,10 @@ jobs:
     env:
       AWS_REGION: ${{ vars.AWS_REGION || 'us-east-2' }}
       AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME_DEV }}
+      STRIPE_SECRET_ARN: ${{ secrets.STRIPE_SECRET_ARN }}
+      COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
+      COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
+      PUBLIC_APP_ORIGIN: ${{ secrets.PUBLIC_APP_ORIGIN }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -39,9 +43,12 @@ jobs:
       - name: Check deploy prerequisites
         id: prereq
         run: |
-          if [ -z "${AWS_ROLE_TO_ASSUME}" ]; then
+          if [ -z "${AWS_ROLE_TO_ASSUME}" ] || [ -z "${STRIPE_SECRET_ARN}" ] || [ -z "${COGNITO_USER_POOL_ID}" ] || [ -z "${COGNITO_CLIENT_ID}" ] || [ -z "${PUBLIC_APP_ORIGIN}" ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "Skipping deploy: AWS_ROLE_TO_ASSUME_DEV is not configured."
+            if [ -z "${AWS_ROLE_TO_ASSUME}" ]; then echo "Skipping deploy: AWS_ROLE_TO_ASSUME_DEV is not configured."; fi
+            if [ -z "${STRIPE_SECRET_ARN}" ]; then echo "Skipping deploy: STRIPE_SECRET_ARN is not configured."; fi
+            if [ -z "${COGNITO_USER_POOL_ID}" ] || [ -z "${COGNITO_CLIENT_ID}" ]; then echo "Skipping deploy: COGNITO_USER_POOL_ID / COGNITO_CLIENT_ID not configured."; fi
+            if [ -z "${PUBLIC_APP_ORIGIN}" ]; then echo "Skipping deploy: PUBLIC_APP_ORIGIN not configured."; fi
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
@@ -69,6 +76,10 @@ jobs:
       AWS_REGION: ${{ vars.AWS_REGION || 'us-east-2' }}
       STAGE: ${{ inputs.stage }}
       AWS_ROLE_TO_ASSUME: ${{ inputs.stage == 'prod' && secrets.AWS_ROLE_TO_ASSUME_PROD || inputs.stage == 'staging' && secrets.AWS_ROLE_TO_ASSUME_STAGING || secrets.AWS_ROLE_TO_ASSUME_DEV }}
+      STRIPE_SECRET_ARN: ${{ secrets.STRIPE_SECRET_ARN }}
+      COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
+      COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
+      PUBLIC_APP_ORIGIN: ${{ secrets.PUBLIC_APP_ORIGIN }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -77,9 +88,12 @@ jobs:
       - name: Check deploy prerequisites
         id: prereq
         run: |
-          if [ -z "${AWS_ROLE_TO_ASSUME}" ]; then
+          if [ -z "${AWS_ROLE_TO_ASSUME}" ] || [ -z "${STRIPE_SECRET_ARN}" ] || [ -z "${COGNITO_USER_POOL_ID}" ] || [ -z "${COGNITO_CLIENT_ID}" ] || [ -z "${PUBLIC_APP_ORIGIN}" ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "Skipping deploy: role secret missing for stage '${STAGE}'."
+            if [ -z "${AWS_ROLE_TO_ASSUME}" ]; then echo "Skipping deploy: role secret missing for stage '${STAGE}'."; fi
+            if [ -z "${STRIPE_SECRET_ARN}" ]; then echo "Skipping deploy: STRIPE_SECRET_ARN is not configured."; fi
+            if [ -z "${COGNITO_USER_POOL_ID}" ] || [ -z "${COGNITO_CLIENT_ID}" ]; then echo "Skipping deploy: Cognito id(s) not configured."; fi
+            if [ -z "${PUBLIC_APP_ORIGIN}" ]; then echo "Skipping deploy: PUBLIC_APP_ORIGIN not configured."; fi
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi

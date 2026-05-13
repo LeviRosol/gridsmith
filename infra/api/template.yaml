@@ -11,10 +11,26 @@ Parameters:
       - prod
     Default: dev
 
+  StripeSecretArn:
+    Type: String
+    Description: Secrets Manager secret ARN holding the Stripe API key (plain sk_... or JSON with STRIPE_SECRET_KEY)
+
+  CognitoUserPoolId:
+    Type: String
+    Description: Cognito User Pool ID (e.g. us-east-1_xxxx)
+
+  CognitoAppClientId:
+    Type: String
+    Description: Cognito app client id (same value as SPA COGNITO_CLIENT_ID / Hosted UI app client)
+
+  PublicAppOrigin:
+    Type: String
+    Description: Public site origin for Checkout success/cancel redirects (no trailing slash), e.g. https://www.example.com or http://localhost:4000
+
 Globals:
   Function:
     Runtime: nodejs20.x
-    Timeout: 10
+    Timeout: 29
     MemorySize: 256
     Architectures:
       - x86_64
@@ -43,6 +59,16 @@ Resources:
     Properties:
       CodeUri: functions/catalog/
       Handler: index.handler
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Ref StripeSecretArn
+      Environment:
+        Variables:
+          STRIPE_SECRET_ARN: !Ref StripeSecretArn
       Events:
         GetCatalog:
           Type: HttpApi
@@ -56,6 +82,20 @@ Resources:
     Properties:
       CodeUri: functions/checkout-session/
       Handler: index.handler
+      MemorySize: 256
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Ref StripeSecretArn
+      Environment:
+        Variables:
+          STRIPE_SECRET_ARN: !Ref StripeSecretArn
+          COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
+          COGNITO_CLIENT_ID: !Ref CognitoAppClientId
+          PUBLIC_APP_ORIGIN: !Ref PublicAppOrigin
       Events:
         CreateCheckoutSession:
           Type: HttpApi
@@ -69,6 +109,19 @@ Resources:
     Properties:
       CodeUri: functions/capabilities/
       Handler: index.handler
+      MemorySize: 512
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Ref StripeSecretArn
+      Environment:
+        Variables:
+          STRIPE_SECRET_ARN: !Ref StripeSecretArn
+          COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
+          COGNITO_CLIENT_ID: !Ref CognitoAppClientId
       Events:
         GetCapabilities:
           Type: HttpApi

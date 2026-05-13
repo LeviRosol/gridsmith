@@ -4,6 +4,8 @@ const isProd = process.env.NODE_ENV === 'production';
 // The marketing home route (`/`) does not mount the OpenSCAD preview; baseplate builder does.
 // `start:production` runs `serve -s dist`, so assets are rooted at `/` (not `/dist/...`).
 const baseUrl = isProd ? 'http://localhost:3000/baseplate' : 'http://localhost:4000/baseplate';
+// Waits use `window.__GRIDSMITH_TEST__` (see `Model` constructor). Local prod bundles must be built
+// with `CI=true` (same as GitHub Actions) or `GRIDSMITH_TEST_HOOK=true` — e.g. `npm run build:all:e2e`.
 
 const messages = [];
 
@@ -50,13 +52,25 @@ function loadPath(path) {
 function loadUrl(url) {
   return page.goto(`${baseUrl}#url=${encodeURIComponent(url)}`);
 }
-async function waitForViewer() {
-  await page.waitForSelector('model-viewer');
-  await page.waitForFunction(() => {
-    const viewer =
-      document.querySelector('model-viewer.main-baseplate-model') ?? document.querySelector('model-viewer');
-    return Boolean(viewer && viewer.getAttribute('src'));
-  });
+async function waitForPreviewReady() {
+  try {
+    await page.waitForFunction(() => Boolean(window.__GRIDSMITH_TEST__?.model), { timeout: 15000 });
+  } catch {
+    throw new Error(
+      'E2E hook missing: rebuild with CI=true (GitHub Actions default) or GRIDSMITH_TEST_HOOK=true — try npm run build:all:e2e or npm run start:production:e2e for prod e2e.',
+    );
+  }
+  await page.waitForFunction(
+    () => {
+      const m = window.__GRIDSMITH_TEST__?.model;
+      if (!m) return false;
+      const s = m.state;
+      return Boolean(
+        s.output?.outFileURL && !s.previewing && !s.rendering && !s.checkingSyntax && !s.exporting,
+      );
+    },
+    { timeout: longTimeout },
+  );
 }
 
 async function waitForDetectedScadParameter(name) {
@@ -115,14 +129,14 @@ function waitForLabel(text) {
 describe('e2e', () => {
   test('load the default page', async () => {
     await page.goto(baseUrl);
-    await waitForViewer();
+    await waitForPreviewReady();
     // Default GridSmith baseplate template compiles to a manifold (not a top-level object list).
     expect3DManifold();
   }, longTimeout);
 
   test('can render cube', async () => {
     await loadSrc('cube([10, 10, 10]);');
-    await waitForViewer();
+    await waitForPreviewReady();
     expect3DPolySet();
   }, longTimeout);
 
@@ -131,7 +145,7 @@ describe('e2e', () => {
       include <BOSL2/std.scad>;
       prismoid([40,40], [0,0], h=20);
     `);
-    await waitForViewer();
+    await waitForPreviewReady();
     expect3DPolySet();
   }, longTimeout);
 
@@ -140,19 +154,19 @@ describe('e2e', () => {
       include <NopSCADlib/vitamins/led_meters.scad>
       meter(led_meter);
     `);
-    await waitForViewer();
+    await waitForPreviewReady();
     expect3DManifold();
   }, longTimeout);
 
   test('load a demo by path', async () => {
     await loadPath('/libraries/closepoints/demo_3D_art.scad');
-    await waitForViewer();
+    await waitForPreviewReady();
     expect3DPolySet();
   }, longTimeout);
 
   test('load a demo by url', async () => {
     await loadUrl('https://github.com/tenstad/keyboard/blob/main/keyboard.scad');
-    await waitForViewer();
+    await waitForPreviewReady();
     expect3DManifold();
   }, longTimeout);
 
@@ -161,7 +175,7 @@ describe('e2e', () => {
       'myVar = 10;',
       'cube(myVar);',
     ].join('\r\n'));
-    await waitForViewer();
+    await waitForPreviewReady();
     expect3DPolySet();
 
     // `/baseplate` uses GridSmithPanel (not the legacy Customizer tab UI). Still validate that

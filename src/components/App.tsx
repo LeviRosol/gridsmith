@@ -19,6 +19,7 @@ import { ConfirmDialog } from 'primereact/confirmdialog';
 import CustomizerPanel from './CustomizerPanel';
 import GridSmithPanel from './GridSmithPanel';
 import TileBuilderPanel from './TileBuilderPanel';
+import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { Menu } from 'primereact/menu';
@@ -31,8 +32,11 @@ import ProfilePage from './ProfilePage';
 import TosPage from './TosPage';
 import PrivacyPage from './PrivacyPage';
 import SiteFooter from './SiteFooter';
+import CartDrawer from './CartDrawer';
+import CartPage from './CartPage';
 import { AuthProvider, useAuth } from './AuthContext';
 import { ConsentProvider } from './ConsentProvider';
+import { TileCartProvider, useTileCart } from '../cart/TileCartContext';
 import { trackPageView } from '../analytics';
 import { installTileStls } from '../tile-builder/install-tile-stls.ts';
 import { isTileBuilderProTierResolution } from '../utils.ts';
@@ -73,9 +77,11 @@ class MarketingPageErrorBoundary extends React.Component<{ children: ReactNode }
 export function App({initialState, statePersister, fs}: {initialState: State, statePersister: StatePersister, fs: FS}) {
   return (
     <AuthProvider>
-      <ConsentProvider>
-        <AppImpl initialState={initialState} statePersister={statePersister} fs={fs} />
-      </ConsentProvider>
+      <TileCartProvider>
+        <ConsentProvider>
+          <AppImpl initialState={initialState} statePersister={statePersister} fs={fs} />
+        </ConsentProvider>
+      </TileCartProvider>
     </AuthProvider>
   );
 }
@@ -98,6 +104,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   const accountMenuRef = useRef<Menu | null>(null);
   const mobileMenuRef = useRef<Menu | null>(null);
   const auth = useAuth();
+  const tileCart = useTileCart();
 
   const [buildChooserModalOpen, setBuildChooserModalOpen] = useState(false);
   const [tileBuilderRenderDownloadUpsellOpen, setTileBuilderRenderDownloadUpsellOpen] = useState(false);
@@ -127,10 +134,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
         (process.env.COGNITO_REGION as string | undefined)?.trim() &&
         (process.env.COGNITO_CLIENT_ID as string | undefined)?.trim(),
     );
-  // Puppeteer e2e runs `NODE_ENV=production` against a local `serve` of `dist/`.
-  // Allow unsigned `/baseplate` only in CI when Cognito env isn't baked into the bundle.
-  const allowAnonymousBaseplateInCi =
-    process.env.CI === 'true' && pathname === '/baseplate' && !cognitoConfigured;
+  const requireAuthForBuilderShell = cognitoConfigured;
 
   const accountItems: MenuItem[] = [
     ...(auth.isSignedIn
@@ -173,6 +177,13 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     },
     { label: 'Get Tiles', command: () => (window.location.pathname = '/tiles') },
     { label: 'About', command: () => (window.location.pathname = '/about') },
+    {
+      label: 'Cart',
+      icon: 'pi pi-shopping-cart',
+      command: () => {
+        tileCart.openDrawer();
+      },
+    },
     { separator: true },
     ...accountItems,
   ];
@@ -189,7 +200,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   useEffect(() => {
     if (!isBuilderShell) return;
     if (auth.loading) return;
-    if (!auth.isSignedIn && !allowAnonymousBaseplateInCi) return;
+    if (!auth.isSignedIn && requireAuthForBuilderShell) return;
     let cancelled = false;
     void (async () => {
       if (pathname === '/tile-builder') {
@@ -218,7 +229,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     };
     // We intentionally don't include `model` in deps: we only want initialization on route+auth changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, auth.loading, auth.isSignedIn, isBuilderShell, allowAnonymousBaseplateInCi]);
+  }, [pathname, auth.loading, auth.isSignedIn, isBuilderShell, requireAuthForBuilderShell]);
 
   useEffect(() => {
     if (pathname !== '/baseplate') return;
@@ -246,7 +257,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!isBuilderShell) return;
-      if (auth.loading || (!auth.isSignedIn && !allowAnonymousBaseplateInCi)) return;
+      if (auth.loading || (!auth.isSignedIn && requireAuthForBuilderShell)) return;
       if (event.key === 'F5') {
         event.preventDefault();
         model.render({isPreview: true, now: true})
@@ -276,7 +287,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [pathname, model, auth.loading, auth.isSignedIn, isBuilderShell, allowAnonymousBaseplateInCi]);
+  }, [pathname, model, auth.loading, auth.isSignedIn, isBuilderShell, requireAuthForBuilderShell]);
 
   useEffect(() => {
     const body = document.body;
@@ -389,6 +400,26 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
             >
               <FaDiscord size={18} aria-hidden="true" />
             </a>
+            <div className="app-header-cart-wrap">
+              <Button
+                type="button"
+                icon="pi pi-shopping-cart"
+                onClick={() => {
+                  tileCart.toggleDrawer();
+                }}
+                className="app-header-link-button"
+                aria-label={tileCart.itemCount ? `Open cart (${tileCart.itemCount} items)` : 'Open cart'}
+                text
+                style={{ paddingInline: '0.25rem' }}
+              />
+              {tileCart.itemCount > 0 ? (
+                <Badge
+                  value={tileCart.itemCount > 99 ? '99+' : tileCart.itemCount}
+                  severity="danger"
+                  className="app-header-cart-badge"
+                />
+              ) : null}
+            </div>
             <div style={{ position: 'relative' }}>
               <Menu model={accountItems} popup ref={accountMenuRef} />
               <Button
@@ -406,6 +437,26 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
           </div>
 
           <div className="app-header-nav-mobile">
+            <div className="app-header-cart-wrap">
+              <Button
+                type="button"
+                icon="pi pi-shopping-cart"
+                onClick={() => {
+                  tileCart.toggleDrawer();
+                }}
+                className="app-header-link-button"
+                aria-label={tileCart.itemCount ? `Open cart (${tileCart.itemCount} items)` : 'Open cart'}
+                text
+                style={{ paddingInline: '0.25rem' }}
+              />
+              {tileCart.itemCount > 0 ? (
+                <Badge
+                  value={tileCart.itemCount > 99 ? '99+' : tileCart.itemCount}
+                  severity="danger"
+                  className="app-header-cart-badge"
+                />
+              ) : null}
+            </div>
             <Menu model={mobileMenuItems} popup ref={mobileMenuRef} />
             <Button
               type="button"
@@ -451,6 +502,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
           />
         </div>
       </Dialog>
+      <CartDrawer />
     </>
   );
 
@@ -477,7 +529,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
       );
     }
 
-    if (!auth.isSignedIn && !allowAnonymousBaseplateInCi) {
+    if (!auth.isSignedIn && requireAuthForBuilderShell) {
       const signInBlurb =
         pathname === '/tile-builder'
           ? 'Please sign in to access the GridSmith tile builder and export tools.'
@@ -521,6 +573,8 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
       page = <HomePage />;
     } else if (pathname === '/about') {
       page = <AboutPage />;
+    } else if (pathname === '/cart') {
+      page = <CartPage />;
     } else if (pathname === '/tiles') {
       page = <TilesPage />;
     } else if (pathname === '/tile-details' || pathname.startsWith('/tile-details/')) {

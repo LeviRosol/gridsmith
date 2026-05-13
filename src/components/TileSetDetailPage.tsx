@@ -3,10 +3,22 @@ import { BreadCrumb } from 'primereact/breadcrumb';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { Divider } from 'primereact/divider';
+import { Message } from 'primereact/message';
+import { ProgressSpinner } from 'primereact/progressspinner';
 import { Tag } from 'primereact/tag';
 import type { MenuItem } from 'primereact/menuitem';
 import { trackTileSetAddClick } from '../analytics.ts';
+import { startGridSmithCheckoutForCartPriceIds } from '../billing/gridSmithBilling';
+import { useAuth } from './AuthContext';
+import { useTileCart } from '../cart/TileCartContext';
+import { isTileSetBuyable, cartHasPriceId } from '../cart/tileCartEligibility';
+import type { TileSetCatalogItem } from '../data/placeholderTileSets';
 import { getTileSetBySlug } from '../data/placeholderTileSets';
+import {
+  findTileSetBySlug,
+  loadTilePackCatalog,
+  tilePackCatalogApiConfigured,
+} from '../data/tilePackCatalog';
 
 const THUMB_KEYS = [0, 1, 2] as const;
 
@@ -72,29 +84,64 @@ function metaExcerpt(text: string, maxLen: number) {
 }
 
 export default function TileSetDetailPage({ slug }: { slug: string }) {
-  const set = slug ? getTileSetBySlug(slug) : undefined;
+  const auth = useAuth();
+  const { addOrUpdateLine, items } = useTileCart();
+  const [set, setSet] = useState<TileSetCatalogItem | undefined>(() =>
+    slug && !tilePackCatalogApiConfigured() ? getTileSetBySlug(slug) : undefined,
+  );
+  const [catalogLoading, setCatalogLoading] = useState(() => tilePackCatalogApiConfigured());
   const [activeThumb, setActiveThumb] = useState(0);
   const [comingSoonDialogVisible, setComingSoonDialogVisible] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [cartAddedFlash, setCartAddedFlash] = useState(false);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+
+  useEffect(() => {
+    if (!slug) {
+      setSet(undefined);
+      setCatalogLoading(false);
+      return undefined;
+    }
+    if (!tilePackCatalogApiConfigured()) {
+      setSet(getTileSetBySlug(slug));
+      setCatalogLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setCatalogLoading(true);
+    void loadTilePackCatalog().then((list) => {
+      if (cancelled) return;
+      setSet(findTileSetBySlug(list, slug));
+      setCatalogLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
 
   useEffect(() => {
     setActiveThumb(0);
     setComingSoonDialogVisible(false);
+    setCheckoutError(null);
+    setCartAddedFlash(false);
+    setCheckoutBusy(false);
   }, [set?.slug]);
 
   useEffect(() => {
+    if (catalogLoading) return undefined;
     if (set) {
       document.title = `GridSmith — ${set.name}`;
       const meta = document.querySelector('meta[name="description"]');
       if (meta) {
         meta.setAttribute('content', metaExcerpt(set.description, 155));
       }
-    } else {
+    } else if (slug) {
       document.title = 'GridSmith — Tile set not found';
     }
     return () => {
       document.title = 'GridSmith';
     };
-  }, [set, slug]);
+  }, [set, slug, catalogLoading]);
 
   const breadcrumbItems: MenuItem[] = useMemo(() => {
     if (!set) return [];
@@ -103,6 +150,23 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
       { label: set.name },
     ];
   }, [set]);
+
+  const inCart = useMemo(() => {
+    if (!set) return false;
+    return isTileSetBuyable(set) && cartHasPriceId(items, set.stripePriceId);
+  }, [set, items]);
+
+  if (catalogLoading) {
+    return (
+      <main className="home-page tile-shop-page">
+        <section className="home-section home-section-hero home-section-hero--child">
+          <div className="home-page-container flex justify-content-center py-6">
+            <ProgressSpinner style={{ width: '48px', height: '48px' }} />
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   if (!slug || !set) {
     return (
@@ -128,17 +192,88 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
 
   const priceDisplay = set.priceLabel ?? (set.disabled ? 'Coming soon' : null);
 
-  const priceForAddToCart = set.priceLabel ?? priceDisplay;
-  const addToCartLabel =
-    priceForAddToCart != null && priceForAddToCart !== ''
-      ? `Add ${set.name}\u2013 ${priceForAddToCart}`
-      : `Add ${set.name}`;
+  const buyable = isTileSetBuyable(set);
 
-  const handleAddToCartClick = () => {
+  const addButtonLabel = set.addToCartDisabled
+    ? 'Coming soon'
+    : !buyable
+      ? 'Unavailable'
+      : inCart
+        ? 'Checkout'
+        : 'Add to cart';
+  const addButtonIcon =
+    set.addToCartDisabled || !buyable ? 'pi pi-shopping-cart' : inCart ? 'pi pi-credit-card' : 'pi pi-shopping-cart';
+  const addButtonClassName = [
+    'w-full',
+    'font-bold',
+    'tile-detail-add-cart',
+    inCart && buyable && !set.addToCartDisabled ? null : 'p-button-outlined',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const addButtonDisabled = Boolean(
+    set.disabled || (!buyable && !set.addToCartDisabled) || checkoutBusy,
+  );
+
+  const handleCheckoutFromCart = async () => {
+    if (!auth.isSignedIn) {
+      setCheckoutError(null);
+      auth.login();
+      return;
+    }
+    if (!items.length) return;
+    setCheckoutBusy(true);
+    setCheckoutError(null);
+    try {
+      const { url } = await startGridSmithCheckoutForCartPriceIds(
+        items.map((row) => row.priceId),
+        { successPath: '/cart?checkout=success', cancelPath: '/cart' },
+      );
+      window.location.assign(url);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Checkout could not be started.';
+      setCheckoutError(msg);
+    } finally {
+      setCheckoutBusy(false);
+    }
+  };
+
+  const handlePrimaryClick = () => {
     trackTileSetAddClick(set.name);
     if (set.addToCartDisabled) {
       setComingSoonDialogVisible(true);
+      return;
     }
+    if (!set.stripePriceId?.trim()) {
+      setCheckoutError('Checkout is not available for this listing yet.');
+      return;
+    }
+    if (!auth.isSignedIn) {
+      setCheckoutError(null);
+      auth.login();
+      return;
+    }
+    if (!buyable) {
+      setCheckoutError('This pack cannot be added to the cart yet.');
+      return;
+    }
+    if (inCart) {
+      void handleCheckoutFromCart();
+      return;
+    }
+    const priceId = set.stripePriceId.trim();
+    setCheckoutError(null);
+    addOrUpdateLine({
+      priceId,
+      slug,
+      name: set.name,
+      priceLabel: set.priceLabel,
+      imageSrc: set.imageSrc,
+    });
+    setCartAddedFlash(true);
+    window.setTimeout(() => {
+      setCartAddedFlash(false);
+    }, 3500);
   };
 
   return (
@@ -210,6 +345,12 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
                 <div className="tile-detail-buybox">
                   <Tag value={set.tagLabel} rounded className="mb-2" />
                   <h1 className="tile-detail-title">{set.name}</h1>
+                  {checkoutError ? (
+                    <Message severity="error" text={checkoutError} className="w-full mb-2" />
+                  ) : null}
+                  {cartAddedFlash ? (
+                    <Message severity="success" text="Added to your cart." className="w-full mb-2" />
+                  ) : null}
                   {priceDisplay ? (
                     <div
                       className={`tile-detail-price${set.priceLabel ? '' : ' tile-detail-price--muted'}`}
@@ -246,10 +387,14 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
 
                   <Button
                     type="button"
-                    label={addToCartLabel}
-                    icon="pi pi-shopping-cart"
-                    className="w-full font-bold tile-detail-add-cart"
-                    onClick={handleAddToCartClick}
+                    label={addButtonLabel}
+                    icon={addButtonIcon}
+                    className={addButtonClassName}
+                    disabled={addButtonDisabled}
+                    loading={checkoutBusy}
+                    onClick={() => {
+                      handlePrimaryClick();
+                    }}
                   />
                   <div className="text-center mt-2">
                     <Button
@@ -296,16 +441,6 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
                       </section>
                     ) : null}
                   </div>
-
-                  <Divider className="my-4" />
-
-                  <Button
-                    type="button"
-                    label={addToCartLabel}
-                    icon="pi pi-shopping-cart"
-                    className="w-full font-bold tile-detail-add-cart"
-                    onClick={handleAddToCartClick}
-                  />
                 </div>
               </div>
             </div>

@@ -22,9 +22,14 @@ const TILE_BUILDER_SCAD_PATH = '/tile_builder.scad';
 export class Model {
   constructor(private fs: FS, public state: State, private setStateCallback?: (state: State) => void, 
     private statePersister?: StatePersister) {
-    // Expose the active model for Puppeteer smoke tests (dev/CI only). Production builds should not
-    // ship with this hook enabled (see `webpack.config.js` env injection).
-    if (typeof window !== 'undefined' && (process.env.CI === 'true' || process.env.NODE_ENV !== 'production')) {
+    // Expose the active model for Puppeteer smoke tests. Omitted from production unless the bundle
+    // was built with `CI=true` (GitHub Actions) or `GRIDSMITH_TEST_HOOK=true` (local prod e2e).
+    if (
+      typeof window !== 'undefined' &&
+      (process.env.CI === 'true' ||
+        process.env.NODE_ENV !== 'production' ||
+        process.env.GRIDSMITH_TEST_HOOK === 'true')
+    ) {
       (window as any).__GRIDSMITH_TEST__ = { model: this };
     }
   }

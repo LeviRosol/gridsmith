@@ -24,6 +24,9 @@ export type TileSetCatalogItem = {
   order: number;
   /** Detail page only: extra section (e.g. tile list). */
   whatYouGet?: TileSetWhatYouGet;
+  /** Set when catalog is loaded from Stripe (checkout wiring). */
+  stripeProductId?: string;
+  stripePriceId?: string;
 };
 
 const PLACEHOLDER_DESCRIPTION =

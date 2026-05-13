@@ -6,6 +6,7 @@ import {
   parseMarketingOptInFromIdTokenPayload,
 } from '../cognito/cognitoClient';
 import { getStoredConsent } from '../consent';
+import { clearStoredTileCart } from '../cart/tileCartStorage';
 
 type AuthUser = {
   sub?: string;
@@ -37,6 +38,8 @@ const STORAGE_KEYS = {
 const SESSION_KEYS = {
   pkceVerifier: 'gridsmith.cognito.pkceVerifier',
   redirectUri: 'gridsmith.cognito.redirectUri',
+  /** After Hosted UI returns to the OAuth callback URL, navigate here (same-origin path + query + hash). */
+  postLoginReturn: 'gridsmith.auth.postLoginReturn',
 };
 const TOKEN_REFRESH_SKEW_MS = 2 * 60 * 1000;
 const TOKEN_REFRESH_MIN_DELAY_MS = 5 * 1000;
@@ -145,6 +148,26 @@ function getCognitoDomainPrefix(domain: string | undefined): string | undefined 
   const match = trimmed.match(/^(?:https?:\/\/)?([^.]+)\.auth\./i);
   if (match) return match[1];
   return trimmed;
+}
+
+/** Same-origin internal path only (prevents open redirects). */
+function safePostLoginReturnTarget(raw: string | null | undefined): string | null {
+  if (raw == null || typeof raw !== 'string') return null;
+  const t = raw.trim();
+  if (!t.startsWith('/') || t.startsWith('//')) return null;
+  if (t.includes('://')) return null;
+  if (t.length > 4096) return null;
+  return t;
+}
+
+function readAndClearPostLoginReturn(): string | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEYS.postLoginReturn);
+    sessionStorage.removeItem(SESSION_KEYS.postLoginReturn);
+    return safePostLoginReturnTarget(raw);
+  } catch {
+    return null;
+  }
 }
 
 /** Default callback when env COGNITO_REDIRECT_URI is unset (matches login page path rules). */
@@ -324,8 +347,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           url.searchParams.delete('state');
           window.history.replaceState(null, '', url.pathname + url.search + url.hash);
           await exchangeCodeForTokens(oauthCode);
+          const resume = readAndClearPostLoginReturn();
+          if (resume) {
+            const nowPath =
+              window.location.pathname + window.location.search + window.location.hash;
+            if (resume !== nowPath) {
+              window.location.replace(resume);
+              return;
+            }
+          }
         } else if (error) {
           console.warn('Cognito OAuth error:', error);
+          try {
+            sessionStorage.removeItem(SESSION_KEYS.postLoginReturn);
+          } catch {
+            /* ignore */
+          }
           const cleanUrl = window.location.pathname + window.location.hash;
           window.history.replaceState(null, '', cleanUrl);
         } else {
@@ -348,6 +385,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (e) {
         console.warn('Auth init failed:', e);
+        try {
+          sessionStorage.removeItem(SESSION_KEYS.postLoginReturn);
+        } catch {
+          /* ignore */
+        }
         localStorage.removeItem(STORAGE_KEYS.idToken);
         localStorage.removeItem(STORAGE_KEYS.accessToken);
         localStorage.removeItem(STORAGE_KEYS.refreshToken);
@@ -489,6 +531,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const codeVerifier = randomCodeVerifier(64);
       const codeChallenge = await sha256Base64Url(codeVerifier);
 
+      const returnTarget =
+        window.location.pathname + window.location.search + window.location.hash;
+      const safeReturn = safePostLoginReturnTarget(returnTarget);
+      if (safeReturn) {
+        sessionStorage.setItem(SESSION_KEYS.postLoginReturn, safeReturn);
+      }
+
       // Store verifier for the redirect exchange step.
       sessionStorage.setItem(SESSION_KEYS.pkceVerifier, codeVerifier);
       sessionStorage.setItem(SESSION_KEYS.redirectUri, redirectUri);
@@ -518,6 +567,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(STORAGE_KEYS.idToken);
     localStorage.removeItem(STORAGE_KEYS.accessToken);
     localStorage.removeItem(STORAGE_KEYS.refreshToken);
+    clearStoredTileCart();
+    try {
+      sessionStorage.removeItem(SESSION_KEYS.postLoginReturn);
+    } catch {
+      /* ignore */
+    }
     setIdToken(null);
     setAccessToken(null);
     setIsAdmin(false);
