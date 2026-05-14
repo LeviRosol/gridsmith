@@ -33,7 +33,7 @@ floor_type = "floor";
 floor_rotation = 0;
 
 // none | flat | curved (UI; walls only assemble when not "none")
-wall_profile = "none";
+wall_profile = "flat";
 
 // Curved profile only: when true, curved piece uses east wall instead of north
 curved_wall_mirror = false;
@@ -41,7 +41,7 @@ curved_wall_mirror = false;
 // -----------------------------
 // Wall positions
 // -----------------------------
-use_north_wall = false;
+use_north_wall = true;
 north_wall_type = "wall";
 north_wall_rotation = 0;
 

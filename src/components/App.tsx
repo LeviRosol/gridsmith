@@ -2,6 +2,7 @@
 
 import React, {
   CSSProperties,
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -89,8 +90,6 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
 function AppImpl({initialState, statePersister, fs}: {initialState: State, statePersister: StatePersister, fs: FS}) {
   const [state, setState] = useState(initialState);
 
-  const model = new Model(fs, state, setState, statePersister);
-
   const [customizerOpen, setCustomizerOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(() => {
     try {
@@ -105,6 +104,12 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   const mobileMenuRef = useRef<Menu | null>(null);
   const auth = useAuth();
   const tileCart = useTileCart();
+
+  const getTileBuilderProEntitled = useCallback(
+    (tileSet: string) => tileCart.tileBuilderProEntitledForTileSet(tileSet),
+    [tileCart.tileBuilderProEntitledForTileSet],
+  );
+  const model = new Model(fs, state, setState, statePersister, getTileBuilderProEntitled);
 
   const [buildChooserModalOpen, setBuildChooserModalOpen] = useState(false);
   const [tileBuilderRenderDownloadUpsellOpen, setTileBuilderRenderDownloadUpsellOpen] = useState(false);
@@ -207,7 +212,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
         await installTileStls(fs);
       }
       if (cancelled) return;
-      model.init();
+      await model.init();
       if (cancelled) return;
       if (pathname === '/tile-builder') {
         const v = model.state.params.vars ?? {};
@@ -230,6 +235,13 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     // We intentionally don't include `model` in deps: we only want initialization on route+auth changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, auth.loading, auth.isSignedIn, isBuilderShell, requireAuthForBuilderShell]);
+
+  const tileBuilderTileSetVar = String(model.state.params.vars?.tile_set ?? 'tavern');
+  const tileBuilderMedHighLocked =
+    pathname === '/tile-builder' &&
+    isTileBuilderProTierResolution(model.state.params.vars?.resolution) &&
+    tileCart.tileBuilderProEntitlementReady &&
+    !tileCart.tileBuilderProEntitledForTileSet(tileBuilderTileSetVar);
 
   useEffect(() => {
     if (pathname !== '/baseplate') return;
@@ -260,23 +272,17 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
       if (auth.loading || (!auth.isSignedIn && requireAuthForBuilderShell)) return;
       if (event.key === 'F5') {
         event.preventDefault();
-        model.render({isPreview: true, now: true})
+        model.render({ isPreview: true, now: true });
       } else if (event.key === 'F6') {
         event.preventDefault();
-        if (
-          pathname === '/tile-builder' &&
-          isTileBuilderProTierResolution(model.state.params.vars?.resolution)
-        ) {
+        if (tileBuilderMedHighLocked) {
           setTileBuilderRenderDownloadUpsellOpen(true);
           return;
         }
-        model.render({isPreview: false, now: true})
+        model.render({ isPreview: false, now: true });
       } else if (event.key === 'F7') {
         event.preventDefault();
-        if (
-          pathname === '/tile-builder' &&
-          isTileBuilderProTierResolution(model.state.params.vars?.resolution)
-        ) {
+        if (tileBuilderMedHighLocked) {
           setTileBuilderRenderDownloadUpsellOpen(true);
           return;
         }
@@ -287,7 +293,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [pathname, model, auth.loading, auth.isSignedIn, isBuilderShell, requireAuthForBuilderShell]);
+  }, [pathname, model, auth.loading, auth.isSignedIn, isBuilderShell, requireAuthForBuilderShell, tileBuilderMedHighLocked]);
 
   useEffect(() => {
     const body = document.body;
@@ -702,7 +708,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
           <ConfirmDialog />
 
           <Dialog
-            header="Render & download"
+            header="Render & Download STL"
             visible={tileBuilderRenderDownloadUpsellOpen}
             modal
             dismissableMask
@@ -719,7 +725,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
                 />
                 <Button
                   type="button"
-                  label="Sign Me Up!"
+                  label="Browse tile packs"
                   icon="pi pi-arrow-right"
                   iconPos="right"
                   severity="success"
@@ -732,10 +738,11 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
             }
           >
             <p style={{ margin: 0, lineHeight: 1.55 }}>
-              Wouldn&apos;t it be nice to render and download that STL??
+                Wouldn&apos;t it be nice to render and download that STL??
             </p>
             <p style={{ margin: '0.75rem 0 0', lineHeight: 1.55 }}>
-              Become a Pro Member to get access to Med and High resolution GridSmith tiles!
+              Purchase the matching Tile Set you&apos;re building (see the shop), or switch to a set you
+              already own.
             </p>
           </Dialog>
         </div>

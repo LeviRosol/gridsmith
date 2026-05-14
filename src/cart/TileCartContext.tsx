@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchGridSmithCapabilities } from '../billing/gridSmithBilling';
 import {
   clearStoredTileCart,
@@ -9,8 +9,9 @@ import {
 } from './tileCartStorage';
 import { isCatalogItemOwnedWithSets } from './tileCartEligibility';
 import type { TileSetCatalogItem } from '../data/placeholderTileSets';
-import { tilePackCatalogApiConfigured } from '../data/tilePackCatalog';
+import { loadTilePackCatalog, tilePackCatalogApiConfigured, clearTilePackCatalogCache } from '../data/tilePackCatalog';
 import { useAuth } from '../components/AuthContext';
+import { computeTileBuilderProEntitledForTileSet } from '../tileBuilder/tileBuilderProAccess';
 
 type TileCartContextValue = {
   items: TileCartLine[];
@@ -25,6 +26,13 @@ type TileCartContextValue = {
   clearCart: () => void;
   /** True when signed in, API configured, capabilities loaded, and this pack is in owned price/product ids. */
   isPackOwned: (set: TileSetCatalogItem) => boolean;
+  /**
+   * Med/High (128/256) for the given SCAD `tile_set` value (e.g. tavern, cave): owned matching catalog
+   * pack with `tileBuilderFeatures`.
+   */
+  tileBuilderProEntitledForTileSet: (tileSet: string) => boolean;
+  /** False until ownership and catalog have been fetched (treat as not entitled while false). */
+  tileBuilderProEntitlementReady: boolean;
 };
 
 const TileCartContext = createContext<TileCartContextValue | null>(null);
@@ -41,9 +49,70 @@ export function TileCartProvider({ children }: { children: React.ReactNode }) {
   const [ownedPriceIds, setOwnedPriceIds] = useState<string[]>([]);
   const [ownedProductIds, setOwnedProductIds] = useState<string[]>([]);
   const [ownershipLoaded, setOwnershipLoaded] = useState(false);
+  const [catalogForEntitlements, setCatalogForEntitlements] = useState<TileSetCatalogItem[] | null>(null);
+  const [catalogForEntitlementsLoaded, setCatalogForEntitlementsLoaded] = useState(false);
 
   const ownedPriceSet = useMemo(() => new Set(ownedPriceIds), [ownedPriceIds]);
   const ownedProductSet = useMemo(() => new Set(ownedProductIds), [ownedProductIds]);
+
+  const signedInPrevRef = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    if (signedInPrevRef.current === null) {
+      signedInPrevRef.current = signedIn;
+      return;
+    }
+    if (signedIn && !signedInPrevRef.current) {
+      clearTilePackCatalogCache();
+    }
+    signedInPrevRef.current = signedIn;
+  }, [signedIn]);
+
+  useEffect(() => {
+    if (!shopApiConfigured || !signedIn) {
+      setCatalogForEntitlements(null);
+      setCatalogForEntitlementsLoaded(true);
+      return undefined;
+    }
+    let cancelled = false;
+    setCatalogForEntitlementsLoaded(false);
+    void loadTilePackCatalog().then((list) => {
+      if (!cancelled) {
+        setCatalogForEntitlements(list);
+        setCatalogForEntitlementsLoaded(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [signedIn, shopApiConfigured]);
+
+  const tileBuilderProEntitlementReady =
+    !signedIn ||
+    !shopApiConfigured ||
+    (ownershipLoaded && catalogForEntitlementsLoaded);
+
+  const tileBuilderProEntitledForTileSet = useCallback(
+    (tileSet: string) => {
+      if (!signedIn || !shopApiConfigured) return false;
+      if (!ownershipLoaded || !catalogForEntitlementsLoaded || !catalogForEntitlements) return false;
+      return computeTileBuilderProEntitledForTileSet(
+        tileSet,
+        ownedPriceIds,
+        ownedProductIds,
+        catalogForEntitlements,
+      );
+    },
+    [
+      signedIn,
+      shopApiConfigured,
+      ownershipLoaded,
+      catalogForEntitlementsLoaded,
+      catalogForEntitlements,
+      ownedPriceIds,
+      ownedProductIds,
+    ],
+  );
 
   useEffect(() => {
     writeStoredTileCart(items);
@@ -136,8 +205,19 @@ export function TileCartProvider({ children }: { children: React.ReactNode }) {
       removeLine,
       clearCart,
       isPackOwned,
+      tileBuilderProEntitledForTileSet,
+      tileBuilderProEntitlementReady,
     }),
-    [items, drawerVisible, addOrUpdateLine, removeLine, clearCart, isPackOwned],
+    [
+      items,
+      drawerVisible,
+      addOrUpdateLine,
+      removeLine,
+      clearCart,
+      isPackOwned,
+      tileBuilderProEntitledForTileSet,
+      tileBuilderProEntitlementReady,
+    ],
   );
 
   return <TileCartContext.Provider value={value}>{children}</TileCartContext.Provider>;

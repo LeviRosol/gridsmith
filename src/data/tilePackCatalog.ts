@@ -32,6 +32,7 @@ function enrichWithPlaceholderCompat(item: TileSetCatalogItem): TileSetCatalogIt
       description: item.description?.trim() ? item.description : ph.description,
       imageSrc: item.imageSrc && item.imageSrc !== '/logo512.png' ? item.imageSrc : ph.imageSrc,
       imagePath: item.imagePath ?? ph.imagePath,
+      tileBuilderFeatures: item.tileBuilderFeatures === true ? true : ph.tileBuilderFeatures,
     };
   }
   const directPh = getTileSetBySlug(item.slug);
@@ -53,12 +54,23 @@ function isWhatYouGet(v: unknown): v is TileSetWhatYouGet {
   );
 }
 
+function truthyTileBuilderFeatures(v: unknown): boolean {
+  if (v === true) return true;
+  if (typeof v !== 'string') return false;
+  const s = v.trim().toLowerCase();
+  return s === 'true' || s === '1' || s === 'yes' || s === 'med_high' || s === 'all';
+}
+
 function normalizeItem(raw: unknown): TileSetCatalogItem | null {
   if (typeof raw !== 'object' || raw == null) return null;
   const o = raw as Record<string, unknown>;
   const slug = typeof o.slug === 'string' ? o.slug.trim() : '';
   const name = typeof o.name === 'string' ? o.name.trim() : '';
   if (!slug || !name) return null;
+
+  const tileBuilderFeatures =
+    o.tileBuilderFeatures === true ||
+    (typeof o.tileBuilderFeatures === 'string' && truthyTileBuilderFeatures(o.tileBuilderFeatures));
 
   return {
     slug,
@@ -77,10 +89,16 @@ function normalizeItem(raw: unknown): TileSetCatalogItem | null {
       typeof o.imagePath === 'string' && isSafeTilePackGalleryFolder(o.imagePath.trim())
         ? o.imagePath.trim()
         : undefined,
+    ...(tileBuilderFeatures ? { tileBuilderFeatures: true as const } : {}),
   };
 }
 
 let cachedSuccess: TileSetCatalogItem[] | null = null;
+
+/** Drop in-memory catalog cache (e.g. after Lambda adds new fields). */
+export function clearTilePackCatalogCache(): void {
+  cachedSuccess = null;
+}
 
 export function loadTilePackCatalog(): Promise<TileSetCatalogItem[]> {
   if (!tilePackCatalogApiConfigured()) {
@@ -91,7 +109,7 @@ export function loadTilePackCatalog(): Promise<TileSetCatalogItem[]> {
   }
 
   const base = apiBase();
-  return fetch(`${base}/api/catalog/tile-packs`)
+  return fetch(`${base}/api/catalog/tile-packs`, { cache: 'no-store' })
     .then(async (r) => {
       if (!r.ok) {
         const t = await r.text();

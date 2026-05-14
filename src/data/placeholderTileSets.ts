@@ -28,6 +28,11 @@ export type TileSetCatalogItem = {
   stripeProductId?: string;
   stripePriceId?: string;
   /**
+   * From Stripe Product metadata `tile_builder_features` (truthy). When true, owning this pack
+   * unlocks Med/High resolution render and STL export in the Tile Builder.
+   */
+  tileBuilderFeatures?: boolean;
+  /**
    * Optional folder key under `/tile-pack-gallery/<key>/` for supporting images; filenames
    * are listed in `/tile-packs/<slug>.json` (`gallery` + optional `galleryFolder`).
    */

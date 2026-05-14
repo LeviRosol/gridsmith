@@ -2,9 +2,9 @@
 name: Tile pack commerce v1
 overview: >-
   Stripe one-time tile packs; Stripe is the commercial source of truth (no order mirror DB).
-  **Shipped:** SAM/API Gateway Lambdas (`GET /api/catalog/tile-packs`, `POST /api/billing/checkout-session`, `GET /api/capabilities/me` with `ownedPurchases[]` / `purchasedAt`, `POST /api/downloads/tile-pack` with JWT + Stripe ownership check + presigned S3 GET), SPA live catalog, cart → Checkout, Profile owned packs + pack downloads when deployed. Cognito↔Stripe via **Customer `metadata.cognito_sub`** + Customer Search (no Cognito `custom:stripe_customer_id` for v1).
+  **Shipped:** SAM/API Gateway Lambdas (`GET /api/catalog/tile-packs`, `POST /api/billing/checkout-session`, `GET /api/capabilities/me` with `ownedPurchases[]` / `purchasedAt`, `POST /api/downloads/tile-pack` with JWT + Stripe ownership check + presigned S3 GET), SPA live catalog, cart → Checkout, Profile owned packs + pack downloads when deployed; Tile Builder **Med/High (128/256):** users can **preview** at any resolution; **full render** and **STL export** are blocked in the client `Model` unless capabilities + catalog show an owned pack with `tile_builder_features` (Stripe Product metadata) for the active SCAD `tile_set`. Upsell modals explain purchase; pack STL downloads remain server-gated. Cognito↔Stripe via **Customer `metadata.cognito_sub`** + Customer Search (no Cognito `custom:stripe_customer_id` for v1).
   **Deploy:** Local `npm run deploy:api:*` anytime. **CI:** `.github/workflows/api-deploy.yml` — **prod** API on **path-filtered push to `main`** (`infra/api/**`, `scripts/deploy-api.sh`, or that workflow file); **`workflow_dispatch`** for manual **dev** / staging / prod. Requires GitHub Environment secrets + OIDC per stage (`api-deploy-pipeline` todo until verified).
-  **Still open:** Tile Builder gates from capabilities; `/admin`; telemetry + Dynamo only when that feature ships.
+  **Still open:** Telemetry + Dynamo only when that feature ships.
 todos:
   - id: storefront-ui-placeholder
     content: "/tiles + /tile-details/:slug with local catalog (incl. optional whatYouGet), two-column detail w/ independent scroll on lg, coming-soon modal, prod deploy—no Stripe yet"
@@ -25,13 +25,10 @@ todos:
     content: "POST /api/downloads/tile-pack (JWT); Stripe purchase verification; presigned S3 GET from Product metadata pack_download_s3_key; Profile download buttons"
     status: completed
   - id: builder-gating-downloads
-    content: Tile Builder Med/High render and STL export gated on capabilities / owned packs (not UI-only upsell)
-    status: pending
+    content: "Tile Builder Med/High: preview allowed for all signed-in users; full render + export blocked in Model unless owned pack + tile_builder_features for tile_set; upsell UI; pack downloads via POST /api/downloads/tile-pack (server)"
+    status: completed
   - id: telemetry-persistence
     content: "When implementing render telemetry: add chosen store (likely DynamoDB in same region as Lambda) and POST /api/telemetry/render—do not create tables before this"
-    status: pending
-  - id: admin-in-app
-    content: /admin lookup UI; backend uses admin JWT + Stripe API (Dashboard parity for read paths) without mirroring orders locally
     status: pending
   - id: marketing-opt-in-cognito
     content: "Cognito custom:marketing_opt_in; Profile page; UpdateUserAttributes + InitiateAuth refresh; OAuth PKCE/redirect fixes; aws.cognito.signin.user.admin scope"
@@ -48,9 +45,8 @@ Repo copy of the GridSmith **Tile pack commerce v1** plan (version-controlled). 
 
 ## Decisions locked in
 
-- **Admin**: same app, `/admin/*` routes gated by a **Cognito group** (e.g. `admins`), with the same enforcement in Lambda.
 - **Checkout**: **signed-in only**; link purchases to users via **Cognito `sub`** and **Stripe Customer** (see below).
-- **Products and orders**: **Stripe is the system of record**—no local mirror tables for catalog, orders, line items, or entitlements. **Capabilities and admin views** resolve ownership by calling the **Stripe API** at request time (with sensible caching later if needed).
+- **Products and orders**: **Stripe is the system of record**—no local mirror tables for catalog, orders, line items, or entitlements. **Capabilities** resolve ownership by calling the **Stripe API** at request time (with sensible caching later if needed).
 - **Persistence**: **Do not create database tables until a feature actually needs them** (e.g. telemetry ingestion). No stub schemas for future saves/Room Builder until those features are implemented.
 - **Stripe (Dashboard):** Account provisioned; **custom Hosted Checkout domain** **`checkout.gridsmith.io`**. When wiring `POST /api/billing/checkout-session`, align success/cancel URLs and customer-facing checkout links with this domain.
 
@@ -178,11 +174,7 @@ Goal: deployments are repeatable and auditable (no copy/paste console setup), wi
 - [`App.tsx`](../../src/components/App.tsx): routing for both phases; stable id in the detail URL (slug or future `product_id`).
 - **Cart**: client-only line items → one Checkout Session (after backend exists).
 - [`AuthContext.tsx`](../../src/components/AuthContext.tsx): require sign-in for checkout and download.
-- [`TileBuilderPanel.tsx`](../../src/components/TileBuilderPanel.tsx) / [`App.tsx`](../../src/components/App.tsx): gates driven by **`/api/capabilities/me`** (backed by Stripe, not a local entitlements table).
-
-## Admin (in-app)
-
-- `/admin/users` (or similar): **Cognito group** on JWT; Lambda calls **Stripe** (and Cognito Admin API if needed) to show customer + payment history—still **no local order mirror** unless you add it later for a concrete reason.
+- [`TileBuilderPanel.tsx`](../../src/components/TileBuilderPanel.tsx) / [`App.tsx`](../../src/components/App.tsx): **Med/High policy (shipped):** `GET /api/capabilities/me` + catalog (`tileBuilderFeatures` from Stripe Product metadata) drive `TileCartContext.tileBuilderProEntitledForTileSet(tile_set)`. **Preview** (`Model.render({ isPreview: true })`) always runs at 128/256 so users can evaluate quality. **Full render** and **`Model.export()`** return early when Med/High is selected and the user does not own a matching pack; **Footer** / **ExportButton** / F6–F7 open the tile-builder upsell instead of calling render/export. Choosing Med/High in the customizer can still show the informational dialog; resolution is not clamped back to Low. **Init order:** `Model.init()` awaits `processSource()`, which **awaits `checkSyntax()`** before returning, and the builder shell **awaits `init()`** before the first tile preview so the footer progress bar does not stay indeterminate after preview (checker vs preview overlap).
 
 ## Marketing newsletter opt-in (store in Cognito)
 
@@ -211,12 +203,12 @@ Goal: deployments are repeatable and auditable (no copy/paste console setup), wi
 4. ~~**Wire catalog:** `GET /api/catalog/tile-packs` in the existing components.~~ **Done.**
 5. ~~**Cart → checkout** in the UI (`POST /api/billing/checkout-session`, multi-line supported).~~ **Done.**
 6. ~~**Download API** + S3 presign + Stripe purchase verification.~~ **Done in repo** (`POST /api/downloads/tile-pack`, private per-stage bucket, `pack_download_s3_key`); **deploy** with the rest of the API.
-7. Tile Builder wired to capabilities.
-8. **Admin** read paths (Stripe + Cognito).
-9. **Telemetry**: add **DynamoDB** (or chosen store) **when** implementing `POST /api/telemetry/render`—not before.
+7. ~~Tile Builder wired to capabilities (Med/High + `tile_builder_features` on Stripe Products).~~ **Done in repo** (preview at Med/High for everyone; render/export gated; see **Routes and UI** above); deploy catalog + capabilities APIs and set Product metadata.
+8. **Telemetry**: add **DynamoDB** (or chosen store) **when** implementing `POST /api/telemetry/render`—not before.
 
 ## Handoff for a new agent
 
 - **Storefront, live catalog fetch, cart/checkout, capabilities-backed Profile (owned packs + purchase dates + pack file downloads via presigned S3)** are in place; **deploy the API** after changing `infra/api/`.
-- **Next concrete work:** **`api-deploy-pipeline`** (CI), then **Tile Builder ↔ `capabilities/me`** for real Med/High gating, unless product priority is **admin** first.
+- **Tile Builder:** Stripe-backed **capabilities** gate **final render + export** at Med/High; **previews** at Med/High are allowed; informational / upsell dialogs in the SPA.
+- **Next concrete work:** **`api-deploy-pipeline`** (CI), then **telemetry** when you implement `POST /api/telemetry/render`.
 - Point the agent at this file: **`docs/plans/tile_pack_commerce_v1.md`**.

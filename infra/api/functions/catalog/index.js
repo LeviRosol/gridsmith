@@ -107,6 +107,33 @@ function truthyMetadata(val) {
   return s === 'true' || s === '1' || s === 'yes';
 }
 
+function explicitTileBuilderOff(meta) {
+  const v = meta?.tile_builder_features;
+  if (v == null || v === '') return false;
+  const s = String(v).trim().toLowerCase();
+  return s === 'false' || s === '0' || s === 'no';
+}
+
+/** True when metadata explicitly enables Tile Builder Med/High (see also pack_download_s3_key fallback). */
+function explicitTileBuilderOn(meta) {
+  const v = meta?.tile_builder_features;
+  if (v == null || v === '') return false;
+  if (truthyMetadata(v)) return true;
+  const s = String(v).trim().toLowerCase();
+  return s === 'med_high' || s === 'all';
+}
+
+/**
+ * Tile Builder Med/High: on when tile_builder_features is truthy/med_high/all, or when the product has
+ * pack_download_s3_key (same packs as STL download). Opt out with tile_builder_features=false|0|no.
+ */
+function tileBuilderFeaturesFromMetadata(meta) {
+  if (explicitTileBuilderOff(meta)) return false;
+  if (explicitTileBuilderOn(meta)) return true;
+  const key = meta?.pack_download_s3_key != null ? String(meta.pack_download_s3_key).trim() : '';
+  return Boolean(key);
+}
+
 function formatMoney(unitAmount, currency) {
   if (unitAmount == null || currency == null) return undefined;
   const cur = String(currency).toUpperCase();
@@ -178,6 +205,7 @@ function mapProductToItem(product, priceObj) {
 
   const whatYouGet = parseWhatYouGet(meta.what_you_get);
   const imagePath = parseImagePathFolder(meta);
+  const tileBuilderFeatures = tileBuilderFeaturesFromMetadata(meta);
 
   const out = {
     slug,
@@ -194,6 +222,7 @@ function mapProductToItem(product, priceObj) {
     stripePriceId: priceObj.id,
   };
   if (imagePath) out.imagePath = imagePath;
+  if (tileBuilderFeatures) out.tileBuilderFeatures = true;
   return out;
 }
 

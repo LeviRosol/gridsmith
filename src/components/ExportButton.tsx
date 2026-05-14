@@ -1,6 +1,7 @@
 import React, { useContext } from 'react';
 import { ModelContext, TileBuilderUpsellContext } from './contexts.ts';
 import { isTileBuilderProTierResolution } from '../utils.ts';
+import { useTileCart } from '../cart/TileCartContext';
 
 import { SplitButton } from 'primereact/splitbutton';
 import { MenuItem } from 'primereact/menuitem';
@@ -11,10 +12,15 @@ export default function ExportButton({className, style}: {className?: string, st
     const model = useContext(ModelContext);
     if (!model) throw new Error('No model');
     const tileBuilderUpsell = useContext(TileBuilderUpsellContext);
+    const tileCart = useTileCart();
     const state = model.state;
     const vars = state.params.vars ?? {};
+    const tileSetVar = typeof vars.tile_set === 'string' && vars.tile_set.trim() ? vars.tile_set.trim() : 'tavern';
     const tileBuilderProTierLocked =
-      state.params.activePath === '/tile_builder.scad' && isTileBuilderProTierResolution(vars.resolution);
+      state.params.activePath === '/tile_builder.scad' &&
+      isTileBuilderProTierResolution(vars.resolution) &&
+      tileCart.tileBuilderProEntitlementReady &&
+      !tileCart.tileBuilderProEntitledForTileSet(tileSetVar);
 
     const dropdownModel: ExtendedMenuItem[] = 
       state.is2D ? [

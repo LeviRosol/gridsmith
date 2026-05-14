@@ -39,6 +39,8 @@ export type TilePackIncludedFiles = {
  * - `description` — multi-paragraph; use `\n\n` between paragraphs.
  * - `gallery` + `galleryFolder` — filenames under `/tile-pack-gallery/<galleryFolder>/`.
  *   If `galleryFolder` is omitted, the catalog item’s `imagePath` (Stripe `image_path`) is used when present.
+ * - `builderEnabled` — when true, this pack’s mapped `tile_set` appears in the Tile Builder dropdown (see `tileSetVarForCatalogSlug`).
+ * - `builderTileSetName` — display label for that row in the Tile Builder tile set dropdown (falls back to catalog name).
  */
 export type TilePackContent = {
   intro?: string;
@@ -47,6 +49,10 @@ export type TilePackContent = {
   includedFiles?: TilePackIncludedFiles;
   gallery?: string[];
   galleryFolder?: string;
+  /** When true, this catalog slug’s SCAD `tile_set` is offered in the Tile Builder (requires slug → var mapping). */
+  builderEnabled?: boolean;
+  /** Short label for the Tile Builder tile set dropdown (e.g. "Tavern"). */
+  builderTileSetName?: string;
 };
 
 function isWhatYouGet(v: unknown): v is TileSetWhatYouGet {
@@ -92,7 +98,21 @@ function parseTilePackContent(raw: unknown): TilePackContent | null {
   if (typeof o.galleryFolder === 'string' && o.galleryFolder.trim()) {
     out.galleryFolder = o.galleryFolder.trim();
   }
-  if (!out.intro && !out.description && !out.whatYouGet && !out.includedFiles && !out.gallery?.length) {
+  if (typeof o.builderEnabled === 'boolean') {
+    out.builderEnabled = o.builderEnabled;
+  }
+  if (typeof o.builderTileSetName === 'string' && o.builderTileSetName.trim()) {
+    out.builderTileSetName = o.builderTileSetName.trim();
+  }
+  if (
+    !out.intro &&
+    !out.description &&
+    !out.whatYouGet &&
+    !out.includedFiles &&
+    !out.gallery?.length &&
+    typeof out.builderEnabled !== 'boolean' &&
+    typeof out.builderTileSetName !== 'string'
+  ) {
     return null;
   }
   return out;
