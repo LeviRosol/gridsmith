@@ -4,7 +4,7 @@ import { Divider } from 'primereact/divider';
 import { InputSwitch } from 'primereact/inputswitch';
 import { Message } from 'primereact/message';
 import { ProgressSpinner } from 'primereact/progressspinner';
-import { fetchGridSmithCapabilities } from '../billing/gridSmithBilling';
+import { fetchGridSmithCapabilities, fetchTilePackDownloadUrl } from '../billing/gridSmithBilling';
 import { catalogOwnedPacksWithPurchases, type OwnedPackWithPurchase } from '../data/ownedPacksMatch';
 import { loadTilePackCatalog, tilePackCatalogApiConfigured } from '../data/tilePackCatalog';
 import { useAuth } from './AuthContext';
@@ -27,6 +27,9 @@ export default function ProfilePage() {
   const ownedSectionRef = useRef<HTMLElement | null>(null);
 
   const [ownedCatalogItems, setOwnedCatalogItems] = useState<OwnedPackWithPurchase[]>([]);
+  const [downloadBusyPriceId, setDownloadBusyPriceId] = useState<string | null>(null);
+  const [downloadErrorByPriceId, setDownloadErrorByPriceId] = useState<Record<string, string>>({});
+  const downloadInFlightRef = useRef(false);
 
   useEffect(() => {
     document.title = 'GridSmith — Profile';
@@ -111,6 +114,29 @@ export default function ProfilePage() {
 
   const shopApiConfigured = tilePackCatalogApiConfigured();
 
+  const startPackDownload = useCallback(async (priceId: string) => {
+    if (downloadInFlightRef.current) return;
+    downloadInFlightRef.current = true;
+    setDownloadBusyPriceId(priceId);
+    setDownloadErrorByPriceId((prev) => {
+      const next = { ...prev };
+      delete next[priceId];
+      return next;
+    });
+    try {
+      const { url } = await fetchTilePackDownloadUrl(priceId);
+      window.location.assign(url);
+    } catch (e) {
+      setDownloadErrorByPriceId((prev) => ({
+        ...prev,
+        [priceId]: e instanceof Error ? e.message : 'Download failed.',
+      }));
+    } finally {
+      downloadInFlightRef.current = false;
+      setDownloadBusyPriceId(null);
+    }
+  }, []);
+
   return (
     <main className="home-page">
       <section className="home-section home-section-alt">
@@ -147,8 +173,8 @@ export default function ProfilePage() {
                     Owned Packs
                   </h2>
                   <p className="m-0 mb-3 line-height-3" style={{ opacity: 0.88 }}>
-                    Tile packs tied to your account from completed Stripe checkouts. Downloads will connect here in a
-                    future release.
+                    Packs from your completed checkouts. <strong>Download</strong> starts one pack at a time from
+                    secure storage (sign-in required).
                   </p>
 
                   {!shopApiConfigured ? (
@@ -172,7 +198,7 @@ export default function ProfilePage() {
                       {ownedCatalogItems.map((item) => {
                         const purchasedLabel = formatPurchasedAt(item.purchasedAt);
                         return (
-                        <li key={item.slug} className="tile-cart-page-line">
+                        <li key={item.slug} className="tile-cart-page-line tile-cart-page-line--owned">
                           <img className="tile-cart-page-line-thumb" src={item.imageSrc} alt="" width={72} height={72} />
                           <div className="tile-cart-page-line-main">
                             <a
@@ -188,6 +214,34 @@ export default function ProfilePage() {
                               <div className="tile-cart-page-line-price" style={{ fontSize: '0.85rem', opacity: 0.78 }}>
                                 Purchased {purchasedLabel}
                               </div>
+                            ) : null}
+                          </div>
+                          <div className="tile-cart-page-line-actions">
+                            {item.stripePriceId ? (
+                              <>
+                                <Button
+                                  type="button"
+                                  label={downloadBusyPriceId === item.stripePriceId ? 'Preparing…' : 'Download'}
+                                  icon="pi pi-download"
+                                  className="p-button-sm p-button-outlined"
+                                  disabled={Boolean(downloadBusyPriceId && downloadBusyPriceId !== item.stripePriceId)}
+                                  loading={downloadBusyPriceId === item.stripePriceId}
+                                  onClick={() => void startPackDownload(item.stripePriceId!)}
+                                />
+                                {downloadErrorByPriceId[item.stripePriceId] ? (
+                                  <p
+                                    className="m-0 mt-1"
+                                    style={{
+                                      fontSize: '0.85rem',
+                                      color: 'var(--red-500, #b91c1c)',
+                                      maxWidth: 220,
+                                    }}
+                                    role="alert"
+                                  >
+                                    {downloadErrorByPriceId[item.stripePriceId]}
+                                  </p>
+                                ) : null}
+                              </>
                             ) : null}
                           </div>
                         </li>

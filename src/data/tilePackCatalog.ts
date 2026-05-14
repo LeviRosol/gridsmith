@@ -4,6 +4,7 @@ import {
   type TileSetCatalogItem,
   type TileSetWhatYouGet,
 } from './placeholderTileSets';
+import { isSafeTilePackGalleryFolder } from './tilePackContent';
 
 /** API base URL including stage path, e.g. https://xxxxx.execute-api.us-east-2.amazonaws.com/dev */
 function apiBase(): string {
@@ -14,23 +15,33 @@ export function tilePackCatalogApiConfigured(): boolean {
   return Boolean(apiBase());
 }
 
-/** Stripe slugs → legacy placeholder slugs (copy, images, whatYouGet) until fully driven by Stripe metadata. */
+/** Stripe slugs → legacy placeholder slugs for catalog merge. Keep keys aligned with `TILE_PACK_JSON_FALLBACK_SLUG` in `tilePackContent.ts` (detail JSON fallback). */
 const SLUG_ENRICH_FROM_PLACEHOLDER: Record<string, string> = {
   'tavern-core-set': 'tavern-set',
   'cave-core-set': 'cave-set',
 };
 
 function enrichWithPlaceholderCompat(item: TileSetCatalogItem): TileSetCatalogItem {
-  const phSlug = SLUG_ENRICH_FROM_PLACEHOLDER[item.slug];
-  if (!phSlug) return item;
-  const ph = getTileSetBySlug(phSlug);
-  if (!ph) return item;
-  return {
-    ...item,
-    whatYouGet: item.whatYouGet ?? ph.whatYouGet,
-    description: item.description?.trim() ? item.description : ph.description,
-    imageSrc: item.imageSrc && item.imageSrc !== '/logo512.png' ? item.imageSrc : ph.imageSrc,
-  };
+  const mappedPhSlug = SLUG_ENRICH_FROM_PLACEHOLDER[item.slug];
+  if (mappedPhSlug) {
+    const ph = getTileSetBySlug(mappedPhSlug);
+    if (!ph) return item;
+    return {
+      ...item,
+      whatYouGet: item.whatYouGet ?? ph.whatYouGet,
+      description: item.description?.trim() ? item.description : ph.description,
+      imageSrc: item.imageSrc && item.imageSrc !== '/logo512.png' ? item.imageSrc : ph.imageSrc,
+      imagePath: item.imagePath ?? ph.imagePath,
+    };
+  }
+  const directPh = getTileSetBySlug(item.slug);
+  if (directPh?.imagePath) {
+    return {
+      ...item,
+      imagePath: item.imagePath ?? directPh.imagePath,
+    };
+  }
+  return item;
 }
 
 function isWhatYouGet(v: unknown): v is TileSetWhatYouGet {
@@ -62,6 +73,10 @@ function normalizeItem(raw: unknown): TileSetCatalogItem | null {
     whatYouGet: isWhatYouGet(o.whatYouGet) ? o.whatYouGet : undefined,
     stripeProductId: typeof o.stripeProductId === 'string' ? o.stripeProductId : undefined,
     stripePriceId: typeof o.stripePriceId === 'string' ? o.stripePriceId : undefined,
+    imagePath:
+      typeof o.imagePath === 'string' && isSafeTilePackGalleryFolder(o.imagePath.trim())
+        ? o.imagePath.trim()
+        : undefined,
   };
 }
 

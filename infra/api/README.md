@@ -16,7 +16,8 @@ That wrapper delegates to:
 
 - `GET /api/catalog/tile-packs` (Stripe catalog)
 - `POST /api/billing/checkout-session` (Cognito ID JWT + Stripe Checkout). JSON body: either `priceId` (single one-time Stripe price) or `lineItems` (array of `{ priceId, quantity?: 1 }`, deduped, max 20 lines, quantity must be 1). Optional `successPath` / `cancelPath` (same-origin paths; Stripe appends `session_id` or `checkout=cancel`).
-- `GET /api/capabilities/me` (Cognito ID JWT + owned Stripe price IDs)
+- `GET /api/capabilities/me` (Cognito ID JWT + owned Stripe price/product IDs and optional `ownedPurchases` with `purchasedAt`)
+- `POST /api/downloads/tile-pack` (Cognito ID JWT + JSON `{ "priceId": "price_…" }`). Verifies the user owns that price via paid Checkout Sessions, reads Stripe Product metadata **`pack_download_s3_key`** (S3 object key, no leading slash), returns a short-lived **presigned S3 GET URL**. Pack files live in the stack’s private **`TilePackDownloadsBucket`** (see CloudFormation output `TilePackDownloadsBucketName`); upload zips/STLs there and set metadata per product.
 
 ## Required behavior
 
@@ -45,8 +46,9 @@ npm run deploy:api:dev
 - `COGNITO_CLIENT_ID` (same as the SPA webpack env — Cognito app client id)
 - `PUBLIC_APP_ORIGIN` (no trailing slash: local dev `http://localhost:4000`, production your public site URL — used for Stripe Checkout success/cancel redirects)
 - `STRIPE_WEBHOOK_SECRET` (when webhooks are introduced)
-- `DOWNLOADS_BUCKET_NAME`
 - `API_BASE_URL` (frontend consumption; emitted/output by infra)
+
+Tile pack **download** storage: each API **stage** (`dev`, `staging`, `prod`) is a **separate CloudFormation stack** with its **own private S3 bucket** (`gridsmith-tilepack-dl-<stage>-<account-id>`). Dev and prod never share bucket objects—no `dev/` / `prod/` prefixes in one bucket. The download Lambda gets `DOWNLOADS_BUCKET_NAME` from that stack automatically.
 
 ## GitHub secrets/variables expected by workflow
 
@@ -55,6 +57,6 @@ npm run deploy:api:dev
 - Secrets:
   - `AWS_ROLE_TO_ASSUME_DEV` / `AWS_ROLE_TO_ASSUME_STAGING` / `AWS_ROLE_TO_ASSUME_PROD`
   - `STRIPE_SECRET_ARN` (per environment, matching the Secrets Manager ARN for that stage’s Stripe key)
-  - `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID`, `PUBLIC_APP_ORIGIN` (checkout + capabilities Lambdas)
+  - `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID`, `PUBLIC_APP_ORIGIN` (checkout, capabilities, and download Lambdas)
 
 Each environment (`dev`, `staging`, `prod`) can add approval rules in GitHub settings, especially for `prod`.

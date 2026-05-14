@@ -7,6 +7,7 @@ import { trackTileSetAddClick, trackTileSetViewDetails } from '../analytics.ts';
 import type { TileSetCatalogItem } from '../data/placeholderTileSets';
 import { PLACEHOLDER_TILE_SETS } from '../data/placeholderTileSets';
 import { loadTilePackCatalog, tilePackCatalogApiConfigured } from '../data/tilePackCatalog';
+import { fetchTilePackContent } from '../data/tilePackContent';
 import { isTileSetBuyable, cartHasPriceId } from '../cart/tileCartEligibility';
 import { useAuth } from './AuthContext';
 import { useTileCart } from '../cart/TileCartContext';
@@ -17,6 +18,11 @@ const TITLE = 'GridSmith — Tile sets';
 const DESCRIPTION = 'Browse GridSmith tile packs and themed STL sets.';
 
 const EXCERPT_LEN = 160;
+
+/** Center ribbon on catalog cards; full scrim + blocked CTAs only when `disabled`. */
+function tileSetShowsComingSoonRibbon(set: TileSetCatalogItem): boolean {
+  return set.disabled || set.addToCartDisabled;
+}
 
 function excerpt(text: string, maxLen: number) {
   const t = text.trim();
@@ -63,10 +69,23 @@ function TilePackCartOrCheckoutButton({
   onCheckoutError: (msg: string | null) => void;
 }) {
   const auth = useAuth();
-  const { addOrUpdateLine, items } = useTileCart();
+  const { addOrUpdateLine, items, isPackOwned } = useTileCart();
   const [busy, setBusy] = useState(false);
   const pid = set.stripePriceId?.trim() ?? '';
+  const owned = isPackOwned(set);
   const inCart = Boolean(pid && cartHasPriceId(items, pid));
+
+  if (owned) {
+    return (
+      <Button
+        type="button"
+        label="You own this pack"
+        icon="pi pi-check"
+        className="w-full font-bold p-button-outlined"
+        disabled
+      />
+    );
+  }
 
   return (
     <Button
@@ -124,6 +143,8 @@ export default function TilesPage() {
   const [sets, setSets] = useState<TileSetCatalogItem[] | null>(() =>
     tilePackCatalogApiConfigured() ? null : [...PLACEHOLDER_TILE_SETS],
   );
+  /** Optional `/tile-packs/<slug>.json` `intro` (by catalog slug) for card blurbs. */
+  const [tilePackCardIntros, setTilePackCardIntros] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -135,6 +156,32 @@ export default function TilesPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (sets == null) {
+      setTilePackCardIntros({});
+      return undefined;
+    }
+    let cancelled = false;
+    void Promise.all(
+      sets.map((s) =>
+        fetchTilePackContent(s.slug).then((c) => ({
+          slug: s.slug,
+          intro: typeof c?.intro === 'string' ? c.intro.trim() : '',
+        })),
+      ),
+    ).then((rows) => {
+      if (cancelled) return;
+      const next: Record<string, string> = {};
+      for (const { slug, intro } of rows) {
+        if (intro) next[slug] = intro;
+      }
+      setTilePackCardIntros(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [sets]);
 
   useEffect(() => {
     document.title = TITLE;
@@ -185,7 +232,7 @@ export default function TilesPage() {
               {sets.map((set) => (
                 <div key={set.slug} className="col-12 sm:col-6 lg:col-4 xl:col-3">
                   <div className="tile-shop-card-shell">
-                    {set.disabled ? (
+                    {tileSetShowsComingSoonRibbon(set) ? (
                       <div className="tile-shop-card-coming-soon" role="status">
                         Coming soon
                       </div>
@@ -214,7 +261,7 @@ export default function TilesPage() {
                       subTitle={set.priceLabel}
                     >
                       <p className="tile-shop-card-blurb m-0 line-height-3">
-                        {excerpt(set.description, EXCERPT_LEN)}
+                        {excerpt(tilePackCardIntros[set.slug] || set.description, EXCERPT_LEN)}
                       </p>
                       <div className="mt-3 flex flex-column gap-2">
                         {set.disabled ? (

@@ -27,6 +27,11 @@ export type TileSetCatalogItem = {
   /** Set when catalog is loaded from Stripe (checkout wiring). */
   stripeProductId?: string;
   stripePriceId?: string;
+  /**
+   * Optional folder key under `/tile-pack-gallery/<key>/` for supporting images; filenames
+   * are listed in `/tile-packs/<slug>.json` (`gallery` + optional `galleryFolder`).
+   */
+  imagePath?: string;
 };
 
 const PLACEHOLDER_DESCRIPTION =
@@ -38,40 +43,11 @@ const PLACEHOLDER_TILE_SETS_RAW: TileSetCatalogItem[] = [
     name: 'Tavern Set',
     priceLabel: '$15',
     imageSrc: '/logo512.png',
-    description: `Build fully modular taverns that actually work at the table.
-
-Welcome to the tavern.
-
-This is where most adventures start—and now you can build it exactly how you want.
-
-The GridSmith Tavern Set is a modular, snap-fit terrain system designed for real gameplay. Tiles drop into a reusable base grid, stay in place, and can be rearranged in seconds. No magnets. No glue. No weird constraints.
-
-Everything is built on a 1x1 (30mm) system, so you're not locked into pre-defined rooms. Want a 5' hallway? Done. Doors in corners? No problem. Awkward layouts from your favorite map? This system was built for that.
-
-And because walls are designed for actual table use, your players can still see their minis without sacrificing the feel of a real space.`,
+    description:
+      'Modular tavern terrain for real table play. Full copy loads from /tile-packs/tavern-set.json when available.',
     tagLabel: 'Tile pack',
     addToCartDisabled: true,
     order: 1,
-    whatYouGet: {
-      heading: 'What You Get',
-      intro:
-        'This set includes 16 core tiles, in both Medium and High resolution, covering everything you need to build a fully functional tavern layout:',
-      bullets: [
-        'Floor',
-        'Wall *',
-        'Corner *',
-        'Curved Wall',
-        'Door *',
-        'Window *',
-        'Stairs *',
-        'Trapdoor',
-        'Hallway'
-      ],
-      closing:
-        `* Wall, Corner, Door, Window, and Stairs come with two floor rotation variants.
-
-        All tiles are designed to work together seamlessly and can be rotated or combined to fit your layout.`,
-    },
   },
   {
     slug: 'cave-set',

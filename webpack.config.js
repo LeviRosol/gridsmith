@@ -86,7 +86,20 @@ const config = [
       publicPath: '/',
     },
     devServer: {
-      static: path.join(__dirname, 'dist'),
+      // Serve gallery and tile-pack JSON from source `public/` during dev (no rebuild wait).
+      static: [
+        {
+          directory: path.join(__dirname, 'public', 'tile-pack-gallery'),
+          publicPath: '/tile-pack-gallery',
+          watch: true,
+        },
+        {
+          directory: path.join(__dirname, 'public', 'tile-packs'),
+          publicPath: '/tile-packs',
+          watch: true,
+        },
+        path.join(__dirname, 'dist'),
+      ],
       compress: true,
       port: 4000,
       historyApiFallback: true,

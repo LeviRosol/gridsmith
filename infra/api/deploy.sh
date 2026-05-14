@@ -86,3 +86,14 @@ if [[ -n "${api_base_url}" && "${api_base_url}" != "None" ]]; then
 else
   echo "Deploy succeeded, but ApiBaseUrl output was not found."
 fi
+
+downloads_bucket="$(
+  aws cloudformation describe-stacks \
+    --region "${region}" \
+    --stack-name "${stack_name}" \
+    --query "Stacks[0].Outputs[?OutputKey=='TilePackDownloadsBucketName'].OutputValue" \
+    --output text 2>/dev/null || true
+)"
+if [[ -n "${downloads_bucket}" && "${downloads_bucket}" != "None" ]]; then
+  echo "TILE_PACK_DOWNLOADS_BUCKET=${downloads_bucket}"
+fi

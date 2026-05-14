@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Divider } from 'primereact/divider';
 import { Message } from 'primereact/message';
-import { startGridSmithCheckoutForCartPriceIds } from '../billing/gridSmithBilling';
+import { fetchGridSmithCapabilities, startGridSmithCheckoutForCartPriceIds } from '../billing/gridSmithBilling';
+import { tilePackCatalogApiConfigured } from '../data/tilePackCatalog';
 import { useTileCart } from '../cart/TileCartContext';
 import { useAuth } from './AuthContext';
 
@@ -15,8 +16,13 @@ export default function CartPage() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [flashSuccess, setFlashSuccess] = useState(false);
   const [flashCancel, setFlashCancel] = useState(false);
+  const [ownsPacks, setOwnsPacks] = useState(false);
+  const [ownsPacksChecked, setOwnsPacksChecked] = useState(false);
   const clearedRef = useRef(false);
   const busyRef = useRef(false);
+
+  const signedIn = auth.isSignedIn && !auth.loading;
+  const shopApiConfigured = tilePackCatalogApiConfigured();
 
   useEffect(() => {
     document.title = TITLE;
@@ -41,6 +47,41 @@ export default function CartPage() {
       window.history.replaceState(window.history.state ?? {}, '', '/cart');
     }
   }, [clearCart]);
+
+  useEffect(() => {
+    if (!signedIn) {
+      setOwnsPacks(false);
+      setOwnsPacksChecked(true);
+      return undefined;
+    }
+    if (!shopApiConfigured) {
+      setOwnsPacks(false);
+      setOwnsPacksChecked(true);
+      return undefined;
+    }
+    let cancelled = false;
+    setOwnsPacksChecked(false);
+    void fetchGridSmithCapabilities()
+      .then((caps) => {
+        if (cancelled) return;
+        const has =
+          (Array.isArray(caps.ownedPriceIds) && caps.ownedPriceIds.length > 0) ||
+          (Array.isArray(caps.ownedProductIds) && caps.ownedProductIds.length > 0);
+        setOwnsPacks(has);
+      })
+      .catch(() => {
+        if (!cancelled) setOwnsPacks(false);
+      })
+      .finally(() => {
+        if (!cancelled) setOwnsPacksChecked(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [signedIn, shopApiConfigured, flashSuccess]);
+
+  const showViewOwnedInEmptyCart =
+    signedIn && (flashSuccess || (shopApiConfigured && ownsPacksChecked && ownsPacks));
 
   const startCheckout = async () => {
     if (!auth.isSignedIn) {
@@ -81,17 +122,11 @@ export default function CartPage() {
       <section className="home-section home-section-alt">
         <div className="home-page-container" style={{ maxWidth: 720 }}>
           {flashSuccess ? (
-            <div className="flex flex-column gap-2 w-full mb-3">
-              <Message
-                severity="success"
-                text="Thanks! Your cart was cleared after checkout. Stripe will email your receipt when payment completes."
-                className="w-full"
-              />
-              <a href="/profile#owned-packs" className="p-button p-component p-button-outlined align-self-start">
-                <span className="p-button-icon pi pi-box" />
-                <span className="p-button-label">View owned packs</span>
-              </a>
-            </div>
+            <Message
+              severity="success"
+              text="Thanks! Your cart was cleared after checkout. Stripe will email your receipt when payment completes."
+              className="w-full mb-3"
+            />
           ) : null}
           {flashCancel ? (
             <Message
@@ -112,15 +147,25 @@ export default function CartPage() {
           {items.length === 0 ? (
             <div className="tile-cart-page-empty">
               <p className="m-0 line-height-3">Your cart is empty.</p>
-              <Button
-                type="button"
-                label="Browse tile sets"
-                className="mt-3"
-                icon="pi pi-th-large"
-                onClick={() => {
-                  window.location.assign('/tiles');
-                }}
-              />
+              {showViewOwnedInEmptyCart ? (
+                <a
+                  href="/profile#owned-packs"
+                  className="p-button p-component p-button-outlined mt-3"
+                >
+                  <span className="p-button-icon pi pi-box" />
+                  <span className="p-button-label">View owned packs</span>
+                </a>
+              ) : (
+                <Button
+                  type="button"
+                  label="Browse tile sets"
+                  className="mt-3"
+                  icon="pi pi-th-large"
+                  onClick={() => {
+                    window.location.assign('/tiles');
+                  }}
+                />
+              )}
             </div>
           ) : (
             <>

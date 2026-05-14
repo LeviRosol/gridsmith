@@ -2,9 +2,9 @@
 name: Tile pack commerce v1
 overview: >-
   Stripe one-time tile packs; Stripe is the commercial source of truth (no order mirror DB).
-  **Shipped:** SAM/API Gateway Lambdas (`GET /api/catalog/tile-packs`, `POST /api/billing/checkout-session`, `GET /api/capabilities/me` with `ownedPurchases[]` / `purchasedAt`), SPA live catalog, cart → Checkout, Profile owned packs with purchase dates when capabilities is deployed. Cognito↔Stripe via **Customer `metadata.cognito_sub`** + Customer Search (no Cognito `custom:stripe_customer_id` for v1).
+  **Shipped:** SAM/API Gateway Lambdas (`GET /api/catalog/tile-packs`, `POST /api/billing/checkout-session`, `GET /api/capabilities/me` with `ownedPurchases[]` / `purchasedAt`, `POST /api/downloads/tile-pack` with JWT + Stripe ownership check + presigned S3 GET), SPA live catalog, cart → Checkout, Profile owned packs + pack downloads when deployed. Cognito↔Stripe via **Customer `metadata.cognito_sub`** + Customer Search (no Cognito `custom:stripe_customer_id` for v1).
   **Deploy:** Local `npm run deploy:api:*` anytime. **CI:** `.github/workflows/api-deploy.yml` — **prod** API on **path-filtered push to `main`** (`infra/api/**`, `scripts/deploy-api.sh`, or that workflow file); **`workflow_dispatch`** for manual **dev** / staging / prod. Requires GitHub Environment secrets + OIDC per stage (`api-deploy-pipeline` todo until verified).
-  **Still open:** S3 download API + presigned URLs; Tile Builder gates from capabilities; `/admin`; telemetry + Dynamo only when that feature ships.
+  **Still open:** Tile Builder gates from capabilities; `/admin`; telemetry + Dynamo only when that feature ships.
 todos:
   - id: storefront-ui-placeholder
     content: "/tiles + /tile-details/:slug with local catalog (incl. optional whatYouGet), two-column detail w/ independent scroll on lg, coming-soon modal, prod deploy—no Stripe yet"
@@ -21,8 +21,11 @@ todos:
   - id: capabilities-api
     content: "GET /api/capabilities/me (JWT) + POST /api/billing/checkout-session shipped; Stripe Customer keyed by metadata cognito_sub (search), not Cognito custom attribute"
     status: completed
+  - id: tile-pack-download-api
+    content: "POST /api/downloads/tile-pack (JWT); Stripe purchase verification; presigned S3 GET from Product metadata pack_download_s3_key; Profile download buttons"
+    status: completed
   - id: builder-gating-downloads
-    content: Tile Builder gates from capabilities API; POST /api/downloads/... validates JWT + live Stripe entitlement then returns short-lived S3 presigned URL
+    content: Tile Builder Med/High render and STL export gated on capabilities / owned packs (not UI-only upsell)
     status: pending
   - id: telemetry-persistence
     content: "When implementing render telemetry: add chosen store (likely DynamoDB in same region as Lambda) and POST /api/telemetry/render—do not create tables before this"
@@ -207,13 +210,13 @@ Goal: deployments are repeatable and auditable (no copy/paste console setup), wi
 3. ~~**Lambda + API Gateway:** Stripe-backed **catalog**; **checkout-session**; **capabilities/me** (Customer Search on `metadata.cognito_sub`).~~ **Done in repo**; must **deploy** for each environment.
 4. ~~**Wire catalog:** `GET /api/catalog/tile-packs` in the existing components.~~ **Done.**
 5. ~~**Cart → checkout** in the UI (`POST /api/billing/checkout-session`, multi-line supported).~~ **Done.**
-6. **Download API** + S3 presign + Stripe purchase verification.
+6. ~~**Download API** + S3 presign + Stripe purchase verification.~~ **Done in repo** (`POST /api/downloads/tile-pack`, private per-stage bucket, `pack_download_s3_key`); **deploy** with the rest of the API.
 7. Tile Builder wired to capabilities.
 8. **Admin** read paths (Stripe + Cognito).
 9. **Telemetry**: add **DynamoDB** (or chosen store) **when** implementing `POST /api/telemetry/render`—not before.
 
 ## Handoff for a new agent
 
-- **Storefront, live catalog fetch, cart/checkout, and capabilities-backed Profile (owned packs + purchase dates)** are in place; **deploy the API** after changing `infra/api/`.
-- **Next concrete work:** **`api-deploy-pipeline`** (CI), then **`builder-gating-downloads`** (presigned download API + S3), unless product priority is **admin** first.
+- **Storefront, live catalog fetch, cart/checkout, capabilities-backed Profile (owned packs + purchase dates + pack file downloads via presigned S3)** are in place; **deploy the API** after changing `infra/api/`.
+- **Next concrete work:** **`api-deploy-pipeline`** (CI), then **Tile Builder ↔ `capabilities/me`** for real Med/High gating, unless product priority is **admin** first.
 - Point the agent at this file: **`docs/plans/tile_pack_commerce_v1.md`**.

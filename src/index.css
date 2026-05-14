@@ -704,7 +704,59 @@ code {
   position: absolute;
   top: 1.5rem;
   right: 1.5rem;
-  z-index: 1;
+  z-index: 5;
+}
+
+/* Tile detail: PrimeReact Galleria + Image preview */
+.tile-detail-galleria.p-galleria {
+  border: none;
+  background: transparent;
+}
+
+.tile-detail-galleria .p-galleria-content {
+  width: 100%;
+}
+
+.tile-detail-galleria .p-galleria-item-wrapper,
+.tile-detail-galleria .p-galleria-item-container,
+.tile-detail-galleria .p-galleria-item {
+  width: 100%;
+}
+
+/* Prev arrow is before the slide in DOM; full-width slide paints on top unless nav is raised. */
+.tile-detail-galleria .p-galleria-item-container {
+  position: relative;
+}
+
+.tile-detail-galleria .p-galleria-item {
+  position: relative;
+  z-index: 0;
+}
+
+.tile-detail-galleria .p-galleria-item-nav {
+  z-index: 2;
+}
+
+/* Don’t show prev/next at first/last slide — Galleria marks them p-disabled; hide instead of styling disabled. */
+.tile-detail-galleria .p-galleria-item-nav.p-disabled {
+  display: none;
+}
+
+.tile-detail-galleria .p-galleria-item .p-image.p-image-preview-container {
+  width: 100%;
+  max-width: 100%;
+}
+
+.tile-detail-galleria .p-galleria-thumbnail-wrapper {
+  margin-top: 1rem;
+}
+
+.tile-detail-galleria-thumb-img {
+  display: block;
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: contain;
+  border-radius: 6px;
 }
 
 .tile-detail-thumbs {
@@ -884,6 +936,10 @@ code {
   padding: 5px 5px 0 5px;
 }
 
+.p-card .p-card-body {
+  padding: 1rem;
+}
+
 .tile-shop-card-image-wrap {
   --tile-shop-image-inset: 20px;
   position: relative;
@@ -1046,13 +1102,24 @@ a.tile-shop-card-image-hit:focus-visible {
   text-decoration: underline;
 }
 
-.tile-cart-page-line-price {
-  opacity: 0.85;
-  margin-top: 0.2rem;
+.tile-cart-page-line--owned {
+  align-items: flex-start;
+}
+
+.tile-cart-page-line-actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+  min-width: 7rem;
 }
 
 .tile-cart-page-empty {
   padding: 1rem 0 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .home-eyebrow {

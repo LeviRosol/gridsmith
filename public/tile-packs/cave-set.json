@@ -1,0 +1,12 @@
+{
+"intro": "Welcome to the cave.\n\ntbd",
+"description": "",
+"includedFiles": {
+  "heading": "Included Files",
+  "bullets": [
+    "High resolution STLs (128 and 256 variants)",
+    "Ready for FDM printing (0.4 nozzle friendly)",
+    "Clean geometry optimized for slicing"
+  ]
+}
+}

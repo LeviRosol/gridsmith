@@ -206,3 +206,52 @@ export async function fetchGridSmithCapabilities(): Promise<GridSmithCapabilitie
     : [];
   return { ...data, ownedPurchases };
 }
+
+export type TilePackDownloadResponse = {
+  url: string;
+  expiresIn?: number;
+};
+
+/** Request a short-lived S3 GET URL for one owned pack (`priceId`). Navigate to `url` to start the download. */
+export async function fetchTilePackDownloadUrl(priceId: string): Promise<TilePackDownloadResponse> {
+  const id = typeof priceId === 'string' ? priceId.trim() : '';
+  if (!id.startsWith('price_')) {
+    throw new Error('Invalid price id.');
+  }
+  const base = apiBase();
+  if (!base) {
+    throw new Error('GRIDSMITH_API_BASE_URL is not configured');
+  }
+  const token = getStoredCognitoIdToken();
+  if (!token) {
+    throw new Error('Sign in to download.');
+  }
+  const r = await fetch(`${base}/api/downloads/tile-pack`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ priceId: id }),
+  });
+  const text = await r.text();
+  if (!r.ok) {
+    let detail = text || r.statusText;
+    try {
+      const j = JSON.parse(text) as { diagnostic?: string; message?: string };
+      if (typeof j.diagnostic === 'string' && j.diagnostic.trim()) {
+        detail = `${detail}\n(diagnostic) ${j.diagnostic.trim()}`;
+      } else if (typeof j.message === 'string' && j.message.trim()) {
+        detail = j.message.trim();
+      }
+    } catch {
+      /* ignore */
+    }
+    throw new Error(`${r.status}: ${detail}`);
+  }
+  const data = JSON.parse(text) as { url?: string; expiresIn?: number };
+  if (!data.url || typeof data.url !== 'string') {
+    throw new Error('Download response missing url');
+  }
+  return { url: data.url, expiresIn: typeof data.expiresIn === 'number' ? data.expiresIn : undefined };
+}

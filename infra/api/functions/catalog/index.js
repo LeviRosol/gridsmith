@@ -125,6 +125,14 @@ function parseOrder(meta) {
   return Number.isFinite(n) ? n : 999;
 }
 
+/** Single path segment for /tile-pack-gallery/<id>/ — no slashes or traversal. */
+function parseImagePathFolder(meta) {
+  const raw = meta?.image_path != null ? String(meta.image_path).trim() : '';
+  if (!raw || raw.length > 64) return '';
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(raw)) return '';
+  return raw;
+}
+
 function parseWhatYouGet(raw) {
   if (!raw || typeof raw !== 'string') return undefined;
   try {
@@ -169,8 +177,9 @@ function mapProductToItem(product, priceObj) {
   const addToCartDisabled = truthyMetadata(meta.add_to_cart_disabled);
 
   const whatYouGet = parseWhatYouGet(meta.what_you_get);
+  const imagePath = parseImagePathFolder(meta);
 
-  return {
+  const out = {
     slug,
     name: product.name || slug,
     priceLabel,
@@ -184,6 +193,8 @@ function mapProductToItem(product, priceObj) {
     stripeProductId: product.id,
     stripePriceId: priceObj.id,
   };
+  if (imagePath) out.imagePath = imagePath;
+  return out;
 }
 
 exports.handler = async () => {

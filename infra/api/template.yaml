@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: GridSmith API (catalog + commerce scaffolding)
+Description: GridSmith API (catalog, checkout, capabilities, tile pack downloads)
 
 Parameters:
   Stage:
@@ -130,6 +130,56 @@ Resources:
             Path: /api/capabilities/me
             Method: GET
 
+  TilePackDownloadsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      # One physical bucket per stack (dev vs prod are different stacks → different buckets).
+      # Name encodes stage + account so it is obvious in the S3 console; globally unique per account.
+      BucketName: !Sub gridsmith-tilepack-dl-${Stage}-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: gridsmith:environment
+          Value: !Ref Stage
+        - Key: gridsmith:purpose
+          Value: tile-pack-downloads
+
+  DownloadPackFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/download-pack/
+      Handler: index.handler
+      MemorySize: 512
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Ref StripeSecretArn
+        - S3ReadPolicy:
+            BucketName: !Ref TilePackDownloadsBucket
+      Environment:
+        Variables:
+          STRIPE_SECRET_ARN: !Ref StripeSecretArn
+          COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
+          COGNITO_CLIENT_ID: !Ref CognitoAppClientId
+          DOWNLOADS_BUCKET_NAME: !Ref TilePackDownloadsBucket
+      Events:
+        PostDownloadTilePack:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref GridSmithHttpApi
+            Path: /api/downloads/tile-pack
+            Method: POST
+
 Outputs:
   ApiBaseUrl:
     Description: Base URL for this stage
@@ -137,3 +187,6 @@ Outputs:
   CatalogEndpoint:
     Description: Catalog endpoint URL
     Value: !Sub "https://${GridSmithHttpApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/api/catalog/tile-packs"
+  TilePackDownloadsBucketName:
+    Description: Private S3 bucket for this stage only (dev/prod stacks each have their own bucket; upload pack files here; Stripe metadata pack_download_s3_key is the object key inside this bucket)
+    Value: !Ref TilePackDownloadsBucket
