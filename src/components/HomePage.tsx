@@ -162,7 +162,7 @@ export default function HomePage() {
         imageSrc={IMAGES.workbench}
         imageAlt="GridSmith workbench with a 3D printer, storage trays, and tiles in progress"
         title="Built in the Open"
-        actions={<MarketingButton label="Read the Build Log" path="/about" />}
+        actions={<MarketingButton label="Read the Build Log" path="/blog" />}
       >
         <p className="m-0 mb-2">
           GridSmith is actively developed through real prints, real gameplay, and continuous iteration. Follow the build

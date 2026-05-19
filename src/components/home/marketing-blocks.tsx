@@ -4,8 +4,8 @@ import { Avatar } from 'primereact/avatar';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Image } from 'primereact/image';
-/** Fixed light/dark marketing bands (independent of app light/dark toggle). */
-export type MarketingTone = 'light' | 'dark' | 'black';
+/** Fixed light/dark/black bands for home/about, or `theme` to follow body dark/light mode. */
+export type MarketingTone = 'light' | 'dark' | 'black' | 'theme';
 
 const TONE_CLASS: Record<MarketingTone, string> = {
   light: 'home-landing-band--light',
@@ -13,6 +13,8 @@ const TONE_CLASS: Record<MarketingTone, string> = {
   dark: 'home-landing-band--dark',
   /** Footer CTA — deeper black */
   black: 'home-landing-band--black',
+  /** Blog and other pages that should match the app theme toggle */
+  theme: 'home-landing-band--theme',
 };
 
 export function navigateMarketing(path: string) {

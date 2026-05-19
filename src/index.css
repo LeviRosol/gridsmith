@@ -1440,6 +1440,85 @@ a.tile-shop-card-image-hit:focus-visible {
   }
 }
 
+/* Theme-adaptive marketing band (blog — follows body.dark-mode / .light-mode) */
+.light-mode .home-landing-band--theme {
+  background: #efefef;
+  --text-color: #1a1a1a;
+  --text-color-secondary: #4b5563;
+  color: var(--text-color);
+}
+
+.dark-mode .home-landing-band--theme {
+  background: color-mix(in srgb, #ffffff 3%, #111111);
+  border-top: 1px solid #333333;
+  border-bottom: 1px solid #333333;
+  --text-color: #f5f5f5;
+  --text-color-secondary: rgba(245, 245, 245, 0.78);
+  color: var(--text-color);
+}
+
+/* Build log — PrimeBlocks-inspired content layouts */
+.light-mode .home-landing-band--theme .blog-emphasized-post.p-card,
+.light-mode .home-landing-band--theme .blog-post-list-card.p-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #1a1a1a;
+}
+
+.dark-mode .home-landing-band--theme .blog-emphasized-post.p-card,
+.dark-mode .home-landing-band--theme .blog-post-list-card.p-card {
+  background: #1a1a1a;
+  border: 1px solid #333333;
+  color: #f5f5f5;
+}
+
+.home-landing-band--theme .blog-emphasized-post.p-card .p-card-body,
+.home-landing-band--theme .blog-post-list-card.p-card .p-card-body {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.blog-emphasized-post-image,
+.blog-post-list-image {
+  display: block;
+  min-height: 12rem;
+  max-height: 22rem;
+  object-fit: cover;
+}
+
+.blog-post-list {
+  gap: 1rem;
+}
+
+.blog-emphasized-post--clickable:hover,
+.blog-post-list-card:hover {
+  border-color: var(--primary-color, #f59e0b);
+}
+
+.blog-post-hero-image {
+  min-height: 14rem;
+  max-height: 28rem;
+  object-fit: cover;
+}
+
+.blog-post-body > :last-child {
+  margin-bottom: 0 !important;
+}
+
+.blog-mdx-inline-image {
+  max-height: 24rem;
+  object-fit: cover;
+}
+
+.blog-mdx-figure figcaption {
+  font-style: italic;
+}
+
+.blog-mdx-list {
+  list-style-position: outside;
+}
+
 /* Cookie consent banner (GTM loads only after opt-in) */
 .cookie-banner {
   position: fixed;

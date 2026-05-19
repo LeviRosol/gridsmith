@@ -1,0 +1,5 @@
+# https://gridsmith.io
+User-agent: *
+Allow: /
+
+Sitemap: https://gridsmith.io/sitemap.xml

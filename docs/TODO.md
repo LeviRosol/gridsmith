@@ -154,12 +154,28 @@ As Stripe and real-user flows land, CI should catch regressions before productio
 - [ ] **Keep existing OpenSCAD playground smoke tests healthy:** `tests/e2e.test.js` + GitHub Actions **`Test Build`** (`npm run build:all`, puppeteer e2e in dev + prod modes). Fix harness drift when UI routing or preview pipeline changes. **Local two-terminal loop:** Terminal A runs the app (`npm start` → `http://localhost:4000/baseplate`); Terminal B runs `npm run test:e2e:watch` (`jest --watchAll` + `PUPPETEER_SKIP_SERVER=1` so Jest does not spawn or tear down a dev server, and edits outside the test file still trigger reruns). For prod-bundle e2e against `serve dist`, use Terminal A `npm run start:production:e2e` (embeds `GRIDSMITH_TEST_HOOK` for `window.__GRIDSMITH_TEST__`; `:3000`) + Terminal B `npm run test:e2e:watch:prod`.
 - [ ] **Block releases on red CI:** Configure **`main`** branch protection (or equivalent) so merges/deploys require a green **`Test Build`** (and any future required workflows). Goal: a failing test fails the workflow and **does not ship** the static app to prod.
 
-## 14. Marketing landing follow-ups
+## 14. Build log / blog (`feature-blog`)
+
+MDX file-based posts; plan in [`docs/plans/blog_build_log_v1.md`](plans/blog_build_log_v1.md).
+
+- [x] **Infrastructure:** `@mdx-js/loader` + `@mdx-js/react`, `src/blog/posts/*.mdx`, `registry.ts`, `load-posts.ts`.
+- [x] **Routes:** `/blog` index, `/blog/:slug` post (`BlogPage`, `BlogPostPage` in `App.tsx`).
+- [x] **Layouts (PrimeBlocks [content](https://primeblocks.org/marketing/content)):** index = Emphasized Post; post = Two Columns with Image.
+- [x] **Seed content:** `test-post-1`, `test-post-2` (Lorem ipsum; hero + inline images).
+- [x] **Home CTA:** “Read the Build Log” → `/blog`.
+- [x] **Nav:** header + mobile menu + footer link to Build Log (`/blog`).
+- [x] **SEO/discovery:** `applyPageMeta` (canonical, OG, Twitter), JSON-LD (`Blog` / `BlogPosting`), `public/robots.txt`, `npm run generate:sitemap` → `public/sitemap.xml`, `npm run prerender:blog` (postbuild) for `/blog` and posts.
+- [x] **Theme:** blog bands use `tone="theme"` (follows app dark/light toggle via `home-landing-band--theme`).
+- [x] **Marketing routes:** skip BrowserFS / `Model` on non-builder paths (`src/routes.ts`); dev server avoids serving stale `dist/blog` prerender over SPA.
+- [ ] **Real posts:** replace dummy MDX with production build-log copy and images.
+- [ ] **GTM:** blog-specific analytics events (`blog_post_view`, optional outbound clicks). Generic `page_view` on route change already runs from `App.tsx`.
+- [ ] **E2e:** smoke for `/blog` and `/blog/:slug`.
+
+## 15. Marketing landing follow-ups
 
 Home and About use the shared landing system (see §4). Remaining polish:
 
 - [ ] Replace placeholder hero/split images with final marketing art (e.g. dedicated `/home/*` paths).
-- [ ] Add a **`/blog`** (or similar) route for the build log; home “Read the Build Log” still links to **`/about`** until then.
 - [ ] Optional e2e smoke for home/about hero copy and primary CTAs when routing changes.
 - [ ] **API automated tests (no extra UI e2e for now):** Add a focused test suite for Lambda handlers / billing logic—request validation, JWT behavior (happy + invalid token), Stripe client usage (mocked; **never** hit live Stripe in unit tests), and entitlement decisions. Run these tests in CI on every push/PR (separate job or folded into `Test Build` once the API code lives in-repo).
 - [ ] **Stripe test-mode fixtures:** Standardize on **`sk_test_` / restricted keys** for CI and local; prod secrets only in prod deploy environments.

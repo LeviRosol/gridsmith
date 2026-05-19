@@ -32,6 +32,8 @@ import TileSetDetailPage from './TileSetDetailPage';
 import ProfilePage from './ProfilePage';
 import TosPage from './TosPage';
 import PrivacyPage from './PrivacyPage';
+import BlogPage from './blog/BlogPage';
+import BlogPostPage from './blog/BlogPostPage';
 import SiteFooter from './SiteFooter';
 import CartDrawer from './CartDrawer';
 import CartPage from './CartPage';
@@ -42,6 +44,7 @@ import { trackPageView } from '../analytics';
 import { installTileStls } from '../tile-builder/install-tile-stls.ts';
 import { isTileBuilderProTierResolution } from '../utils.ts';
 import { FaDiscord } from 'react-icons/fa6';
+import { isBuilderRoute, normalizePathname } from '../routes.ts';
 
 const THEME_MODE_STORAGE_KEY = 'gridsmith.theme.darkMode';
 
@@ -75,7 +78,15 @@ class MarketingPageErrorBoundary extends React.Component<{ children: ReactNode }
   }
 }
 
-export function App({initialState, statePersister, fs}: {initialState: State, statePersister: StatePersister, fs: FS}) {
+export function App({
+  initialState,
+  statePersister,
+  fs,
+}: {
+  initialState: State;
+  statePersister: StatePersister;
+  fs: FS | null;
+}) {
   return (
     <AuthProvider>
       <TileCartProvider>
@@ -87,8 +98,28 @@ export function App({initialState, statePersister, fs}: {initialState: State, st
   );
 }
 
-function AppImpl({initialState, statePersister, fs}: {initialState: State, statePersister: StatePersister, fs: FS}) {
+function AppImpl({
+  initialState,
+  statePersister,
+  fs,
+}: {
+  initialState: State;
+  statePersister: StatePersister;
+  fs: FS | null;
+}) {
   const [state, setState] = useState(initialState);
+
+  const pathname = normalizePathname(window.location.pathname);
+  const isBuilderShell = isBuilderRoute(pathname);
+  const ParamsSidebar = pathname === '/tile-builder' ? TileBuilderPanel : GridSmithPanel;
+
+  useEffect(() => {
+    const raw = window.location.pathname.replace(/\/+$/, '') || '/';
+    if (raw === '/viewer') {
+      const next = '/baseplate' + window.location.search + window.location.hash;
+      window.history.replaceState(window.history.state ?? {}, '', next);
+    }
+  }, []);
 
   const [customizerOpen, setCustomizerOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(() => {
@@ -109,7 +140,10 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     (tileSet: string) => tileCart.tileBuilderProEntitledForTileSet(tileSet),
     [tileCart.tileBuilderProEntitledForTileSet],
   );
-  const model = new Model(fs, state, setState, statePersister, getTileBuilderProEntitled);
+  const model =
+    isBuilderShell && fs
+      ? new Model(fs, state, setState, statePersister, getTileBuilderProEntitled)
+      : null;
 
   const [buildChooserModalOpen, setBuildChooserModalOpen] = useState(false);
   const [tileBuilderRenderDownloadUpsellOpen, setTileBuilderRenderDownloadUpsellOpen] = useState(false);
@@ -119,19 +153,6 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     }),
     [],
   );
-
-  // Simple pathname-based routing
-  let rawPath = window.location.pathname;
-  let normalizedPath = rawPath.replace(/\/+$/, '') || '/';
-  if (normalizedPath === '/viewer') {
-    const next = '/baseplate' + window.location.search + window.location.hash;
-    window.history.replaceState(window.history.state ?? {}, '', next);
-    rawPath = '/baseplate';
-    normalizedPath = '/baseplate';
-  }
-  const pathname = normalizedPath === '' ? '/' : normalizedPath;
-  const isBuilderShell = pathname === '/baseplate' || pathname === '/tile-builder';
-  const ParamsSidebar = pathname === '/tile-builder' ? TileBuilderPanel : GridSmithPanel;
 
   const cognitoConfigured =
     Boolean(
@@ -181,6 +202,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
       },
     },
     { label: 'Get Tiles', command: () => (window.location.pathname = '/tiles') },
+    { label: 'Build Log', command: () => (window.location.pathname = '/blog') },
     { label: 'About', command: () => (window.location.pathname = '/about') },
     {
       label: 'Cart',
@@ -208,6 +230,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     if (!auth.isSignedIn && requireAuthForBuilderShell) return;
     let cancelled = false;
     void (async () => {
+      if (!model || !fs) return;
       if (pathname === '/tile-builder') {
         await installTileStls(fs);
       }
@@ -236,9 +259,12 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, auth.loading, auth.isSignedIn, isBuilderShell, requireAuthForBuilderShell]);
 
-  const tileBuilderTileSetVar = String(model.state.params.vars?.tile_set ?? 'tavern');
+  const tileBuilderTileSetVar = String(
+    (model ? model.state.params.vars?.tile_set : undefined) ?? 'tavern'
+  );
   const tileBuilderMedHighLocked =
     pathname === '/tile-builder' &&
+    model != null &&
     isTileBuilderProTierResolution(model.state.params.vars?.resolution) &&
     tileCart.tileBuilderProEntitlementReady &&
     !tileCart.tileBuilderProEntitledForTileSet(tileBuilderTileSetVar);
@@ -268,7 +294,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (!isBuilderShell) return;
+      if (!isBuilderShell || !model) return;
       if (auth.loading || (!auth.isSignedIn && requireAuthForBuilderShell)) return;
       if (event.key === 'F5') {
         event.preventDefault();
@@ -386,6 +412,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
         <nav className="app-header-nav">
           <div className="app-header-nav-desktop">
             <a href="/tiles" className="app-header-link">Get Tiles</a>
+            <a href="/blog" className="app-header-link">Build Log</a>
             <a href="/about" className="app-header-link">About</a>
             <Button
               type="button"
@@ -579,6 +606,17 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
       page = <HomePage />;
     } else if (pathname === '/about') {
       page = <AboutPage />;
+    } else if (pathname === '/blog') {
+      page = <BlogPage />;
+    } else if (pathname.startsWith('/blog/')) {
+      const blogSlug = decodeURIComponent(
+        pathname.slice('/blog/'.length).split('/').filter(Boolean)[0] ?? ''
+      );
+      page = (
+        <MarketingPageErrorBoundary key={blogSlug || 'missing'}>
+          <BlogPostPage slug={blogSlug} />
+        </MarketingPageErrorBoundary>
+      );
     } else if (pathname === '/cart') {
       page = <CartPage />;
     } else if (pathname === '/tiles') {
@@ -610,6 +648,10 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
         <SiteFooter />
       </div>
     );
+  }
+
+  if (!model || !fs) {
+    return null;
   }
 
   return (

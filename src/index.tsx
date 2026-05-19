@@ -15,6 +15,7 @@ import debug from 'debug';
 import { isInStandaloneMode, registerCustomAppHeightCSSProperty } from './utils.ts';
 import { State, StatePersister } from './state/app-state.ts';
 import { writeStateInFragment } from "./state/fragment-state.ts";
+import { isBuilderRoute, normalizePathname } from './routes.ts';
 
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
@@ -67,11 +68,16 @@ window.addEventListener('load', async () => {
 
   registerCustomAppHeightCSSProperty();
 
-  const fs = await createEditorFS({prefix: '/libraries/', allowPersistence: isInStandaloneMode()});
+  const pathname = normalizePathname(window.location.pathname);
+  const needsEditorFs = isBuilderRoute(pathname);
 
-  await registerOpenSCADLanguage(fs, '/', zipArchives);
+  let fs: FS | null = null;
+  if (needsEditorFs) {
+    const editorFs = await createEditorFS({ prefix: '/libraries/', allowPersistence: isInStandaloneMode() });
+    await registerOpenSCADLanguage(editorFs, '/', zipArchives);
+    fs = editorFs;
+  }
 
-  const pathname = window.location.pathname.replace(/\/+$/, '') || '/';
   const isTileBuilder = pathname === '/tile-builder';
 
   let statePersister: StatePersister;
@@ -79,10 +85,10 @@ window.addEventListener('load', async () => {
 
   if (isTileBuilder) {
     statePersister = { set: async () => {} };
-  } else if (isInStandaloneMode()) {
-    const fs: FS = BrowserFS.BFSRequire('fs')
+  } else if (isInStandaloneMode() && fs) {
+    const persistenceFs: FS = BrowserFS.BFSRequire('fs');
     try {
-      const data = JSON.parse(new TextDecoder("utf-8").decode(fs.readFileSync('/state.json')));
+      const data = JSON.parse(new TextDecoder("utf-8").decode(persistenceFs.readFileSync('/state.json')));
       const {view, params} = data
       persistedState = {view, params};
     } catch (e) {
@@ -90,7 +96,7 @@ window.addEventListener('load', async () => {
     }
     statePersister = {
       set: async ({view, params}) => {
-        fs.writeFile('/state.json', JSON.stringify({view, params}));
+        persistenceFs.writeFile('/state.json', JSON.stringify({view, params}));
       }
     };
   } else {

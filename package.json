@@ -7,6 +7,7 @@
   "dependencies": {
     "@gltf-transform/core": "^4.1.1",
     "@gltf-transform/extensions": "^4.1.1",
+    "@mdx-js/react": "^3.1.1",
     "@monaco-editor/loader": "^1.4.0",
     "@monaco-editor/react": "^4.6.0",
     "@testing-library/jest-dom": "^5.17.0",
@@ -39,7 +40,10 @@
     "start:production": "NODE_ENV=production npm run build && npx serve -s dist -l 3000",
     "start:test": "npm run start:development",
     "start": "npm run start:development",
-    "build": "NODE_ENV=production webpack --mode=production",
+    "generate:sitemap": "node scripts/generate-sitemap.mjs",
+    "prerender:blog": "node scripts/prerender-blog.mjs",
+    "build": "npm run generate:sitemap && NODE_ENV=production webpack --mode=production",
+    "postbuild": "npm run prerender:blog",
     "build:libs": "LIBS_BUILD_MODE=all webpack --config webpack.libs.config.js",
     "build:libs:clean": "LIBS_BUILD_MODE=clean webpack --config webpack.libs.config.js",
     "build:libs:wasm": "LIBS_BUILD_MODE=wasm webpack --config webpack.libs.config.js",
@@ -74,6 +78,7 @@
     "node": "24.x"
   },
   "devDependencies": {
+    "@mdx-js/loader": "^3.1.1",
     "@types/chroma-js": "^2.4.5",
     "@types/debug": "^4.1.12",
     "@types/filesystem": "^0.0.36",
