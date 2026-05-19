@@ -1268,6 +1268,178 @@ a.tile-shop-card-image-hit:focus-visible {
   justify-content: center;
 }
 
+/* Home landing — alternating light/dark bands + full-bleed hero */
+.home-landing-container {
+  max-width: min(100%, 75rem);
+}
+
+.home-landing-section-header--center {
+  max-width: 42rem;
+}
+
+.home-landing-text-block {
+  max-width: 42rem;
+}
+
+.home-landing-text-block p:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Fixed marketing tones (same in app light/dark mode) */
+.home-landing-band--light {
+  background: #efefef;
+  --text-color: #1a1a1a;
+  --text-color-secondary: #4b5563;
+  color: var(--text-color);
+}
+
+/* Same band as About “What is GridSmith?” (.dark-mode .home-section-alt on #111) */
+.home-landing-band--dark {
+  background: color-mix(in srgb, #ffffff 3%, #111111);
+  border-top: 1px solid #333333;
+  border-bottom: 1px solid #333333;
+  --text-color: #f5f5f5;
+  --text-color-secondary: rgba(245, 245, 245, 0.78);
+  color: var(--text-color);
+}
+
+.home-landing-band--black {
+  background: #121212;
+  border-top: 1px solid #2a2a2a;
+  border-bottom: 1px solid #2a2a2a;
+  --text-color: #f5f5f5;
+  --text-color-secondary: rgba(245, 245, 245, 0.78);
+  color: var(--text-color);
+}
+
+/* Full-bleed hero background */
+.home-landing-hero--bg {
+  position: relative;
+  min-height: min(72vh, 40rem);
+  display: flex;
+  align-items: center;
+  padding: 3rem 0 4rem;
+  background-color: #141414;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  --text-color: #f5f5f5;
+  --text-color-secondary: rgba(245, 245, 245, 0.88);
+  color: var(--text-color);
+}
+
+.home-landing-hero-inner {
+  width: 100%;
+}
+
+.home-landing-hero-content {
+  max-width: 40rem;
+}
+
+.home-landing-hero-btn-outlined.p-button-outlined {
+  color: #f5f5f5 !important;
+  border-color: rgba(255, 255, 255, 0.55) !important;
+}
+
+.home-landing-hero-btn-outlined.p-button-outlined:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.75) !important;
+  color: #ffffff !important;
+}
+
+/* Feature grid: CSS grid avoids PrimeFlex col padding overflow (3-up on desktop) */
+.home-landing-feature-grid {
+  display: grid;
+  gap: 0.875rem; /* gap-4 (1.5rem) − 10px */
+}
+
+@media (min-width: 768px) {
+  .home-landing-feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 992px) {
+  .home-landing-feature-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.home-landing-feature-card.p-card .p-card-body {
+  height: 100%;
+  padding: 1.25rem;
+}
+
+.home-landing-feature-card.p-card .p-card-content {
+  padding: 0;
+}
+
+/* Feature tiles on the light band: dark cards with light type */
+.home-landing-band--light .home-landing-feature-card.p-card {
+  background: #121212;
+  border: 1px solid #2a2a2a;
+  color: #f5f5f5;
+}
+
+.home-landing-band--light .home-landing-feature-card.p-card .p-card-body {
+  background: transparent;
+  color: inherit;
+}
+
+.home-landing-feature-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text-color);
+  min-width: 0;
+}
+
+.home-landing-band--light .home-landing-feature-card .home-landing-feature-title {
+  color: #f5f5f5;
+}
+
+.home-landing-feature-body {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--text-color-secondary);
+}
+
+.home-landing-band--light .home-landing-feature-card .home-landing-feature-body {
+  color: rgba(245, 245, 245, 0.78);
+}
+
+.home-landing-feature-photo {
+  min-height: 10rem;
+  max-height: 14rem;
+  object-fit: cover;
+  width: 100%;
+}
+
+/* Footer CTA on black band */
+.home-landing-band--black .home-landing-cta-btn-outlined.p-button-outlined {
+  color: #f5f5f5 !important;
+  border-color: rgba(255, 255, 255, 0.55) !important;
+}
+
+.home-landing-band--black .home-landing-cta-btn-outlined.p-button-outlined:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.75) !important;
+  color: #ffffff !important;
+}
+
+.home-landing-highlight {
+  min-width: 5.5rem;
+  max-width: 7rem;
+}
+
+@media (max-width: 767px) {
+  .home-landing-hero--bg {
+    min-height: min(52vh, 30rem);
+    padding: 2rem 0 2.5rem;
+    background-position: center 30%;
+  }
+}
+
 /* Cookie consent banner (GTM loads only after opt-in) */
 .cookie-banner {
   position: fixed;
