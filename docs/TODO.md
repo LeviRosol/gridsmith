@@ -53,6 +53,7 @@ Based on `docs/gridsmith-context.md`.
   - [x] Update page/app title to "GridSmith".
   - [x] Update PWA install name/short name in `manifest.json`.
   - [x] Update tagline placement/copy across pages: "Build Your World. One Tile at a Time."
+- [x] **Marketing landing (home & about):** Shared PrimeReact blocks in [`src/components/home/marketing-blocks.tsx`](../src/components/home/marketing-blocks.tsx); alternating light/dark/black bands (`.home-landing-*` in [`src/index.css`](../src/index.css)). Home: v1 “Your First Terrain System” hero, features, splits, footer CTA (`/tiles`, Etsy). About: hero + copy sections + footer CTA (`/tiles`, `/tile-builder`). Default meta in `public/index.html`.
 - [ ] **Cleanup:**
   - [x] Remove unused axes feature (toggle, overlay, and assets).
   - [ ] Remove remaining "Playground" legacy content where it no longer serves GridSmith.
@@ -86,7 +87,7 @@ Based on `docs/gridsmith-context.md`.
 ## 8. Future Work / Nice-to-Haves
 - [ ] Make the code editor accessible only to admin/advanced roles (hide for normal users).
 - [ ] Re-enable and design the "Advanced settings" section in the parameter panel.
-- [x] Flesh out About page copy and visuals.
+- [x] Flesh out About page copy and visuals (landing layout via shared `marketing-blocks` with home).
 - [x] Flesh out Get Tiles page content and CTAs for future tile packs/tools.
 - [ ] Add additional GridSmith-specific presets and refine parameter ranges and labels.
 - [ ] Consider PWA cache-busting/versioning strategy to reduce stale title/icon/install prompt artifacts after deploy.
@@ -152,5 +153,13 @@ As Stripe and real-user flows land, CI should catch regressions before productio
 
 - [ ] **Keep existing OpenSCAD playground smoke tests healthy:** `tests/e2e.test.js` + GitHub Actions **`Test Build`** (`npm run build:all`, puppeteer e2e in dev + prod modes). Fix harness drift when UI routing or preview pipeline changes. **Local two-terminal loop:** Terminal A runs the app (`npm start` → `http://localhost:4000/baseplate`); Terminal B runs `npm run test:e2e:watch` (`jest --watchAll` + `PUPPETEER_SKIP_SERVER=1` so Jest does not spawn or tear down a dev server, and edits outside the test file still trigger reruns). For prod-bundle e2e against `serve dist`, use Terminal A `npm run start:production:e2e` (embeds `GRIDSMITH_TEST_HOOK` for `window.__GRIDSMITH_TEST__`; `:3000`) + Terminal B `npm run test:e2e:watch:prod`.
 - [ ] **Block releases on red CI:** Configure **`main`** branch protection (or equivalent) so merges/deploys require a green **`Test Build`** (and any future required workflows). Goal: a failing test fails the workflow and **does not ship** the static app to prod.
+
+## 14. Marketing landing follow-ups
+
+Home and About use the shared landing system (see §4). Remaining polish:
+
+- [ ] Replace placeholder hero/split images with final marketing art (e.g. dedicated `/home/*` paths).
+- [ ] Add a **`/blog`** (or similar) route for the build log; home “Read the Build Log” still links to **`/about`** until then.
+- [ ] Optional e2e smoke for home/about hero copy and primary CTAs when routing changes.
 - [ ] **API automated tests (no extra UI e2e for now):** Add a focused test suite for Lambda handlers / billing logic—request validation, JWT behavior (happy + invalid token), Stripe client usage (mocked; **never** hit live Stripe in unit tests), and entitlement decisions. Run these tests in CI on every push/PR (separate job or folded into `Test Build` once the API code lives in-repo).
 - [ ] **Stripe test-mode fixtures:** Standardize on **`sk_test_` / restricted keys** for CI and local; prod secrets only in prod deploy environments.

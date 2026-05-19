@@ -5,6 +5,7 @@ overview: >-
   **Shipped:** SAM/API Gateway Lambdas (`GET /api/catalog/tile-packs`, `POST /api/billing/checkout-session`, `GET /api/capabilities/me` with `ownedPurchases[]` / `purchasedAt`, `POST /api/downloads/tile-pack` with JWT + Stripe ownership check + presigned S3 GET), SPA live catalog, cart → Checkout, Profile owned packs + pack downloads when deployed; Tile Builder **Med/High (128/256):** users can **preview** at any resolution; **full render** and **STL export** are blocked in the client `Model` unless capabilities + catalog show an owned pack with `tile_builder_features` (Stripe Product metadata) for the active SCAD `tile_set`. Upsell modals explain purchase; pack STL downloads remain server-gated. Cognito↔Stripe via **Customer `metadata.cognito_sub`** + Customer Search (no Cognito `custom:stripe_customer_id` for v1).
   **Deploy:** Local `npm run deploy:api:*` anytime. **CI:** `.github/workflows/api-deploy.yml` — **prod** API on **path-filtered push to `main`** (`infra/api/**`, `scripts/deploy-api.sh`, or that workflow file); **`workflow_dispatch`** for manual **dev** / staging / prod. Requires GitHub Environment secrets + OIDC per stage (`api-deploy-pipeline` todo until verified).
   **Still open:** Telemetry + Dynamo only when that feature ships.
+  **Marketing landing:** Home (`/`) and About (`/about`) share [`src/components/home/marketing-blocks.tsx`](../../src/components/home/marketing-blocks.tsx) (PrimeReact, alternating light/dark/black bands, CTAs to `/tiles`, `/tile-builder`, Etsy).
 todos:
   - id: storefront-ui-placeholder
     content: "/tiles + /tile-details/:slug with local catalog (incl. optional whatYouGet), two-column detail w/ independent scroll on lg, coming-soon modal, prod deploy—no Stripe yet"
@@ -35,6 +36,9 @@ todos:
     status: completed
   - id: stripe-account-checkout-domain
     content: "Stripe account active; custom Hosted Checkout domain checkout.gridsmith.io configured in Dashboard"
+    status: completed
+  - id: marketing-landing-pages
+    content: "Home + About v1 landing (marketing-blocks.tsx, alternating bands, CTAs to /tiles /tile-builder / Etsy); public/index.html default meta"
     status: completed
 isProject: false
 ---
@@ -176,6 +180,18 @@ Goal: deployments are repeatable and auditable (no copy/paste console setup), wi
 - [`AuthContext.tsx`](../../src/components/AuthContext.tsx): require sign-in for checkout and download.
 - [`TileBuilderPanel.tsx`](../../src/components/TileBuilderPanel.tsx) / [`App.tsx`](../../src/components/App.tsx): **Med/High policy (shipped):** `GET /api/capabilities/me` + catalog (`tileBuilderFeatures` from Stripe Product metadata) drive `TileCartContext.tileBuilderProEntitledForTileSet(tile_set)`. **Preview** (`Model.render({ isPreview: true })`) always runs at 128/256 so users can evaluate quality. **Full render** and **`Model.export()`** return early when Med/High is selected and the user does not own a matching pack; **Footer** / **ExportButton** / F6–F7 open the tile-builder upsell instead of calling render/export. Choosing Med/High in the customizer can still show the informational dialog; resolution is not clamped back to Low. **Init order:** `Model.init()` awaits `processSource()`, which **awaits `checkSyntax()`** before returning, and the builder shell **awaits `init()`** before the first tile preview so the footer progress bar does not stay indeterminate after preview (checker vs preview overlap).
 
+## Marketing landing pages (home & about)
+
+**Shipped in repo** (same branch as storefront work):
+
+- **[`src/components/home/marketing-blocks.tsx`](../../src/components/home/marketing-blocks.tsx):** Reusable landing primitives — `MarketingHero`, `MarketingSection`, `MarketingSplit`, `MarketingFeatureGrid`, `MarketingTextSection`, `MarketingCtaBand`, `MarketingButton` — with fixed **light** (`#efefef`), **dark** (About-style `#111` mix), and **black** (`#121212`) band tokens (independent of app light/dark theme).
+- **[`HomePage.tsx`](../../src/components/HomePage.tsx):** v1 copy (“Your First Terrain System”); full-bleed hero; feature grid; beginner / Tavern Core / build-log splits; black footer CTA → `/tiles` and Etsy printed sets.
+- **[`AboutPage.tsx`](../../src/components/AboutPage.tsx):** Hero + five alternating text sections + footer CTA → `/tiles` and `/tile-builder`.
+- **[`src/index.css`](../../src/index.css):** `.home-landing-*` band, hero, feature grid, and CTA styles.
+- **`public/index.html`:** Default document title and meta description aligned with v1 positioning.
+
+**Follow-ups (not blocking checkout):** final marketing image assets; dedicated **`/blog`** for build log (home CTA still **`/about`**); optional e2e for marketing routes.
+
 ## Marketing newsletter opt-in (store in Cognito)
 
 **Shipped in the SPA** (no separate “emails DB” for the boolean). Pool custom attribute **`custom:marketing_opt_in`** (`"true"` / `"false"`); **default opt-in** when the claim is missing (UI + one-time first-session write when possible).
@@ -209,6 +225,7 @@ Goal: deployments are repeatable and auditable (no copy/paste console setup), wi
 ## Handoff for a new agent
 
 - **Storefront, live catalog fetch, cart/checkout, capabilities-backed Profile (owned packs + purchase dates + pack file downloads via presigned S3)** are in place; **deploy the API** after changing `infra/api/`.
+- **Marketing landing:** Home and About use shared **`marketing-blocks`** (see **Marketing landing pages** above); storefront CTAs point at **`/tiles`**, builder at **`/tile-builder`**, printed sets at Etsy.
 - **Tile Builder:** Stripe-backed **capabilities** gate **final render + export** at Med/High; **previews** at Med/High are allowed; informational / upsell dialogs in the SPA.
-- **Next concrete work:** **`api-deploy-pipeline`** (CI), then **telemetry** when you implement `POST /api/telemetry/render`.
+- **Next concrete work:** **`api-deploy-pipeline`** (CI), then **telemetry** when you implement `POST /api/telemetry/render`; marketing polish (final art, `/blog`) as needed.
 - Point the agent at this file: **`docs/plans/tile_pack_commerce_v1.md`**.
