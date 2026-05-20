@@ -1,6 +1,7 @@
 import React from 'react';
 import type { MDXComponents } from '@mdx-js/react';
 import { MarketingPhoto } from '../home/marketing-blocks.tsx';
+import BlogSocialShare from './BlogSocialShare.tsx';
 
 /** Maps MDX elements to PrimeReact-friendly markup (inline images, prose). */
 export const blogMdxComponents: MDXComponents = {
@@ -13,6 +14,15 @@ export const blogMdxComponents: MDXComponents = {
   a: (props) => (
     <a className="text-primary no-underline hover:underline" target="_blank" rel="noopener noreferrer" {...props} />
   ),
+  BlogSocialShare: () => <BlogSocialShare />,
+  pre: (props) => <pre className="blog-mdx-pre" {...props} />,
+  code: (props) => {
+    const isBlock = props.className?.includes('language-');
+    if (isBlock) {
+      return <code className={`blog-mdx-code blog-mdx-code--block ${props.className ?? ''}`.trim()} {...props} />;
+    }
+    return <code className="blog-mdx-code blog-mdx-code--inline" {...props} />;
+  },
   img: ({ src, alt, title }) => {
     if (!src) return null;
     return (

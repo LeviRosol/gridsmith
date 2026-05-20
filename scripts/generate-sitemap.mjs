@@ -1,11 +1,11 @@
 /**
- * Regenerates public/sitemap.xml from static routes + src/blog/posts/*.mdx.
+ * Regenerates public/sitemap.xml and src/blog/post-stats.generated.json.
  * Run before production build: npm run generate:sitemap
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { listBlogPosts } from './blog-posts-manifest.mjs';
+import { listPublishedBlogPosts, writePostStatsFile } from './blog-posts-manifest.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -34,7 +34,8 @@ function urlEntry(loc, changefreq, priority, lastmod) {
   </url>`;
 }
 
-const blogPosts = listBlogPosts();
+writePostStatsFile();
+const blogPosts = listPublishedBlogPosts();
 const lines = [
   '<?xml version="1.0" encoding="UTF-8"?>',
   '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
@@ -50,4 +51,6 @@ const lines = [
 ];
 
 fs.writeFileSync(OUT, lines.join('\n'));
-console.log(`Wrote ${OUT} (${STATIC_ROUTES.length} static + ${blogPosts.length} blog URLs)`);
+console.log(
+  `Wrote ${OUT} (${STATIC_ROUTES.length} static + ${blogPosts.length} published blog URLs); updated post-stats.generated.json`
+);

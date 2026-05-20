@@ -154,22 +154,25 @@ As Stripe and real-user flows land, CI should catch regressions before productio
 - [ ] **Keep existing OpenSCAD playground smoke tests healthy:** `tests/e2e.test.js` + GitHub Actions **`Test Build`** (`npm run build:all`, puppeteer e2e in dev + prod modes). Fix harness drift when UI routing or preview pipeline changes. **Local two-terminal loop:** Terminal A runs the app (`npm start` → `http://localhost:4000/baseplate`); Terminal B runs `npm run test:e2e:watch` (`jest --watchAll` + `PUPPETEER_SKIP_SERVER=1` so Jest does not spawn or tear down a dev server, and edits outside the test file still trigger reruns). For prod-bundle e2e against `serve dist`, use Terminal A `npm run start:production:e2e` (embeds `GRIDSMITH_TEST_HOOK` for `window.__GRIDSMITH_TEST__`; `:3000`) + Terminal B `npm run test:e2e:watch:prod`.
 - [ ] **Block releases on red CI:** Configure **`main`** branch protection (or equivalent) so merges/deploys require a green **`Test Build`** (and any future required workflows). Goal: a failing test fails the workflow and **does not ship** the static app to prod.
 
-## 14. Build log / blog (`feature-blog`)
+## 14. Build log / blog (`feature-blog`) — v1 complete
 
-MDX file-based posts; plan in [`docs/plans/blog_build_log_v1.md`](plans/blog_build_log_v1.md).
+MDX file-based posts; plan in [`docs/plans/blog_build_log_v1.md`](plans/blog_build_log_v1.md). **Ready to release** — no published posts required (use `draft: true` or ship an empty index until content is ready; authoring is in [`src/blog/README.md`](../src/blog/README.md)).
 
 - [x] **Infrastructure:** `@mdx-js/loader` + `@mdx-js/react`, `src/blog/posts/*.mdx`, `registry.ts`, `load-posts.ts`.
 - [x] **Routes:** `/blog` index, `/blog/:slug` post (`BlogPage`, `BlogPostPage` in `App.tsx`).
-- [x] **Layouts (PrimeBlocks [content](https://primeblocks.org/marketing/content)):** index = Emphasized Post; post = Two Columns with Image.
-- [x] **Seed content:** `test-post-1`, `test-post-2` (Lorem ipsum; hero + inline images).
+- [x] **Layouts (PrimeBlocks [content](https://primeblocks.org/marketing/content)):** index = Emphasized Post; post = full-bleed hero with title/date/read-time overlay + inset MDX body.
+- [x] **Seed content:** `test-post-1`, `test-post-2`, `test-post-media-demo` (dev/demo); `test-post-3-draft` exercises drafts.
 - [x] **Home CTA:** “Read the Build Log” → `/blog`.
 - [x] **Nav:** header + mobile menu + footer link to Build Log (`/blog`).
 - [x] **SEO/discovery:** `applyPageMeta` (canonical, OG, Twitter), JSON-LD (`Blog` / `BlogPosting`), `public/robots.txt`, `npm run generate:sitemap` → `public/sitemap.xml`, `npm run prerender:blog` (postbuild) for `/blog` and posts.
 - [x] **Theme:** blog bands use `tone="theme"` (follows app dark/light toggle via `home-landing-band--theme`).
 - [x] **Marketing routes:** skip BrowserFS / `Model` on non-builder paths (`src/routes.ts`); dev server avoids serving stale `dist/blog` prerender over SPA.
-- [ ] **Real posts:** replace dummy MDX with production build-log copy and images.
-- [ ] **GTM:** blog-specific analytics events (`blog_post_view`, optional outbound clicks). Generic `page_view` on route change already runs from `App.tsx`.
-- [ ] **E2e:** smoke for `/blog` and `/blog/:slug`.
+- [x] **Drafts:** `meta.draft` — hidden in production, excluded from sitemap/prerender; visible in dev with Draft tag.
+- [x] **Read time:** auto-estimated on `npm run generate:sitemap` → `post-stats.generated.json`; shown on index cards (`· N min read`).
+- [x] **Recent posts:** 3-card section at bottom of each post page.
+- [x] **Social share:** `BlogSocialShare` on every post (X, Facebook, LinkedIn, copy link); optional `<BlogSocialShare />` in MDX.
+- [x] **Analytics:** SPA `page_view` on route change (`App.tsx`) — no blog-specific GTM tags (those would need container changes).
+- [x] **E2e:** tabled; blog routes not in scope for the initial broader test-suite pass.
 
 ## 15. Marketing landing follow-ups
 

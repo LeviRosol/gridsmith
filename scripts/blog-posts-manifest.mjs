@@ -9,8 +9,44 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 export const POSTS_DIR = path.join(ROOT, 'src', 'blog', 'posts');
+const STATS_OUT = path.join(ROOT, 'src', 'blog', 'post-stats.generated.json');
 
-/** @typedef {{ slug: string, title: string, date: string, excerpt?: string, heroImage: string, heroImageAlt?: string }} BlogPostManifestEntry */
+const WORDS_PER_MINUTE = 200;
+
+/**
+ * @typedef {{
+ *   slug: string,
+ *   title: string,
+ *   date: string,
+ *   excerpt?: string,
+ *   heroImage: string,
+ *   heroImageAlt?: string,
+ *   draft: boolean,
+ *   readingTimeMinutes: number,
+ * }} BlogPostManifestEntry
+ */
+
+function plainTextFromMdxBody(body) {
+  return body
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`[^`]*`/g, ' ')
+    .replace(/!\[[^\]]*]\([^)]*\)/g, ' ')
+    .replace(/\[[^\]]*]\([^)]*\)/g, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/[#>*_~\-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function estimateReadingTimeMinutes(body) {
+  const words = plainTextFromMdxBody(body).split(/\s+/).filter(Boolean).length;
+  if (words === 0) return 1;
+  return Math.max(1, Math.round(words / WORDS_PER_MINUTE));
+}
+
+function mdxBodyAfterMeta(src) {
+  return src.replace(/export const meta\s*=\s*\{[\s\S]*?\n\};\s*/m, '').trim();
+}
 
 /**
  * @param {string} slug
@@ -41,12 +77,17 @@ export function parseBlogPostMeta(slug) {
     );
   };
 
+  const readBoolean = (key) => /\btrue\b/.test(block.match(new RegExp(`${key}:\\s*(true|false)`))?.[0] ?? '');
+
   const title = readString('title');
   const date = readString('date');
   const heroImage = readString('heroImage');
   if (!title || !date || !heroImage) {
     throw new Error(`Incomplete meta in ${filePath} (need title, date, heroImage)`);
   }
+
+  const body = mdxBodyAfterMeta(src);
+  const readingTimeMinutes = estimateReadingTimeMinutes(body);
 
   return {
     slug,
@@ -55,6 +96,8 @@ export function parseBlogPostMeta(slug) {
     excerpt: readString('excerpt'),
     heroImage,
     heroImageAlt: readString('heroImageAlt'),
+    draft: readBoolean('draft'),
+    readingTimeMinutes,
   };
 }
 
@@ -68,4 +111,20 @@ export function listBlogPosts() {
     .sort();
 
   return slugs.map(parseBlogPostMeta).sort((a, b) => b.date.localeCompare(a.date));
+}
+
+/** Published posts only (excludes drafts from sitemap / prerender). */
+export function listPublishedBlogPosts() {
+  return listBlogPosts().filter((p) => !p.draft);
+}
+
+/** Writes src/blog/post-stats.generated.json for the app bundle. */
+export function writePostStatsFile() {
+  const rows = listBlogPosts().map(({ slug, draft, readingTimeMinutes }) => ({
+    slug,
+    draft,
+    readingTimeMinutes,
+  }));
+  fs.writeFileSync(STATS_OUT, `${JSON.stringify(rows, null, 2)}\n`);
+  return rows;
 }

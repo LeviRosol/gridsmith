@@ -227,5 +227,5 @@ Goal: deployments are repeatable and auditable (no copy/paste console setup), wi
 - **Storefront, live catalog fetch, cart/checkout, capabilities-backed Profile (owned packs + purchase dates + pack file downloads via presigned S3)** are in place; **deploy the API** after changing `infra/api/`.
 - **Marketing landing:** Home and About use shared **`marketing-blocks`** (see **Marketing landing pages** above); storefront CTAs point at **`/tiles`**, builder at **`/tile-builder`**, printed sets at Etsy.
 - **Tile Builder:** Stripe-backed **capabilities** gate **final render + export** at Med/High; **previews** at Med/High are allowed; informational / upsell dialogs in the SPA.
-- **Next concrete work:** **`api-deploy-pipeline`** (CI), then **telemetry** when you implement `POST /api/telemetry/render`; marketing polish (final home/about art). Blog: real posts, GTM, e2e — see **`docs/plans/blog_build_log_v1.md`**.
+- **Next concrete work:** **`api-deploy-pipeline`** (CI), then **telemetry** when you implement `POST /api/telemetry/render`; marketing polish (final home/about art). **Blog v1** is engineering-complete — see **`docs/plans/blog_build_log_v1.md`** (content authoring is separate).
 - Point the agent at this file: **`docs/plans/tile_pack_commerce_v1.md`**.

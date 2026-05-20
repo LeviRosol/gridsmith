@@ -7,7 +7,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer';
-import { listBlogPosts } from './blog-posts-manifest.mjs';
+import { listPublishedBlogPosts } from './blog-posts-manifest.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -250,7 +250,7 @@ async function main() {
     process.exit(1);
   }
 
-  const posts = listBlogPosts();
+  const posts = listPublishedBlogPosts();
   const routes = [
     { urlPath: '/blog', outRelative: 'blog/index.html' },
     ...posts.map((p) => ({

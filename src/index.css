@@ -1496,13 +1496,93 @@ a.tile-shop-card-image-hit:focus-visible {
   border-color: var(--primary-color, #f59e0b);
 }
 
+/* Full-bleed post hero (same placement as home MarketingHero — outside MarketingContainer) */
+.blog-post-hero-section {
+  width: 100%;
+}
+
+.blog-post-hero {
+  position: relative;
+  width: 100%;
+}
+
+.blog-post-hero-media.p-image,
+.blog-post-hero-media {
+  display: block;
+  width: 100%;
+}
+
 .blog-post-hero-image {
-  min-height: 14rem;
-  max-height: 28rem;
+  display: block;
+  width: 100%;
+  min-height: min(52vh, 28rem);
+  max-height: min(72vh, 40rem);
   object-fit: cover;
 }
 
-.blog-post-body > :last-child {
+.blog-post-hero-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0 0 clamp(1.5rem, 4vw, 2.75rem);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.08) 0%,
+    rgba(0, 0, 0, 0.25) 40%,
+    rgba(0, 0, 0, 0.78) 100%
+  );
+  pointer-events: none;
+}
+
+.blog-post-hero-overlay .home-landing-container {
+  width: 100%;
+}
+
+.blog-post-hero-overlay .p-tag {
+  pointer-events: auto;
+}
+
+/*
+ * Tighter space below full-bleed hero (blog post page only).
+ * MarketingSection uses PrimeFlex py-6 / md:py-8 (3rem / 5rem top, !important), loaded after
+ * index.css — override padding-top here with the same specificity + !important.
+ */
+.home-landing-band--theme.blog-post-section {
+  padding-top: 1.5rem !important;
+}
+
+@media screen and (min-width: 768px) {
+  .home-landing-band--theme.blog-post-section {
+    padding-top: 2.5rem !important;
+  }
+}
+
+.blog-post-hero-title {
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.blog-post-hero-meta {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.blog-post-body {
+  width: 100%;
+}
+
+.blog-post-body-content {
+  box-sizing: border-box;
+  width: calc(100% - 100px);
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.blog-post-body-content > :last-child {
   margin-bottom: 0 !important;
 }
 
@@ -1517,6 +1597,120 @@ a.tile-shop-card-image-hit:focus-visible {
 
 .blog-mdx-list {
   list-style-position: outside;
+}
+
+.blog-mdx-pre {
+  margin: 0 0 1rem;
+  padding: 1rem 1.125rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.light-mode .blog-mdx-pre {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #1a1a1a;
+}
+
+.dark-mode .blog-mdx-pre {
+  background: #1a1a1a;
+  border: 1px solid #333333;
+  color: #e5e7eb;
+}
+
+.blog-mdx-code--inline {
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+  border-radius: 0.25rem;
+}
+
+.light-mode .blog-mdx-code--inline {
+  background: #f3f4f6;
+  color: #1a1a1a;
+}
+
+.dark-mode .blog-mdx-code--inline {
+  background: #2a2a2a;
+  color: #f5f5f5;
+}
+
+.blog-mdx-code--block {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  background: transparent;
+  padding: 0;
+}
+
+.blog-social-share {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--surface-border, #e5e7eb);
+}
+
+.dark-mode .blog-social-share {
+  border-top-color: #333333;
+}
+
+.blog-recent-posts-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+}
+
+@media (max-width: 767px) {
+  .blog-recent-posts-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.blog-recent-posts-row .blog-recent-posts-card,
+.blog-recent-posts-row .blog-post-list-card {
+  width: 100%;
+  min-width: 0;
+}
+
+.blog-recent-posts-row .blog-post-list-image {
+  min-height: 6.5rem;
+  max-height: 9.5rem;
+}
+
+.blog-recent-posts-row .blog-post-list-card .p-4 {
+  padding: 0.75rem 1rem;
+}
+
+.blog-recent-posts-row .blog-post-list-card h3 {
+  font-size: 1rem;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.blog-recent-posts-row .blog-post-list-card .text-color-secondary.line-height-3 {
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.blog-recent-posts-row .blog-post-list-card .text-primary.font-medium {
+  font-size: 0.875rem;
+}
+
+.blog-recent-posts-row .blog-post-list-card .flex.flex-wrap {
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+}
+
+.blog-recent-posts-row .blog-post-list-card .text-sm {
+  font-size: 0.75rem;
+  white-space: nowrap;
 }
 
 /* Cookie consent banner (GTM loads only after opt-in) */

@@ -9,6 +9,10 @@ export type BlogPostMeta = {
   /** Hero image URL (one per post), shown on index and post layout. */
   heroImage: string;
   heroImageAlt?: string;
+  /** When true, post is dev-only (hidden in production builds, sitemap, and prerender). */
+  draft?: boolean;
+  /** Override auto-estimated read time from `post-stats.generated.json`. */
+  readingTimeMinutes?: number;
 };
 
 export type BlogPost = {
