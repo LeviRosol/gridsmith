@@ -29,7 +29,7 @@ Local prod (test both the different inlining and serving under a prefix):
 npm run build:libs  # Download WASM and build all OpenSCAD libraries
 npm install
 npm run start:production
-# http://localhost:3000/dist/
+# http://localhost:3000/
 ```
 
 Deployment (edit "homepage" in `package.json` to match your deployment root!):

@@ -36,6 +36,13 @@ export function ConsentProvider({ children }: { children: React.ReactNode }) {
 
   const showBanner = !answered || settingsOpen;
 
+  /** Re-read storage on mount (e.g. after prerendered HTML or hydration). */
+  useLayoutEffect(() => {
+    if (getStoredConsent() !== undefined) {
+      setAnswered(true);
+    }
+  }, []);
+
   useLayoutEffect(() => {
     if (getStoredConsent()?.analytics === true) {
       loadGoogleTagManager();

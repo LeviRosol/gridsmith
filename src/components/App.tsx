@@ -2,6 +2,7 @@
 
 import React, {
   CSSProperties,
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -19,6 +20,7 @@ import { ConfirmDialog } from 'primereact/confirmdialog';
 import CustomizerPanel from './CustomizerPanel';
 import GridSmithPanel from './GridSmithPanel';
 import TileBuilderPanel from './TileBuilderPanel';
+import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { Menu } from 'primereact/menu';
@@ -30,13 +32,19 @@ import TileSetDetailPage from './TileSetDetailPage';
 import ProfilePage from './ProfilePage';
 import TosPage from './TosPage';
 import PrivacyPage from './PrivacyPage';
+import BlogPage from './blog/BlogPage';
+import BlogPostPage from './blog/BlogPostPage';
 import SiteFooter from './SiteFooter';
+import CartDrawer from './CartDrawer';
+import CartPage from './CartPage';
 import { AuthProvider, useAuth } from './AuthContext';
 import { ConsentProvider } from './ConsentProvider';
+import { TileCartProvider, useTileCart } from '../cart/TileCartContext';
 import { trackPageView } from '../analytics';
 import { installTileStls } from '../tile-builder/install-tile-stls.ts';
 import { isTileBuilderProTierResolution } from '../utils.ts';
 import { FaDiscord } from 'react-icons/fa6';
+import { isBuilderRoute, normalizePathname } from '../routes.ts';
 
 const THEME_MODE_STORAGE_KEY = 'gridsmith.theme.darkMode';
 
@@ -70,20 +78,48 @@ class MarketingPageErrorBoundary extends React.Component<{ children: ReactNode }
   }
 }
 
-export function App({initialState, statePersister, fs}: {initialState: State, statePersister: StatePersister, fs: FS}) {
+export function App({
+  initialState,
+  statePersister,
+  fs,
+}: {
+  initialState: State;
+  statePersister: StatePersister;
+  fs: FS | null;
+}) {
   return (
     <AuthProvider>
-      <ConsentProvider>
-        <AppImpl initialState={initialState} statePersister={statePersister} fs={fs} />
-      </ConsentProvider>
+      <TileCartProvider>
+        <ConsentProvider>
+          <AppImpl initialState={initialState} statePersister={statePersister} fs={fs} />
+        </ConsentProvider>
+      </TileCartProvider>
     </AuthProvider>
   );
 }
 
-function AppImpl({initialState, statePersister, fs}: {initialState: State, statePersister: StatePersister, fs: FS}) {
+function AppImpl({
+  initialState,
+  statePersister,
+  fs,
+}: {
+  initialState: State;
+  statePersister: StatePersister;
+  fs: FS | null;
+}) {
   const [state, setState] = useState(initialState);
 
-  const model = new Model(fs, state, setState, statePersister);
+  const pathname = normalizePathname(window.location.pathname);
+  const isBuilderShell = isBuilderRoute(pathname);
+  const ParamsSidebar = pathname === '/tile-builder' ? TileBuilderPanel : GridSmithPanel;
+
+  useEffect(() => {
+    const raw = window.location.pathname.replace(/\/+$/, '') || '/';
+    if (raw === '/viewer') {
+      const next = '/baseplate' + window.location.search + window.location.hash;
+      window.history.replaceState(window.history.state ?? {}, '', next);
+    }
+  }, []);
 
   const [customizerOpen, setCustomizerOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(() => {
@@ -98,6 +134,16 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   const accountMenuRef = useRef<Menu | null>(null);
   const mobileMenuRef = useRef<Menu | null>(null);
   const auth = useAuth();
+  const tileCart = useTileCart();
+
+  const getTileBuilderProEntitled = useCallback(
+    (tileSet: string) => tileCart.tileBuilderProEntitledForTileSet(tileSet),
+    [tileCart.tileBuilderProEntitledForTileSet],
+  );
+  const model =
+    isBuilderShell && fs
+      ? new Model(fs, state, setState, statePersister, getTileBuilderProEntitled)
+      : null;
 
   const [buildChooserModalOpen, setBuildChooserModalOpen] = useState(false);
   const [tileBuilderRenderDownloadUpsellOpen, setTileBuilderRenderDownloadUpsellOpen] = useState(false);
@@ -108,18 +154,13 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     [],
   );
 
-  // Simple pathname-based routing
-  let rawPath = window.location.pathname;
-  let normalizedPath = rawPath.replace(/\/+$/, '') || '/';
-  if (normalizedPath === '/viewer') {
-    const next = '/baseplate' + window.location.search + window.location.hash;
-    window.history.replaceState(window.history.state ?? {}, '', next);
-    rawPath = '/baseplate';
-    normalizedPath = '/baseplate';
-  }
-  const pathname = normalizedPath === '' ? '/' : normalizedPath;
-  const isBuilderShell = pathname === '/baseplate' || pathname === '/tile-builder';
-  const ParamsSidebar = pathname === '/tile-builder' ? TileBuilderPanel : GridSmithPanel;
+  const cognitoConfigured =
+    Boolean(
+      (process.env.COGNITO_DOMAIN as string | undefined)?.trim() &&
+        (process.env.COGNITO_REGION as string | undefined)?.trim() &&
+        (process.env.COGNITO_CLIENT_ID as string | undefined)?.trim(),
+    );
+  const requireAuthForBuilderShell = cognitoConfigured;
 
   const accountItems: MenuItem[] = [
     ...(auth.isSignedIn
@@ -161,7 +202,15 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
       },
     },
     { label: 'Get Tiles', command: () => (window.location.pathname = '/tiles') },
+    { label: 'Build Log', command: () => (window.location.pathname = '/blog') },
     { label: 'About', command: () => (window.location.pathname = '/about') },
+    {
+      label: 'Cart',
+      icon: 'pi pi-shopping-cart',
+      command: () => {
+        tileCart.openDrawer();
+      },
+    },
     { separator: true },
     ...accountItems,
   ];
@@ -178,14 +227,15 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
   useEffect(() => {
     if (!isBuilderShell) return;
     if (auth.loading) return;
-    if (!auth.isSignedIn) return;
+    if (!auth.isSignedIn && requireAuthForBuilderShell) return;
     let cancelled = false;
     void (async () => {
+      if (!model || !fs) return;
       if (pathname === '/tile-builder') {
         await installTileStls(fs);
       }
       if (cancelled) return;
-      model.init();
+      await model.init();
       if (cancelled) return;
       if (pathname === '/tile-builder') {
         const v = model.state.params.vars ?? {};
@@ -207,7 +257,17 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     };
     // We intentionally don't include `model` in deps: we only want initialization on route+auth changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, auth.loading, auth.isSignedIn, isBuilderShell]);
+  }, [pathname, auth.loading, auth.isSignedIn, isBuilderShell, requireAuthForBuilderShell]);
+
+  const tileBuilderTileSetVar = String(
+    (model ? model.state.params.vars?.tile_set : undefined) ?? 'tavern'
+  );
+  const tileBuilderMedHighLocked =
+    pathname === '/tile-builder' &&
+    model != null &&
+    isTileBuilderProTierResolution(model.state.params.vars?.resolution) &&
+    tileCart.tileBuilderProEntitlementReady &&
+    !tileCart.tileBuilderProEntitledForTileSet(tileBuilderTileSetVar);
 
   useEffect(() => {
     if (pathname !== '/baseplate') return;
@@ -234,27 +294,21 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (!isBuilderShell) return;
-      if (auth.loading || !auth.isSignedIn) return;
+      if (!isBuilderShell || !model) return;
+      if (auth.loading || (!auth.isSignedIn && requireAuthForBuilderShell)) return;
       if (event.key === 'F5') {
         event.preventDefault();
-        model.render({isPreview: true, now: true})
+        model.render({ isPreview: true, now: true });
       } else if (event.key === 'F6') {
         event.preventDefault();
-        if (
-          pathname === '/tile-builder' &&
-          isTileBuilderProTierResolution(model.state.params.vars?.resolution)
-        ) {
+        if (tileBuilderMedHighLocked) {
           setTileBuilderRenderDownloadUpsellOpen(true);
           return;
         }
-        model.render({isPreview: false, now: true})
+        model.render({ isPreview: false, now: true });
       } else if (event.key === 'F7') {
         event.preventDefault();
-        if (
-          pathname === '/tile-builder' &&
-          isTileBuilderProTierResolution(model.state.params.vars?.resolution)
-        ) {
+        if (tileBuilderMedHighLocked) {
           setTileBuilderRenderDownloadUpsellOpen(true);
           return;
         }
@@ -265,7 +319,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [pathname, model, auth.loading, auth.isSignedIn, isBuilderShell]);
+  }, [pathname, model, auth.loading, auth.isSignedIn, isBuilderShell, requireAuthForBuilderShell, tileBuilderMedHighLocked]);
 
   useEffect(() => {
     const body = document.body;
@@ -358,6 +412,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
         <nav className="app-header-nav">
           <div className="app-header-nav-desktop">
             <a href="/tiles" className="app-header-link">Get Tiles</a>
+            <a href="/blog" className="app-header-link">Build Log</a>
             <a href="/about" className="app-header-link">About</a>
             <Button
               type="button"
@@ -378,6 +433,26 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
             >
               <FaDiscord size={18} aria-hidden="true" />
             </a>
+            <div className="app-header-cart-wrap">
+              <Button
+                type="button"
+                icon="pi pi-shopping-cart"
+                onClick={() => {
+                  tileCart.toggleDrawer();
+                }}
+                className="app-header-link-button"
+                aria-label={tileCart.itemCount ? `Open cart (${tileCart.itemCount} items)` : 'Open cart'}
+                text
+                style={{ paddingInline: '0.25rem' }}
+              />
+              {tileCart.itemCount > 0 ? (
+                <Badge
+                  value={tileCart.itemCount > 99 ? '99+' : tileCart.itemCount}
+                  severity="danger"
+                  className="app-header-cart-badge"
+                />
+              ) : null}
+            </div>
             <div style={{ position: 'relative' }}>
               <Menu model={accountItems} popup ref={accountMenuRef} />
               <Button
@@ -395,6 +470,26 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
           </div>
 
           <div className="app-header-nav-mobile">
+            <div className="app-header-cart-wrap">
+              <Button
+                type="button"
+                icon="pi pi-shopping-cart"
+                onClick={() => {
+                  tileCart.toggleDrawer();
+                }}
+                className="app-header-link-button"
+                aria-label={tileCart.itemCount ? `Open cart (${tileCart.itemCount} items)` : 'Open cart'}
+                text
+                style={{ paddingInline: '0.25rem' }}
+              />
+              {tileCart.itemCount > 0 ? (
+                <Badge
+                  value={tileCart.itemCount > 99 ? '99+' : tileCart.itemCount}
+                  severity="danger"
+                  className="app-header-cart-badge"
+                />
+              ) : null}
+            </div>
             <Menu model={mobileMenuItems} popup ref={mobileMenuRef} />
             <Button
               type="button"
@@ -440,6 +535,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
           />
         </div>
       </Dialog>
+      <CartDrawer />
     </>
   );
 
@@ -466,7 +562,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
       );
     }
 
-    if (!auth.isSignedIn) {
+    if (!auth.isSignedIn && requireAuthForBuilderShell) {
       const signInBlurb =
         pathname === '/tile-builder'
           ? 'Please sign in to access the GridSmith tile builder and export tools.'
@@ -510,6 +606,19 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
       page = <HomePage />;
     } else if (pathname === '/about') {
       page = <AboutPage />;
+    } else if (pathname === '/blog') {
+      page = <BlogPage />;
+    } else if (pathname.startsWith('/blog/')) {
+      const blogSlug = decodeURIComponent(
+        pathname.slice('/blog/'.length).split('/').filter(Boolean)[0] ?? ''
+      );
+      page = (
+        <MarketingPageErrorBoundary key={blogSlug || 'missing'}>
+          <BlogPostPage slug={blogSlug} />
+        </MarketingPageErrorBoundary>
+      );
+    } else if (pathname === '/cart') {
+      page = <CartPage />;
     } else if (pathname === '/tiles') {
       page = <TilesPage />;
     } else if (pathname === '/tile-details' || pathname.startsWith('/tile-details/')) {
@@ -539,6 +648,10 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
         <SiteFooter />
       </div>
     );
+  }
+
+  if (!model || !fs) {
+    return null;
   }
 
   return (
@@ -637,7 +750,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
           <ConfirmDialog />
 
           <Dialog
-            header="Render & download"
+            header="Render & Download STL"
             visible={tileBuilderRenderDownloadUpsellOpen}
             modal
             dismissableMask
@@ -654,7 +767,7 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
                 />
                 <Button
                   type="button"
-                  label="Sign Me Up!"
+                  label="Browse tile packs"
                   icon="pi pi-arrow-right"
                   iconPos="right"
                   severity="success"
@@ -667,10 +780,11 @@ function AppImpl({initialState, statePersister, fs}: {initialState: State, state
             }
           >
             <p style={{ margin: 0, lineHeight: 1.55 }}>
-              Wouldn&apos;t it be nice to render and download that STL??
+                Wouldn&apos;t it be nice to render and download that STL??
             </p>
             <p style={{ margin: '0.75rem 0 0', lineHeight: 1.55 }}>
-              Become a Pro Member to get access to Med and High resolution GridSmith tiles!
+              Purchase the matching Tile Set you&apos;re building (see the shop), or switch to a set you
+              already own.
             </p>
           </Dialog>
         </div>

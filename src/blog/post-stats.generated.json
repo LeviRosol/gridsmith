@@ -1,0 +1,22 @@
+[
+  {
+    "slug": "test-post-3-draft",
+    "draft": true,
+    "readingTimeMinutes": 1
+  },
+  {
+    "slug": "coming-soon",
+    "draft": false,
+    "readingTimeMinutes": 1
+  },
+  {
+    "slug": "test-post-2",
+    "draft": true,
+    "readingTimeMinutes": 1
+  },
+  {
+    "slug": "test-post-media-demo",
+    "draft": true,
+    "readingTimeMinutes": 1
+  }
+]

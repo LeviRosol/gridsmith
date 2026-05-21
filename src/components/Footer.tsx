@@ -12,12 +12,14 @@ import ExportButton from './ExportButton.tsx';
 import { isTileBuilderProTierResolution } from '../utils.ts';
 import SettingsMenu from './SettingsMenu.tsx';
 import MultimaterialColorsDialog from './MultimaterialColorsDialog.tsx';
+import { useTileCart } from '../cart/TileCartContext';
 
 
 export default function Footer({style}: {style?: CSSProperties}) {
   const model = useContext(ModelContext);
   if (!model) throw new Error('No model');
   const tileBuilderUpsell = useContext(TileBuilderUpsellContext);
+  const tileCart = useTileCart();
   const state = model.state;
 
   const toast = useRef<Toast>(null);
@@ -41,12 +43,26 @@ export default function Footer({style}: {style?: CSSProperties}) {
   const maxMarkerSeverity = markers.length == 0 ? undefined : markers.map(m => m.severity).reduce((a, b) => Math.max(a, b));
 
   const vars = state.params.vars ?? {};
+  const tileSetVar = typeof vars.tile_set === 'string' && vars.tile_set.trim() ? vars.tile_set.trim() : 'tavern';
   const tileBuilderNothingToRender =
     state.params.activePath === '/tile_builder.scad' &&
-    vars.use_floor !== true &&
-    vars.use_north_wall !== true;
+    (() => {
+      const v = vars;
+      const wp = v.wall_profile;
+      const wallsAllowed = wp != null && wp !== 'none';
+      const anyWall =
+        wallsAllowed &&
+        (v.use_north_wall === true ||
+          v.use_east_wall === true ||
+          v.use_south_wall === true ||
+          v.use_west_wall === true);
+      return v.use_floor !== true && !anyWall;
+    })();
   const tileBuilderProTierLocked =
-    state.params.activePath === '/tile_builder.scad' && isTileBuilderProTierResolution(vars.resolution);
+    state.params.activePath === '/tile_builder.scad' &&
+    isTileBuilderProTierResolution(vars.resolution) &&
+    tileCart.tileBuilderProEntitlementReady &&
+    !tileCart.tileBuilderProEntitledForTileSet(tileSetVar);
 
   return <>
     <ProgressBar mode="indeterminate"

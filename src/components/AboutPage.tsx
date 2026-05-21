@@ -1,14 +1,22 @@
 import React, { useEffect } from 'react';
+import {
+  MarketingCtaBand,
+  MarketingHero,
+  MarketingTextSection,
+} from './home/marketing-blocks';
+
+const TITLE = 'GridSmith — About';
+const DESCRIPTION =
+  'Learn what GridSmith is, how the modular terrain system works, and why it is built for creative tabletop play.';
+
+const ABOUT_HERO_IMAGE = '/walls_combined_close.png';
 
 export default function AboutPage() {
   useEffect(() => {
-    document.title = 'GridSmith — About';
+    document.title = TITLE;
     const meta = document.querySelector('meta[name="description"]');
     if (meta) {
-      meta.setAttribute(
-        'content',
-        'Learn what GridSmith is, how the modular terrain system works, and why it is built for creative tabletop play.'
-      );
+      meta.setAttribute('content', DESCRIPTION);
     }
     return () => {
       document.title = 'GridSmith';
@@ -16,96 +24,75 @@ export default function AboutPage() {
   }, []);
 
   return (
-    <main className="home-page">
-      <section className="home-section home-section-about-hero home-section-about-hero--child">
-        <div className="home-page-container">
-          <h1 className="home-h1">Build Your World. One Tile at a Time.</h1>
-          <div className="home-prose">
-            <p>
-              GridSmith is a modular terrain system designed to give you complete control over your tabletop. Start
-              simple. Expand endlessly. Create spaces that evolve with your story.
-            </p>
-          </div>
-        </div>
-      </section>
+    <main className="home-page home-landing">
+      <MarketingHero
+        title="Build Your World. One Tile at a Time."
+        lead="GridSmith is a modular terrain system designed to give you complete control over your tabletop."
+        supportingLines={[
+          'Start simple. Expand endlessly. Create spaces that evolve with your story.',
+        ]}
+        primaryCta={{ label: 'Shop Tile Sets', path: '/tiles' }}
+        secondaryCta={{ label: 'Build for Free', path: '/tile-builder' }}
+        imageSrc={ABOUT_HERO_IMAGE}
+        imageAlt="GridSmith modular terrain tiles arranged for tabletop play"
+      />
 
-      <section className="home-section home-section-alt">
-        <div className="home-page-container">
-          <h2 className="home-h2">What is GridSmith?</h2>
-          <div className="home-prose">
-            <p>
-              GridSmith is a flexible, tile-based terrain system built for tabletop gaming. It lets you create custom
-              layouts using interchangeable pieces, so every room, hallway, and encounter space is exactly what you need
-              it to be.
-            </p>
-            <p>
-              Whether you&apos;re building a quick skirmish map or a sprawling dungeon, GridSmith adapts to your table,
-              your game, and your imagination.
-            </p>
-          </div>
-        </div>
-      </section>
+      <MarketingTextSection
+        id="what-is-gridsmith"
+        tone="light"
+        title="What is GridSmith?"
+        paragraphs={[
+          'GridSmith is a flexible, tile-based terrain system built for tabletop gaming. It lets you create custom layouts using interchangeable pieces, so every room, hallway, and encounter space is exactly what you need it to be.',
+          "Whether you're building a quick skirmish map or a sprawling dungeon, GridSmith adapts to your table, your game, and your imagination.",
+        ]}
+      />
 
-      <section className="home-section">
-        <div className="home-page-container">
-          <h2 className="home-h2">Designed to Adapt</h2>
-          <div className="home-prose">
-            <p>
-              Traditional terrain locks you into fixed layouts. GridSmith breaks that constraint. Rearrange, expand, or
-              rebuild your environment in seconds, without starting over.
-            </p>
-            <p>
-              Every piece is part of a larger system, designed to work together seamlessly while still giving you the
-              freedom to create something uniquely yours.
-            </p>
-          </div>
-        </div>
-      </section>
+      <MarketingTextSection
+        id="designed-to-adapt"
+        tone="dark"
+        title="Designed to Adapt"
+        paragraphs={[
+          'Traditional terrain locks you into fixed layouts. GridSmith breaks that constraint. Rearrange, expand, or rebuild your environment in seconds, without starting over.',
+          'Every piece is part of a larger system, designed to work together seamlessly while still giving you the freedom to create something uniquely yours.',
+        ]}
+      />
 
-      <section className="home-section home-section-alt">
-        <div className="home-page-container">
-          <h2 className="home-h2">Built for the Table</h2>
-          <div className="home-prose">
-            <p>
-              GridSmith isn&apos;t just about building, it&apos;s about playing. The system is designed to feel solid,
-              intuitive, and reliable during real gameplay.
-            </p>
-            <p>
-              Set it down, move pieces as needed, and focus on what matters: the story unfolding at your table.
-            </p>
-          </div>
-        </div>
-      </section>
+      <MarketingTextSection
+        id="built-for-the-table"
+        tone="light"
+        title="Built for the Table"
+        paragraphs={[
+          "GridSmith isn't just about building, it's about playing. The system is designed to feel solid, intuitive, and reliable during real gameplay.",
+          'Set it down, move pieces as needed, and focus on what matters: the story unfolding at your table.',
+        ]}
+      />
 
-      <section className="home-section">
-        <div className="home-page-container">
-          <h2 className="home-h2">Start Small. Grow Over Time.</h2>
-          <div className="home-prose">
-            <p>
-              You don&apos;t need everything at once. Begin with a simple setup and expand your collection as your world
-              grows.
-            </p>
-            <p>Add new environments, new textures, and new possibilities whenever you&apos;re ready.</p>
-          </div>
-        </div>
-      </section>
+      <MarketingTextSection
+        id="start-small"
+        tone="dark"
+        title="Start Small. Grow Over Time."
+        paragraphs={[
+          "You don't need everything at once. Begin with a simple setup and expand your collection as your world grows.",
+          "Add new environments, new textures, and new possibilities whenever you're ready.",
+        ]}
+      />
 
-      <section className="home-section home-section-alt">
-        <div className="home-page-container">
-          <h2 className="home-h2">Built for Creators</h2>
-          <div className="home-prose">
-            <p>
-              GridSmith exists for people who want more control over their tabletop experience. It&apos;s a system that
-              rewards creativity, experimentation, and iteration.
-            </p>
-            <p>
-              If you&apos;ve ever wanted terrain that keeps up with your ideas, you&apos;re exactly who this was built
-              for.
-            </p>
-          </div>
-        </div>
-      </section>
+      <MarketingTextSection
+        id="built-for-creators"
+        tone="light"
+        title="Built for Creators"
+        paragraphs={[
+          "GridSmith exists for people who want more control over their tabletop experience. It's a system that rewards creativity, experimentation, and iteration.",
+          "If you've ever wanted terrain that keeps up with your ideas, you're exactly who this was built for.",
+        ]}
+      />
+
+      <MarketingCtaBand
+        title="Ready to Build Your First Layout?"
+        tone="black"
+        primaryCta={{ label: 'Shop Tile Sets', path: '/tiles', outlined: false }}
+        secondaryCta={{ label: 'Build for Free', path: '/tile-builder', outlined: true }}
+      />
     </main>
   );
 }
-

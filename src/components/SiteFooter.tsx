@@ -61,6 +61,7 @@ export default function SiteFooter() {
         <a href="/baseplate" className="app-footer-link">Baseplate</a>
         <a href="/tile-builder" className="app-footer-link">Tile builder</a>
         <a href="/tiles" className="app-footer-link">Get Tiles</a>
+        <a href="/blog" className="app-footer-link">Build Log</a>
         <a href="/about" className="app-footer-link">About</a>
         <a href="/profile" className="app-footer-link">Profile</a>
       </div>

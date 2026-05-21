@@ -1,0 +1,32 @@
+{
+  "builderTileSetName": "Tavern",
+  "galleryFolder": "tavern",
+  "gallery": ["1.jpg", "2.jpg"],
+  "builderEnabled": true,
+  "intro": "Welcome to the tavern.\n\nThis is where most adventures start—and now you can build it exactly how you want.",
+  "description": "Build fully modular taverns that actually work at the table.\n\nWelcome to the tavern.\n\nThis is where most adventures start—and now you can build it exactly how you want.\n\nThe GridSmith Tavern Set is a modular, snap-fit terrain system designed for real gameplay. Tiles drop into a reusable base grid, stay in place, and can be rearranged in seconds. No magnets. No glue. No weird constraints.\n\nEverything is built on a 1x1 (30mm) system, so you're not locked into pre-defined rooms. Want a 5' hallway? Done. Doors in corners? No problem. Awkward layouts from your favorite map? This system was built for that.\n\nAnd because walls are designed for actual table use, your players can still see their minis without sacrificing the feel of a real space.",
+  "includedFiles": {
+    "heading": "Included Files",
+    "bullets": [
+      "High resolution STLs (128 and 256 variants)",
+      "Ready for FDM printing (0.4 nozzle friendly)",
+      "Clean geometry optimized for slicing"
+    ]
+  },
+  "whatYouGet": {
+    "heading": "What You Get",
+    "intro": "This set includes 16 core tiles, in both Medium and High resolution, covering everything you need to build a fully functional tavern layout:",
+    "bullets": [
+      "Floor",
+      "Wall *",
+      "Corner *",
+      "Curved Wall",
+      "Door *",
+      "Window *",
+      "Stairs *",
+      "Trapdoor",
+      "Hallway"
+    ],
+    "closing": "* Wall, Corner, Door, Window, and Stairs come with two floor rotation variants.\n\nAll tiles are designed to work together seamlessly and can be rotated or combined to fit your layout."
+  }
+}

@@ -3,6 +3,7 @@ import webpack from 'webpack';
 import WorkboxPlugin from 'workbox-webpack-plugin';
 import Dotenv from 'dotenv-webpack';
 
+import fs from 'fs';
 import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -22,6 +23,17 @@ const config = [
     // devtool: 'inline-source-map',
     module: {
       rules: [
+        {
+          test: /\.mdx$/,
+          use: [
+            {
+              loader: '@mdx-js/loader',
+              options: {
+                providerImportSource: '@mdx-js/react',
+              },
+            },
+          ],
+        },
         {
           test: /\.tsx?$/,
           use: {
@@ -78,7 +90,7 @@ const config = [
       ],
     },
     resolve: {
-      extensions: ['.tsx', '.ts', '.js'],
+      extensions: ['.tsx', '.ts', '.mdx', '.js'],
     },
     output: {
       filename: 'index.js',
@@ -86,16 +98,56 @@ const config = [
       publicPath: '/',
     },
     devServer: {
-      static: path.join(__dirname, 'dist'),
+      setupMiddlewares: (middlewares) => {
+        // After `npm run build`, prerendered dist/blog/*.html would shadow the SPA on /blog in dev.
+        if (isDev) {
+          middlewares.unshift({
+            name: 'gridsmith-dev-blog-spa-fallback',
+            middleware: (req, _res, next) => {
+              const urlPath = (req.path ?? req.url ?? '').split('?')[0].replace(/\/+$/, '') || '/';
+              if (urlPath === '/blog' || /^\/blog\/[^/]+$/.test(urlPath)) {
+                const prerendered = path.join(__dirname, 'dist', urlPath.slice(1), 'index.html');
+                if (fs.existsSync(prerendered)) {
+                  req.url = '/index.html';
+                }
+              }
+              next();
+            },
+          });
+        }
+        return middlewares;
+      },
+      // Serve gallery and tile-pack JSON from source `public/` during dev (no rebuild wait).
+      static: [
+        {
+          directory: path.join(__dirname, 'public', 'tile-pack-gallery'),
+          publicPath: '/tile-pack-gallery',
+          watch: true,
+        },
+        {
+          directory: path.join(__dirname, 'public', 'tile-packs'),
+          publicPath: '/tile-packs',
+          watch: true,
+        },
+        path.join(__dirname, 'dist'),
+      ],
       compress: true,
       port: 4000,
       historyApiFallback: true,
     },
     plugins: [
       // Load .env and inject process.env.COGNITO_* (and any other process.env.X used in code) into the bundle
-      new Dotenv({ path: path.resolve(__dirname, '.env'), systemvars: true }),
+      new Dotenv({
+        path: path.resolve(__dirname, '.env'),
+        systemvars: true,
+        // CI/checkout often has no local `.env`; don't fail or spam warnings for a file we gitignore.
+        silent: true,
+      }),
       new webpack.EnvironmentPlugin({
         'process.env.NODE_ENV': process.env.NODE_ENV ?? 'development',
+        'process.env.CI': process.env.CI ?? 'false',
+        'process.env.GRIDSMITH_TEST_HOOK': process.env.GRIDSMITH_TEST_HOOK ?? 'false',
+        'process.env.GRIDSMITH_API_BASE_URL': process.env.GRIDSMITH_API_BASE_URL ?? '',
       }),
       ...(process.env.NODE_ENV === 'production' ? [
         new WorkboxPlugin.GenerateSW({
@@ -202,6 +254,7 @@ const config = [
     plugins: [
       new webpack.EnvironmentPlugin({
         'process.env.NODE_ENV': process.env.NODE_ENV ?? 'development',
+        'process.env.CI': process.env.CI ?? 'false',
         'process.env.COGNITO_DOMAIN': process.env.COGNITO_DOMAIN ?? '',
         'process.env.COGNITO_REGION': process.env.COGNITO_REGION ?? '',
         'process.env.COGNITO_CLIENT_ID': process.env.COGNITO_CLIENT_ID ?? '',

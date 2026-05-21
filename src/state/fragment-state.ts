@@ -46,6 +46,12 @@ export function encodeStateParamsAsFragment(state: State) {
   // return encodeURIComponent(json);
   return compressString(json);
 }
+/** Hash targets used for in-document navigation (Profile sections, etc.) — not OpenSCAD fragment state. */
+function isSpaInPageFragment(serialized: string): boolean {
+  if (serialized.length > 128) return false;
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(serialized);
+}
+
 export async function readStateFromFragment(): Promise<State | null> {
   if (window.location.hash.startsWith('#') && window.location.hash.length > 1) {
     try {
@@ -64,6 +70,8 @@ export async function readStateFromFragment(): Promise<State | null> {
         const url = decodeURIComponent(serialized.substring('url='.length));
         const path = '/' + new URL(url).pathname.split('/').pop();
         return createInitialState(null, {path, url});
+      } else if (isSpaInPageFragment(serialized)) {
+        return null;
       }
       let obj;
       try {

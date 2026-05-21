@@ -1,0 +1,34 @@
+import type { BlogPost, BlogPostMeta } from './types.ts';
+import { getAllPosts, getPostBySlug, getPostBySlugIncludingDraft } from './registry.ts';
+import { isDraftPost } from './publish.ts';
+
+export type BlogPostListItem = BlogPostMeta & { slug: string };
+
+export function getAllPostsMeta(): BlogPostListItem[] {
+  return getAllPosts().map(({ slug, meta }) => ({ slug, ...meta }));
+}
+
+/** Featured = newest non-draft; remaining posts (including newer drafts in dev) in `rest`. */
+export function getBlogIndexPosts(): {
+  featured: BlogPostListItem | undefined;
+  rest: BlogPostListItem[];
+} {
+  const posts = getAllPostsMeta();
+  const featured = posts.find((p) => !isDraftPost(p));
+  if (!featured) {
+    return { featured: undefined, rest: posts };
+  }
+  return {
+    featured,
+    rest: posts.filter((p) => p.slug !== featured.slug),
+  };
+}
+
+/** Up to `limit` published posts excluding `excludeSlug`, newest first. */
+export function getRecentPosts(excludeSlug?: string, limit = 3): BlogPostListItem[] {
+  return getAllPostsMeta()
+    .filter((p) => p.slug !== excludeSlug)
+    .slice(0, limit);
+}
+
+export { getAllPosts, getPostBySlug, getPostBySlugIncludingDraft };

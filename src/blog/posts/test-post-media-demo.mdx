@@ -1,0 +1,66 @@
+export const meta = {
+  title: 'Test Post — Media & MDX Syntax',
+  date: '2026-05-10',
+  draft: true,
+  excerpt:
+    'A reference post showing markdown images, headings, lists, and fenced code blocks in build log MDX files.',
+  heroImage: '/gs_hero_final.png',
+  heroImageAlt: 'Hero image for the media and MDX syntax demo post',
+};
+
+## Why this post exists
+
+Use this as a scratch post while composing real build log entries. Everything below the `export const meta` block is **MDX body** — mostly **standard Markdown**, plus optional React components we expose (e.g. `<BlogSocialShare />`).
+
+## Images (Markdown)
+
+Put images on their own line with Markdown image syntax. Paths are usually root-absolute under `public/`:
+
+```md
+![Alt text shown as caption](/path-under-public.png)
+```
+
+Example inline in the story:
+
+![Workbench with tiles and printer in progress](/walls_combined_close.png)
+
+A second image later in the article:
+
+![Top-down terrain spread](/gs_hero_final.png)
+
+The `img` element is styled as a full-width figure with an optional caption from the alt text.
+
+## Lists and emphasis
+
+- Bullets work as usual
+- **Bold** and _italic_ too
+- [Links](https://gridsmith.io) open in a new tab
+
+1. Numbered lists
+2. Are also supported
+
+## Code blocks (fenced)
+
+Use triple backticks with an optional language tag for syntax highlighting (highlighting is basic; styling is theme-aware):
+
+```openscad
+// Example OpenSCAD snippet
+cube([10, 10, 2]);
+```
+
+```javascript
+// Example JS — e.g. a note about the tile builder
+const resolution = 128;
+console.log(`Rendering at ${resolution}`);
+```
+
+Plain fenced block without a language:
+
+```
+GridSmith build log — plain preformatted text
+Multiple lines stay monospace
+```
+
+## Optional component
+
+You can drop the share row inside the body (it also appears automatically at the bottom of every post):

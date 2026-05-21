@@ -7,6 +7,7 @@
   "dependencies": {
     "@gltf-transform/core": "^4.1.1",
     "@gltf-transform/extensions": "^4.1.1",
+    "@mdx-js/react": "^3.1.1",
     "@monaco-editor/loader": "^1.4.0",
     "@monaco-editor/react": "^4.6.0",
     "@testing-library/jest-dom": "^5.17.0",
@@ -29,16 +30,28 @@
   },
   "scripts": {
     "test:e2e": "jest",
-    "start:development": "dotenv -e .env -- npx webpack serve --mode=development",
+    "test:e2e:headed": "PUPPETEER_HEADED=1 jest",
+    "test:e2e:watch": "PUPPETEER_SKIP_SERVER=1 jest --watchAll",
+    "test:e2e:watch:headed": "PUPPETEER_SKIP_SERVER=1 PUPPETEER_HEADED=1 jest --watchAll",
+    "test:e2e:watch:prod": "NODE_ENV=production PUPPETEER_SKIP_SERVER=1 jest --watchAll",
+    "test:e2e:external:dev": "PUPPETEER_SKIP_SERVER=1 jest",
+    "test:e2e:external:prod": "NODE_ENV=production PUPPETEER_SKIP_SERVER=1 jest",
+    "start:development": "sh -c 'if [ -f .env ]; then exec dotenv -e .env -- npx webpack serve --mode=development; else exec npx webpack serve --mode=development; fi'",
     "start:production": "NODE_ENV=production npm run build && npx serve -s dist -l 3000",
     "start:test": "npm run start:development",
     "start": "npm run start:development",
+    "generate:sitemap": "node scripts/generate-sitemap.mjs",
+    "prerender:blog": "node scripts/prerender-blog.mjs",
+    "prebuild": "npm run generate:sitemap",
     "build": "NODE_ENV=production webpack --mode=production",
+    "postbuild": "npm run prerender:blog",
     "build:libs": "LIBS_BUILD_MODE=all webpack --config webpack.libs.config.js",
     "build:libs:clean": "LIBS_BUILD_MODE=clean webpack --config webpack.libs.config.js",
     "build:libs:wasm": "LIBS_BUILD_MODE=wasm webpack --config webpack.libs.config.js",
     "build:libs:fonts": "LIBS_BUILD_MODE=fonts webpack --config webpack.libs.config.js",
     "build:all": "npm run build:libs && npm run build",
+    "build:all:e2e": "GRIDSMITH_TEST_HOOK=true npm run build:all",
+    "start:production:e2e": "GRIDSMITH_TEST_HOOK=true npm run build && npx serve -s dist -l 3000",
     "deploy:api": "bash ./scripts/deploy-api.sh",
     "deploy:api:dev": "bash ./scripts/deploy-api.sh --stage dev",
     "deploy:api:staging": "bash ./scripts/deploy-api.sh --stage staging",
@@ -63,9 +76,10 @@
     ]
   },
   "engines": {
-    "node": ">=18.12.0"
+    "node": "24.x"
   },
   "devDependencies": {
+    "@mdx-js/loader": "^3.1.1",
     "@types/chroma-js": "^2.4.5",
     "@types/debug": "^4.1.12",
     "@types/filesystem": "^0.0.36",

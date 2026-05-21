@@ -1,30 +1,44 @@
 ---
 name: Tile pack commerce v1
-overview: Stripe one-time Tile Pack purchases (catalog + order history from Stripe API only), S3 STL delivery via logged-in download API, shop at /tiles and /tile-details, in-app Cognito-gated admin, and persistence only when a feature needs it. **Storefront UI** (grid, rich product detail, catalog module with optional `whatYouGet`) is in-repo and **shipped to prod**; next is Lambda/Stripe behind the same components.
+overview: >-
+  Stripe one-time tile packs; Stripe is the commercial source of truth (no order mirror DB).
+  **Shipped:** SAM/API Gateway Lambdas (`GET /api/catalog/tile-packs`, `POST /api/billing/checkout-session`, `GET /api/capabilities/me` with `ownedPurchases[]` / `purchasedAt`, `POST /api/downloads/tile-pack` with JWT + Stripe ownership check + presigned S3 GET), SPA live catalog, cart → Checkout, Profile owned packs + pack downloads when deployed; Tile Builder **Med/High (128/256):** users can **preview** at any resolution; **full render** and **STL export** are blocked in the client `Model` unless capabilities + catalog show an owned pack with `tile_builder_features` (Stripe Product metadata) for the active SCAD `tile_set`. Upsell modals explain purchase; pack STL downloads remain server-gated. Cognito↔Stripe via **Customer `metadata.cognito_sub`** + Customer Search (no Cognito `custom:stripe_customer_id` for v1).
+  **Deploy:** Local `npm run deploy:api:*` anytime. **CI:** `.github/workflows/api-deploy.yml` — **prod** API on **path-filtered push to `main`** (`infra/api/**`, `scripts/deploy-api.sh`, or that workflow file); **`workflow_dispatch`** for manual **dev** / staging / prod. Requires GitHub Environment secrets + OIDC per stage (`api-deploy-pipeline` todo until verified).
+  **Still open:** Telemetry + Dynamo only when that feature ships.
+  **Marketing landing:** Home (`/`) and About (`/about`) share [`src/components/home/marketing-blocks.tsx`](../../src/components/home/marketing-blocks.tsx) (PrimeReact, alternating light/dark/black bands, CTAs to `/tiles`, `/tile-builder`, Etsy).
 todos:
   - id: storefront-ui-placeholder
     content: "/tiles + /tile-details/:slug with local catalog (incl. optional whatYouGet), two-column detail w/ independent scroll on lg, coming-soon modal, prod deploy—no Stripe yet"
     status: completed
   - id: lambda-stripe-apis
-    content: "Add API Gateway + Lambda: catalog from Stripe, checkout-session (JWT), capabilities/me via Stripe Customer + purchase history (no order mirror DB)"
+    content: "SAM + API Gateway in-repo: catalog, checkout-session (JWT; multi-line lineItems), capabilities/me. Local/manual: npm run deploy:api:dev|staging|prod. CI: path-filtered push to main → prod API (see .github/workflows/api-deploy.yml); finish GitHub prod env secrets + OIDC (api-deploy-pipeline todo)."
+    status: completed
+  - id: api-deploy-pipeline
+    content: "GitHub Actions: prod API on main push (path-filtered infra/api); manual workflow_dispatch for dev/staging/prod. Wire GitHub prod environment secrets + OIDC; optional branch protection."
     status: pending
   - id: catalog-wire-live
     content: Replace placeholder catalog with GET /api/catalog/tile-packs; keep the same UI components and routing
-    status: pending
+    status: completed
   - id: capabilities-api
-    content: Implement GET /api/capabilities/me (JWT) and POST /api/billing/checkout-session; persist Stripe customer id on Cognito user (custom attribute) at first checkout if needed
-    status: pending
+    content: "GET /api/capabilities/me (JWT) + POST /api/billing/checkout-session shipped; Stripe Customer keyed by metadata cognito_sub (search), not Cognito custom attribute"
+    status: completed
+  - id: tile-pack-download-api
+    content: "POST /api/downloads/tile-pack (JWT); Stripe purchase verification; presigned S3 GET from Product metadata pack_download_s3_key; Profile download buttons"
+    status: completed
   - id: builder-gating-downloads
-    content: Tile Builder gates from capabilities API; POST /api/downloads/... validates JWT + live Stripe entitlement then returns short-lived S3 presigned URL
-    status: pending
+    content: "Tile Builder Med/High: preview allowed for all signed-in users; full render + export blocked in Model unless owned pack + tile_builder_features for tile_set; upsell UI; pack downloads via POST /api/downloads/tile-pack (server)"
+    status: completed
   - id: telemetry-persistence
     content: "When implementing render telemetry: add chosen store (likely DynamoDB in same region as Lambda) and POST /api/telemetry/render—do not create tables before this"
     status: pending
-  - id: admin-in-app
-    content: /admin lookup UI; backend uses admin JWT + Stripe API (Dashboard parity for read paths) without mirroring orders locally
-    status: pending
   - id: marketing-opt-in-cognito
     content: "Cognito custom:marketing_opt_in; Profile page; UpdateUserAttributes + InitiateAuth refresh; OAuth PKCE/redirect fixes; aws.cognito.signin.user.admin scope"
+    status: completed
+  - id: stripe-account-checkout-domain
+    content: "Stripe account active; custom Hosted Checkout domain checkout.gridsmith.io configured in Dashboard"
+    status: completed
+  - id: marketing-landing-pages
+    content: "Home + About v1 landing (marketing-blocks.tsx, alternating bands, CTAs to /tiles /tile-builder / Etsy); public/index.html default meta"
     status: completed
 isProject: false
 ---
@@ -35,10 +49,10 @@ Repo copy of the GridSmith **Tile pack commerce v1** plan (version-controlled). 
 
 ## Decisions locked in
 
-- **Admin**: same app, `/admin/*` routes gated by a **Cognito group** (e.g. `admins`), with the same enforcement in Lambda.
 - **Checkout**: **signed-in only**; link purchases to users via **Cognito `sub`** and **Stripe Customer** (see below).
-- **Products and orders**: **Stripe is the system of record**—no local mirror tables for catalog, orders, line items, or entitlements. **Capabilities and admin views** resolve ownership by calling the **Stripe API** at request time (with sensible caching later if needed).
+- **Products and orders**: **Stripe is the system of record**—no local mirror tables for catalog, orders, line items, or entitlements. **Capabilities** resolve ownership by calling the **Stripe API** at request time (with sensible caching later if needed).
 - **Persistence**: **Do not create database tables until a feature actually needs them** (e.g. telemetry ingestion). No stub schemas for future saves/Room Builder until those features are implemented.
+- **Stripe (Dashboard):** Account provisioned; **custom Hosted Checkout domain** **`checkout.gridsmith.io`**. When wiring `POST /api/billing/checkout-session`, align success/cancel URLs and customer-facing checkout links with this domain.
 
 ## Relationship to the old “Stripe subscriptions” plan
 
@@ -54,8 +68,8 @@ Keep: **API Gateway + Lambda**, **`GET /api/capabilities/me`**, **non-PII `analy
 
 You typically need **one stable association**, not a full order database:
 
-- **Recommended**: store **`stripe_customer_id`** in a **Cognito custom attribute** (e.g. `custom:stripe_customer_id`), set on first checkout/session creation. This is an **opaque identifier**, not a user-held secret and not a password.
-- **Alternative**: put `cognito_sub` on **Stripe Customer `metadata`** and use **Stripe Customer Search** to resolve `sub` → customer when the custom attribute is empty (slightly more API work on cold start).
+- **Implemented (v1):** put **`cognito_sub`** on **Stripe Customer `metadata`** and use **Stripe Customer Search** in Lambdas (`checkout-session`, `capabilities`) to resolve `sub` → customer.
+- **Optional later:** store **`stripe_customer_id`** in a **Cognito custom attribute** (e.g. `custom:stripe_customer_id`) to avoid search on hot paths—only if latency or Stripe search limits become an issue.
 
 **What you do *not* need to store per user for v1:**
 
@@ -133,6 +147,24 @@ Goal: **local webpack / Vite never “accidentally” calls prod API Gateway or 
 - **Operational guardrails**
   - Restrict who can deploy to prod; use **IAM** so dev laptops cannot invoke **prod** Lambdas by default. API keys in docs are **dev** only.
 
+## API deployment process (AWS)
+
+Goal: deployments are repeatable and auditable (no copy/paste console setup), with API release flow decoupled from static web deploys.
+
+- **Separate pipelines**
+  - Keep **web deploy** and **API deploy** as separate workflows/jobs. Pushes to `main` can continue deploying the web app, while API deploys run from a dedicated workflow.
+- **GitHub Actions (`/.github/workflows/api-deploy.yml`)**
+  - **Push to `main`** touching `infra/api/**`, `scripts/deploy-api.sh`, or the workflow file → deploy API to **prod** (uses GitHub **prod** environment secrets: `AWS_ROLE_TO_ASSUME_PROD`, Stripe/Cognito/origin, etc.). Does **not** run when only SPA/src changes land on `main`.
+  - **Manual** `workflow_dispatch` → pick **dev**, **staging**, or **prod** (use for dev API deploys; staging optional).
+- **Prod API deploy control**
+  - Automated on the path-filtered `main` pushes above once secrets and OIDC trust are configured. Re-run or hotfix still available via `workflow_dispatch` to **prod**.
+- **Stage-specific config/secrets**
+  - CI injects stage-specific env vars/secrets (Stripe key, API URLs, S3 bucket, Cognito IDs). Non-prod stages use Stripe test keys only; prod uses live keys only.
+- **Local fallback**
+  - Keep `npm run deploy:api:*` for dev/prod when you want to deploy outside CI. **Prod:** after merge to `main`, GitHub Actions deploys the API automatically **only when** `infra/api/**`, `scripts/deploy-api.sh`, or the API workflow file changed (same path filter as the workflow); if prerequisites are missing, the job skips and logs why.
+- **Infra as code only**
+  - API Gateway routes, Lambda config, IAM roles, and stage outputs live in CDK/SAM/Terraform (or equivalent) committed to git; no one-off console-only changes.
+
 ## Routes and UI (frontend)
 
 - **Phase 1 (UI — done in repo):**
@@ -141,15 +173,24 @@ Goal: **local webpack / Vite never “accidentally” calls prod API Gateway or 
   - **Nested routes:** Webpack `publicPath: '/'`, root-absolute `public/index.html` asset tags, and resolved `url()` for PrimeIcons so WASM/fonts/scripts do not 404 under `/tile-details/...`.
   - **Footer:** **`SiteFooter`** stays global under `<main>` only (not duplicated inside the scroll column); users finish the in-column scroll, then scroll the document to reach the footer.
   - **Prod:** Storefront deployed so visitors see `/tiles` and `/tile-details`; commerce APIs remain future work.
-- **Phase 2:** Swap the data source to `GET /api/catalog/tile-packs` without redesigning the layout.
+- **Phase 2:** Swap the data source to `GET /api/catalog/tile-packs` without redesigning the layout — **done** when `GRIDSMITH_API_BASE_URL` is configured (`src/data/tilePackCatalog.ts`); placeholder enrichment remains for select slugs.
+- **Phase 2b (checkout + ownership):** Client cart (`TileCartContext` + `/cart`), Stripe Checkout via `POST /api/billing/checkout-session`, Profile **Owned Packs** from `GET /api/capabilities/me` including optional **Purchased** date from `ownedPurchases` (requires deployed capabilities Lambda).
 - [`App.tsx`](../../src/components/App.tsx): routing for both phases; stable id in the detail URL (slug or future `product_id`).
 - **Cart**: client-only line items → one Checkout Session (after backend exists).
 - [`AuthContext.tsx`](../../src/components/AuthContext.tsx): require sign-in for checkout and download.
-- [`TileBuilderPanel.tsx`](../../src/components/TileBuilderPanel.tsx) / [`App.tsx`](../../src/components/App.tsx): gates driven by **`/api/capabilities/me`** (backed by Stripe, not a local entitlements table).
+- [`TileBuilderPanel.tsx`](../../src/components/TileBuilderPanel.tsx) / [`App.tsx`](../../src/components/App.tsx): **Med/High policy (shipped):** `GET /api/capabilities/me` + catalog (`tileBuilderFeatures` from Stripe Product metadata) drive `TileCartContext.tileBuilderProEntitledForTileSet(tile_set)`. **Preview** (`Model.render({ isPreview: true })`) always runs at 128/256 so users can evaluate quality. **Full render** and **`Model.export()`** return early when Med/High is selected and the user does not own a matching pack; **Footer** / **ExportButton** / F6–F7 open the tile-builder upsell instead of calling render/export. Choosing Med/High in the customizer can still show the informational dialog; resolution is not clamped back to Low. **Init order:** `Model.init()` awaits `processSource()`, which **awaits `checkSyntax()`** before returning, and the builder shell **awaits `init()`** before the first tile preview so the footer progress bar does not stay indeterminate after preview (checker vs preview overlap).
 
-## Admin (in-app)
+## Marketing landing pages (home & about)
 
-- `/admin/users` (or similar): **Cognito group** on JWT; Lambda calls **Stripe** (and Cognito Admin API if needed) to show customer + payment history—still **no local order mirror** unless you add it later for a concrete reason.
+**Shipped in repo** (same branch as storefront work):
+
+- **[`src/components/home/marketing-blocks.tsx`](../../src/components/home/marketing-blocks.tsx):** Reusable landing primitives — `MarketingHero`, `MarketingSection`, `MarketingSplit`, `MarketingFeatureGrid`, `MarketingTextSection`, `MarketingCtaBand`, `MarketingButton` — with fixed **light** (`#efefef`), **dark** (About-style `#111` mix), and **black** (`#121212`) band tokens (independent of app light/dark theme).
+- **[`HomePage.tsx`](../../src/components/HomePage.tsx):** v1 copy (“Your First Terrain System”); full-bleed hero; feature grid; beginner / Tavern Core / build-log splits; black footer CTA → `/tiles` and Etsy printed sets.
+- **[`AboutPage.tsx`](../../src/components/AboutPage.tsx):** Hero + five alternating text sections + footer CTA → `/tiles` and `/tile-builder`.
+- **[`src/index.css`](../../src/index.css):** `.home-landing-*` band, hero, feature grid, and CTA styles.
+- **`public/index.html`:** Default document title and meta description aligned with v1 positioning.
+
+**Follow-ups (not blocking checkout):** final marketing image assets; optional e2e for marketing routes. Build log ships on **`feature-blog`** at **`/blog`** (see [`blog_build_log_v1.md`](blog_build_log_v1.md)).
 
 ## Marketing newsletter opt-in (store in Cognito)
 
@@ -173,15 +214,18 @@ Goal: **local webpack / Vite never “accidentally” calls prod API Gateway or 
 ## Suggested implementation order
 
 1. ~~**Storefront UI (placeholders):** `/tiles` grid + `/tile-details` + placeholder content + prod deploy of the shell~~ **Done (see Phase 1 above).**
-2. **Lambda + API Gateway:** Stripe-backed **catalog** endpoint first; then **checkout-session** and **capabilities/me** (Cognito `custom:stripe_customer_id` when needed).
-3. **Wire catalog:** replace placeholder module with `GET /api/catalog/tile-packs` in the existing components.
-4. **Cart → checkout** in the UI once `POST /api/billing/checkout-session` exists.
-5. **Download API** + S3 presign + Stripe purchase verification.
-6. Tile Builder wired to capabilities.
-7. **Admin** read paths (Stripe + Cognito).
+2. **API deploy pipeline:** GitHub workflow exists (**prod** API on **`main`** push when `infra/api/**` or related paths change; **`workflow_dispatch`** for **dev** / staging / prod). Finish wiring **GitHub Environment `prod`** (OIDC `AWS_ROLE_TO_ASSUME_PROD`, Stripe secret ARN, Cognito ids, `PUBLIC_APP_ORIGIN`). Until prod secrets work, use local `npm run deploy:api:prod` after merges that touch the API.
+3. ~~**Lambda + API Gateway:** Stripe-backed **catalog**; **checkout-session**; **capabilities/me** (Customer Search on `metadata.cognito_sub`).~~ **Done in repo**; must **deploy** for each environment.
+4. ~~**Wire catalog:** `GET /api/catalog/tile-packs` in the existing components.~~ **Done.**
+5. ~~**Cart → checkout** in the UI (`POST /api/billing/checkout-session`, multi-line supported).~~ **Done.**
+6. ~~**Download API** + S3 presign + Stripe purchase verification.~~ **Done in repo** (`POST /api/downloads/tile-pack`, private per-stage bucket, `pack_download_s3_key`); **deploy** with the rest of the API.
+7. ~~Tile Builder wired to capabilities (Med/High + `tile_builder_features` on Stripe Products).~~ **Done in repo** (preview at Med/High for everyone; render/export gated; see **Routes and UI** above); deploy catalog + capabilities APIs and set Product metadata.
 8. **Telemetry**: add **DynamoDB** (or chosen store) **when** implementing `POST /api/telemetry/render`—not before.
 
 ## Handoff for a new agent
 
-- **Storefront UI placeholder** is complete; start with todo **`lambda-stripe-apis`** (or **`catalog-wire-live`** after APIs exist).
+- **Storefront, live catalog fetch, cart/checkout, capabilities-backed Profile (owned packs + purchase dates + pack file downloads via presigned S3)** are in place; **deploy the API** after changing `infra/api/`.
+- **Marketing landing:** Home and About use shared **`marketing-blocks`** (see **Marketing landing pages** above); storefront CTAs point at **`/tiles`**, builder at **`/tile-builder`**, printed sets at Etsy.
+- **Tile Builder:** Stripe-backed **capabilities** gate **final render + export** at Med/High; **previews** at Med/High are allowed; informational / upsell dialogs in the SPA.
+- **Next concrete work:** **`api-deploy-pipeline`** (CI), then **telemetry** when you implement `POST /api/telemetry/render`; marketing polish (final home/about art). **Blog v1** is engineering-complete — see **`docs/plans/blog_build_log_v1.md`** (content authoring is separate).
 - Point the agent at this file: **`docs/plans/tile_pack_commerce_v1.md`**.

@@ -4,7 +4,7 @@ import { checkSyntax, render, RenderArgs, RenderOutput } from "../runner/actions
 import { MultiLayoutComponentId, SingleLayoutComponentId, State, StatePersister } from "./app-state.ts";
 import { VALID_EXPORT_FORMATS_2D, VALID_EXPORT_FORMATS_3D } from './formats.ts';
 import { bubbleUpDeepMutations } from "./deep-mutate.ts";
-import { downloadUrl, fetchSource, formatBytes, formatMillis, readFileAsDataURL } from '../utils.ts'
+import { downloadUrl, fetchSource, formatBytes, formatMillis, isTileBuilderProTierResolution, readFileAsDataURL } from '../utils.ts'
 
 import JSZip from 'jszip';
 import { ProcessStreams } from "../runner/openscad-runner.ts";
@@ -20,13 +20,29 @@ const githubRx = /^https:\/\/github.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/;
 const TILE_BUILDER_SCAD_PATH = '/tile_builder.scad';
 
 export class Model {
-  constructor(private fs: FS, public state: State, private setStateCallback?: (state: State) => void, 
-    private statePersister?: StatePersister) {
+  constructor(
+    private fs: FS,
+    public state: State,
+    private setStateCallback?: (state: State) => void,
+    private statePersister?: StatePersister,
+    /** When set, Med/High tile builder resolution requires this to return true for the current `tile_set` SCAD var. */
+    private getTileBuilderProEntitled?: (tileSet: string) => boolean,
+  ) {
+    // Expose the active model for Puppeteer smoke tests. Omitted from production unless the bundle
+    // was built with `CI=true` (GitHub Actions) or `GRIDSMITH_TEST_HOOK=true` (local prod e2e).
+    if (
+      typeof window !== 'undefined' &&
+      (process.env.CI === 'true' ||
+        process.env.NODE_ENV !== 'production' ||
+        process.env.GRIDSMITH_TEST_HOOK === 'true')
+    ) {
+      (window as any).__GRIDSMITH_TEST__ = { model: this };
+    }
   }
   
-  init() {
+  async init(): Promise<void> {
     if (!this.state.output && !this.state.lastCheckerRun && !this.state.previewing && !this.state.checkingSyntax && !this.state.rendering) {
-      this.processSource();
+      await this.processSource();
     }
   }
 
@@ -182,7 +198,9 @@ export class Model {
     }
     if (this.source.trim() !== '') {
       if (this.state.params.activePath.endsWith('.scad')) {
-        this.checkSyntax();
+        // Await so initial preview (e.g. tile builder) does not overlap checkingSyntax — the footer
+        // progress bar stays on until both would otherwise finish independently.
+        await this.checkSyntax();
       }
       if (this.state.params.activePath !== TILE_BUILDER_SCAD_PATH) {
         this.render({isPreview: true, now: false});
@@ -204,7 +222,10 @@ export class Model {
         s.checkingSyntax = false;
       });
     } catch (err) {
-      console.error('Error while checking syntax:', err)
+      console.error('Error while checking syntax:', err);
+      this.mutate((s) => {
+        s.checkingSyntax = false;
+      });
     }
   }
 
@@ -259,7 +280,20 @@ export class Model {
     return this.buildBaseplateExportName();
   }
 
+  /** Med/High (128/256) in tile builder without owning the pack: blocks full render and export; previews still run. */
+  private tileBuilderMedHighBlocked(): boolean {
+    if (this.state.params.activePath !== TILE_BUILDER_SCAD_PATH) return false;
+    const res = this.state.params.vars?.resolution;
+    if (!isTileBuilderProTierResolution(res)) return false;
+    const raw = this.state.params.vars?.tile_set;
+    const tileSet = typeof raw === 'string' && raw.trim() ? raw.trim() : 'tavern';
+    return this.getTileBuilderProEntitled ? !this.getTileBuilderProEntitled(tileSet) : true;
+  }
+
   async export() {
+    if (this.tileBuilderMedHighBlocked()) {
+      return;
+    }
     const exportFormat = this.state.is2D ? this.state.params.exportFormat2D : this.state.params.exportFormat3D;
     if (this.state.output) {
       const normalPassThrough = 
@@ -395,6 +429,11 @@ export class Model {
     // console.log(JSON.stringify(this.state, null, 2));
     mountArchives ??= true;
     retryInOtherDim ??= true;
+
+    // Med/High without owning the pack: preview is allowed; full render and export stay blocked.
+    if (!isPreview && this.tileBuilderMedHighBlocked()) {
+      return;
+    }
 
     if (!isPreview) {
       const v = this.state.params.vars ?? {};

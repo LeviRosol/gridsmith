@@ -1,5 +1,11 @@
-import React, { CSSProperties, useContext, useEffect, useState } from 'react';
+import React, { CSSProperties, useContext, useEffect, useRef, useState } from 'react';
 import { ModelContext } from './contexts.ts';
+import { useTileCart } from '../cart/TileCartContext';
+import { isTileBuilderProTierResolution } from '../utils.ts';
+import { fetchTilePackContent } from '../data/tilePackContent';
+import { loadTilePackCatalog } from '../data/tilePackCatalog';
+import type { TileSetCatalogItem } from '../data/placeholderTileSets';
+import { tileSetVarForCatalogSlug } from '../tileBuilder/tileBuilderProAccess';
 import { Fieldset } from 'primereact/fieldset';
 import { Accordion, AccordionTab } from 'primereact/accordion';
 import { Dropdown } from 'primereact/dropdown';
@@ -8,7 +14,20 @@ import { Button } from 'primereact/button';
 import { SelectButton } from 'primereact/selectbutton';
 import { Dialog } from 'primereact/dialog';
 
-const TILE_SET_OPTIONS = [{ label: 'Tavern', value: 'tavern' }];
+type TileSetDropdownOption = { label: string; value: string };
+
+/** True when tile builder has floor or at least one wall segment to preview. */
+function tileBuilderCanAutoPreview(vars: { [k: string]: unknown } | undefined): boolean {
+  const v = vars ?? {};
+  const wallsAllowed = v.wall_profile != null && v.wall_profile !== 'none';
+  const anyWall =
+    wallsAllowed &&
+    (v.use_north_wall === true ||
+      v.use_east_wall === true ||
+      v.use_south_wall === true ||
+      v.use_west_wall === true);
+  return v.use_floor === true || anyWall;
+}
 
 const RESOLUTION_OPTIONS = [
   { label: 'Low', value: 64 },
@@ -91,8 +110,8 @@ const DEFAULTS: {
   resolution: 64,
   use_floor: true,
   floor_type: 'floor',
-  wall_profile: 'none',
-  use_north_wall: false,
+  wall_profile: 'flat',
+  use_north_wall: true,
   north_wall_type: 'wall',
   use_east_wall: false,
   east_wall_type: 'wall',
@@ -114,13 +133,23 @@ function getVar<K extends TileVarKey>(vars: { [k: string]: any } | undefined, ke
 export default function TileBuilderPanel({ className, style }: { className?: string; style?: CSSProperties }) {
   const model = useContext(ModelContext);
   if (!model) throw new Error('No model');
-  const [activeTabIndex, setActiveTabIndex] = useState<number | number[]>(0);
+  const tileCart = useTileCart();
+  const [activeTabIndex, setActiveTabIndex] = useState<number[]>([0]);
   const [proTierResolutionDialogVisible, setProTierResolutionDialogVisible] = useState(false);
+  /** Tile sets offered in the builder: catalog slug → SCAD `tile_set`, gated by `builderEnabled` in `public/tile-packs/<slug>.json`. */
+  const [tileSetDropdownOptions, setTileSetDropdownOptions] = useState<TileSetDropdownOption[]>([
+    { label: 'Tavern', value: 'tavern' },
+  ]);
+  const [tileSetDropdownLoaded, setTileSetDropdownLoaded] = useState(false);
+  /** Tracks entitlement-ready so we can run one auto-preview after Stripe/catalog resolve (Med/High no longer blocked). */
+  const lastEntitlementReadyRef = useRef<boolean | null>(null);
+  /** Per SCAD `tile_set`: auto-bump resolution 64 → 256 once when user becomes entitled for that set. */
+  const defaultHighAppliedRef = useRef<Record<string, boolean>>({});
 
   const state = model.state;
   const vars = state.params.vars ?? {};
+  const tileSetKey = getVar(vars, 'tile_set');
   const wallProfile = getVar(vars, 'wall_profile');
-  const useFloorEnabled = getVar(vars, 'use_floor') === true;
   const useNorthWallEnabled = getVar(vars, 'use_north_wall') === true;
   const useEastWallEnabled = getVar(vars, 'use_east_wall') === true;
   const useSouthWallEnabled = getVar(vars, 'use_south_wall') === true;
@@ -128,11 +157,63 @@ export default function TileBuilderPanel({ className, style }: { className?: str
   const wallsProfileActive = wallProfile !== 'none';
   const anyWallEnabled =
     useNorthWallEnabled || useEastWallEnabled || useSouthWallEnabled || useWestWallEnabled;
-  const nothingToPreview = !useFloorEnabled && (!wallsProfileActive || !anyWallEnabled);
+  const nothingToPreview =
+    getVar(vars, 'use_floor') !== true && (!wallsProfileActive || !anyWallEnabled);
 
   const setVar = (key: TileVarKey, value: unknown) => {
     model.setVar(key, value);
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const catalog = await loadTilePackCatalog();
+      if (cancelled) return;
+      const mapped = catalog
+        .map((item: TileSetCatalogItem) => {
+          const tileVar = tileSetVarForCatalogSlug(item.slug);
+          return tileVar ? { item, tileVar } : null;
+        })
+        .filter((x): x is { item: TileSetCatalogItem; tileVar: string } => x != null);
+
+      const resolved = await Promise.all(
+        mapped.map(async ({ item, tileVar }) => {
+          const content = await fetchTilePackContent(item.slug);
+          if (content?.builderEnabled !== true) return null;
+          const displayName = content.builderTileSetName?.trim();
+          const label = displayName && displayName.length > 0 ? displayName : item.name;
+          return { label, value: tileVar, order: item.order };
+        }),
+      );
+      const next = resolved
+        .filter((x): x is { label: string; value: string; order: number } => x != null)
+        .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label))
+        .map(({ label, value }) => ({ label, value }));
+      if (cancelled) return;
+      setTileSetDropdownOptions(next.length > 0 ? next : [{ label: 'Tavern', value: 'tavern' }]);
+      setTileSetDropdownLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!tileSetDropdownLoaded) return;
+    const cur = getVar(vars, 'tile_set');
+    if (tileSetDropdownOptions.some((o) => o.value === cur)) return;
+    if (tileSetDropdownOptions.length > 0) {
+      model.setVar('tile_set', tileSetDropdownOptions[0]!.value);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tileSetDropdownLoaded, tileSetDropdownOptions, vars.tile_set, model]);
+
+  // Floor is always on in the builder (Show Floor control removed).
+  useEffect(() => {
+    if (getVar(vars, 'use_floor') !== true) {
+      model.setVar('use_floor', true);
+    }
+  }, [model, vars.use_floor]);
 
   useEffect(() => {
     if (wallProfile !== 'curved') return;
@@ -145,6 +226,45 @@ export default function TileBuilderPanel({ className, style }: { className?: str
       if (!useNorthWallEnabled) setVar('use_north_wall', true);
     }
   }, [wallProfile, useNorthWallEnabled, useEastWallEnabled, vars.curved_wall_mirror]);
+
+  // Default purchasers to High (256) once per tile set while resolution is still Low (64).
+  useEffect(() => {
+    if (!tileCart.tileBuilderProEntitlementReady) return;
+    if (!tileCart.tileBuilderProEntitledForTileSet(tileSetKey)) return;
+    if (getVar(vars, 'resolution') !== 64) return;
+    if (defaultHighAppliedRef.current[tileSetKey]) return;
+    defaultHighAppliedRef.current[tileSetKey] = true;
+    model.setVar('resolution', 256);
+    if (tileBuilderCanAutoPreview(model.state.params.vars)) {
+      void model.render({ isPreview: true, now: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    tileCart.tileBuilderProEntitlementReady,
+    tileCart.tileBuilderProEntitledForTileSet,
+    tileSetKey,
+    vars.resolution,
+    model,
+  ]);
+
+  // After Stripe/catalog finish, entitlement flips false → true; re-run preview so Med/High + default High are not stuck blank.
+  useEffect(() => {
+    const ready = tileCart.tileBuilderProEntitlementReady;
+    if (!ready) {
+      lastEntitlementReadyRef.current = false;
+      return;
+    }
+    const prev = lastEntitlementReadyRef.current;
+    lastEntitlementReadyRef.current = true;
+    if (prev !== false) return;
+    const v = model.state.params.vars ?? {};
+    if (!tileBuilderCanAutoPreview(v)) return;
+    void model.render({ isPreview: true, now: true });
+  }, [
+    model,
+    tileCart.tileBuilderProEntitlementReady,
+    tileCart.tileBuilderProEntitledForTileSet,
+  ]);
 
   return (
     <div
@@ -164,34 +284,14 @@ export default function TileBuilderPanel({ className, style }: { className?: str
         style={{ margin: '5px 10px 5px 10px', backgroundColor: 'rgba(255,255,255,0.4)' }}
       >
         <Accordion
+          multiple
           activeIndex={activeTabIndex}
-          onTabChange={(e) => setActiveTabIndex(e.index)}
+          onTabChange={(e) => {
+            const idx = e.index;
+            setActiveTabIndex(Array.isArray(idx) ? idx : idx == null ? [] : [idx]);
+          }}
         >
           <AccordionTab header="Core">
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '0.5rem',
-              }}
-            >
-              <label style={{ fontWeight: 600, flexShrink: 0 }}>Resolution</label>
-                <Dropdown
-                  value={getVar(vars, 'resolution')}
-                  options={RESOLUTION_OPTIONS}
-                  onChange={(e) => {
-                    const next = e.value as number;
-                    setVar('resolution', next);
-                    if (next !== 64) {
-                      setProTierResolutionDialogVisible(true);
-                    }
-                  }}
-                  style={{ width: '60%' }}
-                />
-            </div>
-
             <div className="flex flex-column gap-3">
               <div
                 style={{
@@ -205,8 +305,37 @@ export default function TileBuilderPanel({ className, style }: { className?: str
                 <label style={{ fontWeight: 600, flexShrink: 0 }}>Tile Set</label>
                 <Dropdown
                   value={getVar(vars, 'tile_set')}
-                  options={TILE_SET_OPTIONS}
+                  options={tileSetDropdownOptions}
+                  loading={!tileSetDropdownLoaded}
                   onChange={(e) => setVar('tile_set', e.value)}
+                  style={{ width: '60%' }}
+                />
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.5rem',
+                }}
+              >
+                <label style={{ fontWeight: 600, flexShrink: 0 }}>Resolution</label>
+                <Dropdown
+                  value={getVar(vars, 'resolution')}
+                  options={RESOLUTION_OPTIONS}
+                  onChange={(e) => {
+                    const next = e.value as number;
+                    setVar('resolution', next);
+                    if (
+                      next !== 64 &&
+                      tileCart.tileBuilderProEntitlementReady &&
+                      !tileCart.tileBuilderProEntitledForTileSet(tileSetKey)
+                    ) {
+                      setProTierResolutionDialogVisible(true);
+                    }
+                  }}
                   style={{ width: '60%' }}
                 />
               </div>
@@ -224,31 +353,11 @@ export default function TileBuilderPanel({ className, style }: { className?: str
                   gap: '0.5rem',
                 }}
               >
-                <label htmlFor="tile-use-floor" style={{ fontWeight: 600 }}>
-                  Show Floor
-                </label>
-                <Checkbox
-                  inputId="tile-use-floor"
-                  checked={getVar(vars, 'use_floor')}
-                  onChange={(e) => setVar('use_floor', e.checked ?? false)}
-                />
-              </div>
-
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '0.5rem',
-                }}
-              >
                 <label style={{ fontWeight: 600, flexShrink: 0 }}>Floor type</label>
                 <Dropdown
                   value={getVar(vars, 'floor_type')}
                   options={FLOOR_TYPE_OPTIONS}
                   onChange={(e) => setVar('floor_type', e.value)}
-                  disabled={!useFloorEnabled}
                   style={{ width: '60%' }}
                 />
               </div>
@@ -410,15 +519,25 @@ export default function TileBuilderPanel({ className, style }: { className?: str
           </AccordionTab>
         </Accordion>
 
-        <Button
-          type="button"
-          label={state.previewing ? 'Previewing…' : 'Preview'}
-          icon="pi pi-eye"
-          className="p-button-sm"
-          onClick={() => model.render({ isPreview: true, now: true })}
-          disabled={state.previewing || state.rendering || nothingToPreview}
-          style={{ alignSelf: 'stretch', marginTop: '0.75rem' }}
-        />
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            width: '100%',
+            marginTop: '0.75rem',
+          }}
+        >
+          <Button
+            type="button"
+            label={state.previewing ? 'Previewing…' : 'Preview'}
+            icon="pi pi-eye"
+            className="p-button-sm"
+            onClick={() => {
+              void model.render({ isPreview: true, now: true });
+            }}
+            disabled={state.previewing || state.rendering || nothingToPreview}
+          />
+        </div>
       </Fieldset>
 
       <Dialog
@@ -443,7 +562,7 @@ export default function TileBuilderPanel({ className, style }: { className?: str
             />
             <Button
               type="button"
-              label="Sign Me Up!"
+              label="Browse tile packs"
               icon="pi pi-arrow-right"
               iconPos="right"
               severity="success"
@@ -457,7 +576,7 @@ export default function TileBuilderPanel({ className, style }: { className?: str
       >
         <p style={{ margin: 0, lineHeight: 1.55 }}>
           As a free tool, you are able to generate as many low resolution tiles as your heart desires. To gain access to
-          Medium and High resolution models, you will need to be a Pro Member.
+          Medium and High resolution models, you will need to purchase that Tile Set, and then return to this page.
         </p>
       </Dialog>
     </div>

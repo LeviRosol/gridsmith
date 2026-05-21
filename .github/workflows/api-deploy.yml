@@ -1,8 +1,10 @@
 name: API Deploy
 
+# Prod: push to main only when API-related paths change (solo dev: dev/staging via manual run).
+# SPA deploy (e.g. Vercel) stays separate; this workflow does not gate the static app.
 on:
   push:
-    branches-ignore:
+    branches:
       - main
     paths:
       - "infra/api/**"
@@ -11,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       stage:
-        description: "Target stage"
+        description: "Target stage (use for dev deploys; prod also runs on main push when paths match)"
         required: true
         type: choice
         options:
@@ -24,31 +26,39 @@ permissions:
   contents: read
 
 jobs:
-  deploy-dev-on-branch-push:
+  deploy-prod-on-main-push:
     if: github.event_name == 'push'
     runs-on: ubuntu-24.04
-    environment: dev
+    environment: prod
     env:
-      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-      AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME_DEV }}
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-2' }}
+      STAGE: prod
+      AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME_PROD }}
+      STRIPE_SECRET_ARN: ${{ secrets.STRIPE_SECRET_ARN }}
+      COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
+      COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
+      PUBLIC_APP_ORIGIN: ${{ secrets.PUBLIC_APP_ORIGIN }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version-file: .nvmrc
       - name: Check deploy prerequisites
         id: prereq
         run: |
-          if [ -z "${AWS_ROLE_TO_ASSUME}" ]; then
+          if [ -z "${AWS_ROLE_TO_ASSUME}" ] || [ -z "${STRIPE_SECRET_ARN}" ] || [ -z "${COGNITO_USER_POOL_ID}" ] || [ -z "${COGNITO_CLIENT_ID}" ] || [ -z "${PUBLIC_APP_ORIGIN}" ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "Skipping deploy: AWS_ROLE_TO_ASSUME_DEV is not configured."
+            if [ -z "${AWS_ROLE_TO_ASSUME}" ]; then echo "Skipping deploy: AWS_ROLE_TO_ASSUME_PROD is not configured on the prod environment."; fi
+            if [ -z "${STRIPE_SECRET_ARN}" ]; then echo "Skipping deploy: STRIPE_SECRET_ARN is not configured."; fi
+            if [ -z "${COGNITO_USER_POOL_ID}" ] || [ -z "${COGNITO_CLIENT_ID}" ]; then echo "Skipping deploy: Cognito id(s) not configured."; fi
+            if [ -z "${PUBLIC_APP_ORIGIN}" ]; then echo "Skipping deploy: PUBLIC_APP_ORIGIN is not configured."; fi
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
       - name: Setup AWS SAM
         if: steps.prereq.outputs.ready == 'true'
         uses: aws-actions/setup-sam@v2
-      - name: Configure AWS credentials (dev)
+      - name: Configure AWS credentials (prod)
         if: steps.prereq.outputs.ready == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -56,30 +66,37 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       - name: Install dependencies
         if: steps.prereq.outputs.ready == 'true'
-        run: npm ci
-      - name: Deploy API (dev)
+        run: npm install --no-audit --no-fund
+      - name: Deploy API (prod)
         if: steps.prereq.outputs.ready == 'true'
-        run: npm run deploy:api:dev
+        run: npm run deploy:api -- --stage "${STAGE}"
 
   deploy-manual:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     environment: ${{ inputs.stage }}
     env:
-      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-2' }}
       STAGE: ${{ inputs.stage }}
       AWS_ROLE_TO_ASSUME: ${{ inputs.stage == 'prod' && secrets.AWS_ROLE_TO_ASSUME_PROD || inputs.stage == 'staging' && secrets.AWS_ROLE_TO_ASSUME_STAGING || secrets.AWS_ROLE_TO_ASSUME_DEV }}
+      STRIPE_SECRET_ARN: ${{ secrets.STRIPE_SECRET_ARN }}
+      COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
+      COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
+      PUBLIC_APP_ORIGIN: ${{ secrets.PUBLIC_APP_ORIGIN }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version-file: .nvmrc
       - name: Check deploy prerequisites
         id: prereq
         run: |
-          if [ -z "${AWS_ROLE_TO_ASSUME}" ]; then
+          if [ -z "${AWS_ROLE_TO_ASSUME}" ] || [ -z "${STRIPE_SECRET_ARN}" ] || [ -z "${COGNITO_USER_POOL_ID}" ] || [ -z "${COGNITO_CLIENT_ID}" ] || [ -z "${PUBLIC_APP_ORIGIN}" ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "Skipping deploy: role secret missing for stage '${STAGE}'."
+            if [ -z "${AWS_ROLE_TO_ASSUME}" ]; then echo "Skipping deploy: role secret missing for stage '${STAGE}'."; fi
+            if [ -z "${STRIPE_SECRET_ARN}" ]; then echo "Skipping deploy: STRIPE_SECRET_ARN is not configured."; fi
+            if [ -z "${COGNITO_USER_POOL_ID}" ] || [ -z "${COGNITO_CLIENT_ID}" ]; then echo "Skipping deploy: Cognito id(s) not configured."; fi
+            if [ -z "${PUBLIC_APP_ORIGIN}" ]; then echo "Skipping deploy: PUBLIC_APP_ORIGIN is not configured."; fi
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
@@ -94,7 +111,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       - name: Install dependencies
         if: steps.prereq.outputs.ready == 'true'
-        run: npm ci
+        run: npm install --no-audit --no-fund
       - name: Deploy API (${{ env.STAGE }})
         if: steps.prereq.outputs.ready == 'true'
         run: npm run deploy:api -- --stage "${STAGE}"

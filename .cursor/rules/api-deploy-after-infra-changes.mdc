@@ -1,0 +1,17 @@
+---
+description: After changing GridSmith API Lambdas or SAM, remind that deploy is required for the SPA to see new behavior.
+globs: infra/api/**
+alwaysApply: false
+---
+
+# API changes require deployment
+
+Edits under `infra/api/` (Lambda handlers, SAM template, `deploy.sh`, shared modules used only by the API) **do not affect** the app until you deploy to the stage your `GRIDSMITH_API_BASE_URL` points at.
+
+**When you finish a task that changes this tree**, state clearly in the summary:
+
+1. **Deploy required** — the running API will not match the repo until deploy runs.
+2. **How** — **Merged to `main`:** if you changed `infra/api/**` (or `scripts/deploy-api.sh` / the API workflow), GitHub Actions can deploy **prod** API automatically once the **prod** environment secrets and OIDC trust are set (see `.github/workflows/api-deploy.yml`). Until then, or for **dev**, use **`workflow_dispatch`** on that workflow or run locally: `npm run deploy:api:dev`, `npm run deploy:api:staging`, or `npm run deploy:api:prod` (see `scripts/deploy-api.sh` / `infra/api/deploy.sh`).
+3. **Why it matters** — the SPA calls `GRIDSMITH_API_BASE_URL`; local webpack changes alone never update Lambda behavior.
+
+Do not assume the user already deployed; a one-sentence reminder is enough unless they asked only for code with no ops note.

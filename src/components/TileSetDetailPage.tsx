@@ -3,12 +3,31 @@ import { BreadCrumb } from 'primereact/breadcrumb';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { Divider } from 'primereact/divider';
+import { Galleria } from 'primereact/galleria';
+import { Image, type ImagePassThroughOptions } from 'primereact/image';
+import { Message } from 'primereact/message';
+import { ProgressSpinner } from 'primereact/progressspinner';
 import { Tag } from 'primereact/tag';
 import type { MenuItem } from 'primereact/menuitem';
 import { trackTileSetAddClick } from '../analytics.ts';
+import { startGridSmithCheckoutForCartPriceIds } from '../billing/gridSmithBilling';
+import { useAuth } from './AuthContext';
+import { useTileCart } from '../cart/TileCartContext';
+import { isTileSetBuyable, cartHasPriceId } from '../cart/tileCartEligibility';
+import type { TileSetCatalogItem } from '../data/placeholderTileSets';
 import { getTileSetBySlug } from '../data/placeholderTileSets';
-
-const THUMB_KEYS = [0, 1, 2] as const;
+import {
+  findTileSetBySlug,
+  loadTilePackCatalog,
+  tilePackCatalogApiConfigured,
+} from '../data/tilePackCatalog';
+import {
+  buildGalleryFileUrls,
+  DEFAULT_TILE_PACK_INCLUDED_FILES_BULLETS,
+  fetchTilePackContent,
+  isSafeTilePackGalleryFolder,
+} from '../data/tilePackContent';
+import type { TilePackContent } from '../data/tilePackContent';
 
 const DESIGNED_FOR_TABLE_BULLETS = [
   '30mm scale — works with standard 1" minis',
@@ -17,18 +36,21 @@ const DESIGNED_FOR_TABLE_BULLETS = [
   'Clean, consistent style — built to look good and print well',
 ];
 
-const INCLUDED_FILES_BULLETS = [
-  'High resolution STLs (128 and 256 variants)',
-  'Ready for FDM printing (0.4 nozzle friendly)',
-  'Clean geometry optimized for slicing',
-];
-
 /** Shown under the price on every tile set detail page. */
 const BUYBOX_HIGHLIGHT_BULLETS = [
   "True 5' hallways",
   'Tiles stay locked in place (no magnets or bulky bases)',
   'Designed for real gameplay, not display',
 ];
+
+type TileDetailGalleriaItem = { itemImageSrc: string };
+
+/** Fullscreen preview: hide download + rotate; keep zoom and close (dismiss also via Escape / backdrop). */
+const TILE_DETAIL_IMAGE_PREVIEW_PT: ImagePassThroughOptions = {
+  downloadButton: { style: { display: 'none' } },
+  rotateLeftButton: { style: { display: 'none' } },
+  rotateRightButton: { style: { display: 'none' } },
+};
 
 function TileDetailSpecList({
   heading,
@@ -72,27 +94,63 @@ function metaExcerpt(text: string, maxLen: number) {
 }
 
 export default function TileSetDetailPage({ slug }: { slug: string }) {
-  const set = slug ? getTileSetBySlug(slug) : undefined;
-  const [activeThumb, setActiveThumb] = useState(0);
+  const auth = useAuth();
+  const { addOrUpdateLine, items, isPackOwned } = useTileCart();
+  const [set, setSet] = useState<TileSetCatalogItem | undefined>(() =>
+    slug && !tilePackCatalogApiConfigured() ? getTileSetBySlug(slug) : undefined,
+  );
+  const [catalogLoading, setCatalogLoading] = useState(() => tilePackCatalogApiConfigured());
+  const [activeIndex, setActiveIndex] = useState(0);
   const [comingSoonDialogVisible, setComingSoonDialogVisible] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [cartAddedFlash, setCartAddedFlash] = useState(false);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [detailPackContent, setDetailPackContent] = useState<TilePackContent | null | undefined>(undefined);
 
   useEffect(() => {
-    setActiveThumb(0);
+    if (!slug) {
+      setSet(undefined);
+      setCatalogLoading(false);
+      return undefined;
+    }
+    if (!tilePackCatalogApiConfigured()) {
+      setSet(getTileSetBySlug(slug));
+      setCatalogLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setCatalogLoading(true);
+    void loadTilePackCatalog().then((list) => {
+      if (cancelled) return;
+      setSet(findTileSetBySlug(list, slug));
+      setCatalogLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  useEffect(() => {
+    setActiveIndex(0);
     setComingSoonDialogVisible(false);
+    setCheckoutError(null);
+    setCartAddedFlash(false);
+    setCheckoutBusy(false);
+    setDetailPackContent(undefined);
   }, [set?.slug]);
 
   useEffect(() => {
-    if (set) {
-      document.title = `GridSmith — ${set.name}`;
-      const meta = document.querySelector('meta[name="description"]');
-      if (meta) {
-        meta.setAttribute('content', metaExcerpt(set.description, 155));
-      }
-    } else {
-      document.title = 'GridSmith — Tile set not found';
+    if (!set || set.slug !== slug) {
+      setDetailPackContent(undefined);
+      return undefined;
     }
+    let cancelled = false;
+    setDetailPackContent(undefined);
+    void fetchTilePackContent(slug).then((content) => {
+      if (!cancelled) setDetailPackContent(content);
+    });
     return () => {
-      document.title = 'GridSmith';
+      cancelled = true;
     };
   }, [set, slug]);
 
@@ -103,6 +161,89 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
       { label: set.name },
     ];
   }, [set]);
+
+  const owned = useMemo(() => (set ? isPackOwned(set) : false), [set, isPackOwned]);
+
+  const inCart = useMemo(() => {
+    if (!set || owned) return false;
+    return isTileSetBuyable(set) && cartHasPriceId(items, set.stripePriceId);
+  }, [set, items, owned]);
+
+  const mergedDescription = useMemo(() => {
+    if (!set) return '';
+    const fromJson = detailPackContent?.description?.trim();
+    if (fromJson) return fromJson;
+    return (set.description && set.description.trim()) || '';
+  }, [set, detailPackContent]);
+
+  const mergedWhatYouGet = useMemo(() => {
+    return detailPackContent?.whatYouGet ?? set?.whatYouGet;
+  }, [detailPackContent, set]);
+
+  const includedFilesSection = useMemo(() => {
+    const heading =
+      detailPackContent?.includedFiles?.heading?.trim() || 'Included Files';
+    if (detailPackContent?.includedFiles?.bullets?.length) {
+      return { heading, bullets: detailPackContent.includedFiles.bullets };
+    }
+    return { heading, bullets: DEFAULT_TILE_PACK_INCLUDED_FILES_BULLETS };
+  }, [detailPackContent]);
+
+  const gallerySupportingUrls = useMemo(() => {
+    if (!set || set.slug !== slug) return [];
+    const pack = detailPackContent;
+    if (pack === undefined) return [];
+    if (!pack?.gallery?.length) return [];
+    const folder = (pack.galleryFolder ?? set.imagePath ?? '').trim();
+    if (!isSafeTilePackGalleryFolder(folder)) return [];
+    return buildGalleryFileUrls(folder, pack.gallery);
+  }, [set, slug, detailPackContent]);
+
+  const allImages = useMemo(() => {
+    if (!set) return [] as string[];
+    const hero = set.imageSrc?.trim() || '/logo512.png';
+    return [hero, ...gallerySupportingUrls];
+  }, [set, gallerySupportingUrls]);
+
+  useEffect(() => {
+    setActiveIndex((prev) => {
+      const maxIdx = Math.max(0, allImages.length - 1);
+      return Math.min(prev, maxIdx);
+    });
+  }, [allImages.length]);
+
+  const galleriaItems: TileDetailGalleriaItem[] = useMemo(
+    () => allImages.map((itemImageSrc) => ({ itemImageSrc })),
+    [allImages],
+  );
+
+  useEffect(() => {
+    if (catalogLoading) return undefined;
+    if (set) {
+      document.title = `GridSmith — ${set.name}`;
+      const meta = document.querySelector('meta[name="description"]');
+      if (meta) {
+        meta.setAttribute('content', metaExcerpt(mergedDescription, 155));
+      }
+    } else if (slug) {
+      document.title = 'GridSmith — Tile set not found';
+    }
+    return () => {
+      document.title = 'GridSmith';
+    };
+  }, [set, slug, catalogLoading, mergedDescription]);
+
+  if (catalogLoading) {
+    return (
+      <main className="home-page tile-shop-page">
+        <section className="home-section home-section-hero home-section-hero--child">
+          <div className="home-page-container flex justify-content-center py-6">
+            <ProgressSpinner style={{ width: '48px', height: '48px' }} />
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   if (!slug || !set) {
     return (
@@ -128,17 +269,99 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
 
   const priceDisplay = set.priceLabel ?? (set.disabled ? 'Coming soon' : null);
 
-  const priceForAddToCart = set.priceLabel ?? priceDisplay;
-  const addToCartLabel =
-    priceForAddToCart != null && priceForAddToCart !== ''
-      ? `Add ${set.name}\u2013 ${priceForAddToCart}`
-      : `Add ${set.name}`;
+  const buyable = isTileSetBuyable(set);
 
-  const handleAddToCartClick = () => {
+  const addButtonLabel = set.addToCartDisabled
+    ? 'Coming soon'
+    : !buyable
+      ? 'Unavailable'
+      : owned
+        ? 'You own this pack'
+        : inCart
+          ? 'Checkout'
+          : 'Add to cart';
+  const addButtonIcon =
+    set.addToCartDisabled || !buyable
+      ? 'pi pi-shopping-cart'
+      : owned
+        ? 'pi pi-check'
+        : inCart
+          ? 'pi pi-credit-card'
+          : 'pi pi-shopping-cart';
+  const addButtonClassName = [
+    'w-full',
+    'font-bold',
+    'tile-detail-add-cart',
+    inCart && buyable && !set.addToCartDisabled && !owned ? null : 'p-button-outlined',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const addButtonDisabled = Boolean(
+    set.disabled || (!buyable && !set.addToCartDisabled) || checkoutBusy || owned,
+  );
+
+  const handleCheckoutFromCart = async () => {
+    if (!auth.isSignedIn) {
+      setCheckoutError(null);
+      auth.login();
+      return;
+    }
+    if (!items.length) return;
+    setCheckoutBusy(true);
+    setCheckoutError(null);
+    try {
+      const { url } = await startGridSmithCheckoutForCartPriceIds(
+        items.map((row) => row.priceId),
+        { successPath: '/cart?checkout=success', cancelPath: '/cart' },
+      );
+      window.location.assign(url);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Checkout could not be started.';
+      setCheckoutError(msg);
+    } finally {
+      setCheckoutBusy(false);
+    }
+  };
+
+  const handlePrimaryClick = () => {
     trackTileSetAddClick(set.name);
+    if (owned) {
+      return;
+    }
     if (set.addToCartDisabled) {
       setComingSoonDialogVisible(true);
+      return;
     }
+    if (!set.stripePriceId?.trim()) {
+      setCheckoutError('Checkout is not available for this listing yet.');
+      return;
+    }
+    if (!auth.isSignedIn) {
+      setCheckoutError(null);
+      auth.login();
+      return;
+    }
+    if (!buyable) {
+      setCheckoutError('This pack cannot be added to the cart yet.');
+      return;
+    }
+    if (inCart) {
+      void handleCheckoutFromCart();
+      return;
+    }
+    const priceId = set.stripePriceId.trim();
+    setCheckoutError(null);
+    addOrUpdateLine({
+      priceId,
+      slug,
+      name: set.name,
+      priceLabel: set.priceLabel,
+      imageSrc: set.imageSrc,
+    });
+    setCartAddedFlash(true);
+    window.setTimeout(() => {
+      setCartAddedFlash(false);
+    }, 3500);
   };
 
   return (
@@ -158,34 +381,53 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
               <div className="tile-detail-column tile-detail-column--left">
                 <div className="tile-detail-gallery">
                   <div className="tile-detail-image-frame">
-                    <img
-                      className="tile-detail-image"
-                      src={set.imageSrc}
-                      alt=""
-                      loading="eager"
-                      width={512}
-                      height={512}
+                    <Galleria
+                      key={set.slug}
+                      value={galleriaItems}
+                      activeIndex={activeIndex}
+                      onItemChange={(e) => {
+                        const max = Math.max(0, galleriaItems.length - 1);
+                        setActiveIndex(Math.max(0, Math.min(max, e.index)));
+                      }}
+                      numVisible={5}
+                      responsiveOptions={[
+                        { breakpoint: '1024px', numVisible: 4 },
+                        { breakpoint: '768px', numVisible: 3 },
+                      ]}
+                      showThumbnails={galleriaItems.length > 1}
+                      showItemNavigators={galleriaItems.length > 1}
+                      showThumbnailNavigators={galleriaItems.length > 4}
+                      item={(item: TileDetailGalleriaItem) => (
+                        <Image
+                          key={`${set.slug}-${item.itemImageSrc}`}
+                          src={item.itemImageSrc}
+                          alt=""
+                          preview={!set.disabled}
+                          downloadable={false}
+                          closeOnEscape
+                          imageClassName="tile-detail-image"
+                          width="512"
+                          height="512"
+                          loading="eager"
+                          pt={TILE_DETAIL_IMAGE_PREVIEW_PT}
+                          className="flex w-full justify-content-center"
+                        />
+                      )}
+                      thumbnail={(item: TileDetailGalleriaItem) => (
+                        <img
+                          src={item.itemImageSrc}
+                          alt=""
+                          className="tile-detail-galleria-thumb-img"
+                          loading="lazy"
+                        />
+                      )}
+                      className="tile-detail-galleria w-full max-w-full"
                     />
                     {set.disabled ? (
                       <div className="tile-detail-image-badge">
                         <Tag value="Coming soon" />
                       </div>
                     ) : null}
-                  </div>
-                  <div className="tile-detail-thumbs" role="list">
-                    {THUMB_KEYS.map((i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        role="listitem"
-                        className={`tile-detail-thumb${activeThumb === i ? ' tile-detail-thumb--active' : ''}`}
-                        onClick={() => setActiveThumb(i)}
-                        aria-label={`Product image ${i + 1}`}
-                        aria-current={activeThumb === i ? 'true' : undefined}
-                      >
-                        <img src={set.imageSrc} alt="" width={96} height={96} />
-                      </button>
-                    ))}
                   </div>
                 </div>
 
@@ -210,6 +452,12 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
                 <div className="tile-detail-buybox">
                   <Tag value={set.tagLabel} rounded className="mb-2" />
                   <h1 className="tile-detail-title">{set.name}</h1>
+                  {checkoutError ? (
+                    <Message severity="error" text={checkoutError} className="w-full mb-2" />
+                  ) : null}
+                  {cartAddedFlash ? (
+                    <Message severity="success" text="Added to your cart." className="w-full mb-2" />
+                  ) : null}
                   {priceDisplay ? (
                     <div
                       className={`tile-detail-price${set.priceLabel ? '' : ' tile-detail-price--muted'}`}
@@ -229,7 +477,7 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
 
                   <div className="tile-detail-description-block mt-3">
                     <h2 className="tile-detail-description-heading">Description</h2>
-                    {set.description
+                    {mergedDescription
                       .trim()
                       .split(/\n\n+/)
                       .map((para, i) => (
@@ -246,10 +494,14 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
 
                   <Button
                     type="button"
-                    label={addToCartLabel}
-                    icon="pi pi-shopping-cart"
-                    className="w-full font-bold tile-detail-add-cart"
-                    onClick={handleAddToCartClick}
+                    label={addButtonLabel}
+                    icon={addButtonIcon}
+                    className={addButtonClassName}
+                    disabled={addButtonDisabled}
+                    loading={checkoutBusy}
+                    onClick={() => {
+                      handlePrimaryClick();
+                    }}
                   />
                   <div className="text-center mt-2">
                     <Button
@@ -265,47 +517,37 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
 
                   <div className="flex flex-column gap-4 mt-4">
                     <TileDetailSpecList
-                      heading="Included Files"
-                      items={INCLUDED_FILES_BULLETS}
+                      heading={includedFilesSection.heading}
+                      items={includedFilesSection.bullets}
                       sectionId="tile-detail-included-files"
                     />
 
-                    {set.whatYouGet ? (
+                    {mergedWhatYouGet ? (
                       <section
                         className="tile-detail-spec-section tile-detail-what-you-get"
                         aria-labelledby={`tile-detail-what-you-get-${set.slug}`}
                       >
                         <h3 className="tile-detail-spec-heading" id={`tile-detail-what-you-get-${set.slug}`}>
-                          {set.whatYouGet.heading}
+                          {mergedWhatYouGet.heading}
                         </h3>
-                        {set.whatYouGet.intro ? (
+                        {mergedWhatYouGet.intro ? (
                           <p className="tile-detail-spec-prose tile-detail-spec-prose--preline m-0 line-height-3">
-                            {normalizeMultilineField(set.whatYouGet.intro)}
+                            {normalizeMultilineField(mergedWhatYouGet.intro)}
                           </p>
                         ) : null}
-                        <ul className={`tile-detail-spec-list${set.whatYouGet.intro ? ' mt-2' : ''}`}>
-                          {set.whatYouGet.bullets.map((item, i) => (
+                        <ul className={`tile-detail-spec-list${mergedWhatYouGet.intro ? ' mt-2' : ''}`}>
+                          {mergedWhatYouGet.bullets.map((item, i) => (
                             <li key={i}>{normalizeMultilineField(item)}</li>
                           ))}
                         </ul>
-                        {set.whatYouGet.closing ? (
+                        {mergedWhatYouGet.closing ? (
                           <p className="tile-detail-spec-prose tile-detail-spec-prose--preline m-0 mt-3 line-height-3">
-                            {normalizeMultilineField(set.whatYouGet.closing)}
+                            {normalizeMultilineField(mergedWhatYouGet.closing)}
                           </p>
                         ) : null}
                       </section>
                     ) : null}
                   </div>
-
-                  <Divider className="my-4" />
-
-                  <Button
-                    type="button"
-                    label={addToCartLabel}
-                    icon="pi pi-shopping-cart"
-                    className="w-full font-bold tile-detail-add-cart"
-                    onClick={handleAddToCartClick}
-                  />
                 </div>
               </div>
             </div>

@@ -19,6 +19,9 @@ body {
 }
 
 .app-header {
+  position: sticky;
+  top: 0;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -176,6 +179,25 @@ body {
   display: none;
 }
 
+.app-header-cart-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-header-cart-badge.p-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 1rem;
+  height: 1rem;
+  line-height: 1rem;
+  font-size: 0.65rem;
+  padding: 0 0.28rem;
+  pointer-events: none;
+}
+
 @media (max-width: 640px) {
   .app-header-nav-desktop {
     display: none;
@@ -184,6 +206,7 @@ body {
   .app-header-nav-mobile {
     display: flex;
     align-items: center;
+    gap: 0.15rem;
   }
 
   .app-header {
@@ -681,7 +704,59 @@ code {
   position: absolute;
   top: 1.5rem;
   right: 1.5rem;
-  z-index: 1;
+  z-index: 5;
+}
+
+/* Tile detail: PrimeReact Galleria + Image preview */
+.tile-detail-galleria.p-galleria {
+  border: none;
+  background: transparent;
+}
+
+.tile-detail-galleria .p-galleria-content {
+  width: 100%;
+}
+
+.tile-detail-galleria .p-galleria-item-wrapper,
+.tile-detail-galleria .p-galleria-item-container,
+.tile-detail-galleria .p-galleria-item {
+  width: 100%;
+}
+
+/* Prev arrow is before the slide in DOM; full-width slide paints on top unless nav is raised. */
+.tile-detail-galleria .p-galleria-item-container {
+  position: relative;
+}
+
+.tile-detail-galleria .p-galleria-item {
+  position: relative;
+  z-index: 0;
+}
+
+.tile-detail-galleria .p-galleria-item-nav {
+  z-index: 2;
+}
+
+/* Don’t show prev/next at first/last slide — Galleria marks them p-disabled; hide instead of styling disabled. */
+.tile-detail-galleria .p-galleria-item-nav.p-disabled {
+  display: none;
+}
+
+.tile-detail-galleria .p-galleria-item .p-image.p-image-preview-container {
+  width: 100%;
+  max-width: 100%;
+}
+
+.tile-detail-galleria .p-galleria-thumbnail-wrapper {
+  margin-top: 1rem;
+}
+
+.tile-detail-galleria-thumb-img {
+  display: block;
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: contain;
+  border-radius: 6px;
 }
 
 .tile-detail-thumbs {
@@ -861,6 +936,10 @@ code {
   padding: 5px 5px 0 5px;
 }
 
+.p-card .p-card-body {
+  padding: 1rem;
+}
+
 .tile-shop-card-image-wrap {
   --tile-shop-image-inset: 20px;
   position: relative;
@@ -934,6 +1013,113 @@ a.tile-shop-card-image-hit:focus-visible {
   z-index: 4;
   pointer-events: auto;
   cursor: not-allowed;
+}
+
+/* Tile cart (drawer + /cart page) */
+.tile-cart-inline-link {
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
+.tile-cart-line-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tile-cart-line {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tile-cart-line-thumb {
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.tile-cart-line-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.tile-cart-line-title {
+  font-weight: 600;
+  color: inherit;
+  text-decoration: none;
+}
+
+.tile-cart-line-title:hover {
+  text-decoration: underline;
+}
+
+.tile-cart-line-price {
+  font-size: 0.9rem;
+  opacity: 0.85;
+  margin-top: 0.15rem;
+}
+
+.tile-cart-page-line-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.tile-cart-page-line {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.dark-mode .tile-cart-page-line {
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+}
+
+.tile-cart-page-line-thumb {
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.tile-cart-page-line-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.tile-cart-page-line-title {
+  font-weight: 600;
+  color: inherit;
+  text-decoration: none;
+  font-size: 1.05rem;
+}
+
+.tile-cart-page-line-title:hover {
+  text-decoration: underline;
+}
+
+.tile-cart-page-line--owned {
+  align-items: flex-start;
+}
+
+.tile-cart-page-line-actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+  min-width: 7rem;
+}
+
+.tile-cart-page-empty {
+  padding: 1rem 0 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .home-eyebrow {
@@ -1080,6 +1266,471 @@ a.tile-shop-card-image-hit:focus-visible {
 
 .home-actions-centered {
   justify-content: center;
+}
+
+/* Home landing — alternating light/dark bands + full-bleed hero */
+.home-landing-container {
+  max-width: min(100%, 75rem);
+}
+
+.home-landing-section-header--center {
+  max-width: 42rem;
+}
+
+.home-landing-text-block {
+  max-width: 42rem;
+}
+
+.home-landing-text-block p:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Fixed marketing tones (same in app light/dark mode) */
+.home-landing-band--light {
+  background: #efefef;
+  --text-color: #1a1a1a;
+  --text-color-secondary: #4b5563;
+  color: var(--text-color);
+}
+
+/* Same band as About “What is GridSmith?” (.dark-mode .home-section-alt on #111) */
+.home-landing-band--dark {
+  background: color-mix(in srgb, #ffffff 3%, #111111);
+  border-top: 1px solid #333333;
+  border-bottom: 1px solid #333333;
+  --text-color: #f5f5f5;
+  --text-color-secondary: rgba(245, 245, 245, 0.78);
+  color: var(--text-color);
+}
+
+.home-landing-band--black {
+  background: #121212;
+  border-top: 1px solid #2a2a2a;
+  border-bottom: 1px solid #2a2a2a;
+  --text-color: #f5f5f5;
+  --text-color-secondary: rgba(245, 245, 245, 0.78);
+  color: var(--text-color);
+}
+
+/* Full-bleed hero background */
+.home-landing-hero--bg {
+  position: relative;
+  min-height: min(72vh, 40rem);
+  display: flex;
+  align-items: center;
+  padding: 3rem 0 4rem;
+  background-color: #141414;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  --text-color: #f5f5f5;
+  --text-color-secondary: rgba(245, 245, 245, 0.88);
+  color: var(--text-color);
+}
+
+.home-landing-hero-inner {
+  width: 100%;
+}
+
+.home-landing-hero-content {
+  max-width: 40rem;
+}
+
+.home-landing-hero-btn-outlined.p-button-outlined {
+  color: #f5f5f5 !important;
+  border-color: rgba(255, 255, 255, 0.55) !important;
+}
+
+.home-landing-hero-btn-outlined.p-button-outlined:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.75) !important;
+  color: #ffffff !important;
+}
+
+/* Feature grid: CSS grid avoids PrimeFlex col padding overflow (3-up on desktop) */
+.home-landing-feature-grid {
+  display: grid;
+  gap: 0.875rem; /* gap-4 (1.5rem) − 10px */
+}
+
+@media (min-width: 768px) {
+  .home-landing-feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 992px) {
+  .home-landing-feature-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.home-landing-feature-card.p-card .p-card-body {
+  height: 100%;
+  padding: 1.25rem;
+}
+
+.home-landing-feature-card.p-card .p-card-content {
+  padding: 0;
+}
+
+/* Feature tiles on the light band: dark cards with light type */
+.home-landing-band--light .home-landing-feature-card.p-card {
+  background: #121212;
+  border: 1px solid #2a2a2a;
+  color: #f5f5f5;
+}
+
+.home-landing-band--light .home-landing-feature-card.p-card .p-card-body {
+  background: transparent;
+  color: inherit;
+}
+
+.home-landing-feature-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text-color);
+  min-width: 0;
+}
+
+.home-landing-band--light .home-landing-feature-card .home-landing-feature-title {
+  color: #f5f5f5;
+}
+
+.home-landing-feature-body {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--text-color-secondary);
+}
+
+.home-landing-band--light .home-landing-feature-card .home-landing-feature-body {
+  color: rgba(245, 245, 245, 0.78);
+}
+
+.home-landing-feature-photo {
+  min-height: 10rem;
+  max-height: 14rem;
+  object-fit: cover;
+  width: 100%;
+}
+
+/* Footer CTA on black band */
+.home-landing-band--black .home-landing-cta-btn-outlined.p-button-outlined {
+  color: #f5f5f5 !important;
+  border-color: rgba(255, 255, 255, 0.55) !important;
+}
+
+.home-landing-band--black .home-landing-cta-btn-outlined.p-button-outlined:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.75) !important;
+  color: #ffffff !important;
+}
+
+.home-landing-highlight {
+  min-width: 5.5rem;
+  max-width: 7rem;
+}
+
+@media (max-width: 767px) {
+  .home-landing-hero--bg {
+    min-height: min(52vh, 30rem);
+    padding: 2rem 0 2.5rem;
+    background-position: center 30%;
+  }
+}
+
+/* Theme-adaptive marketing band (blog — follows body.dark-mode / .light-mode) */
+.light-mode .home-landing-band--theme {
+  background: #efefef;
+  --text-color: #1a1a1a;
+  --text-color-secondary: #4b5563;
+  color: var(--text-color);
+}
+
+.dark-mode .home-landing-band--theme {
+  background: color-mix(in srgb, #ffffff 3%, #111111);
+  border-top: 1px solid #333333;
+  border-bottom: 1px solid #333333;
+  --text-color: #f5f5f5;
+  --text-color-secondary: rgba(245, 245, 245, 0.78);
+  color: var(--text-color);
+}
+
+/* Build log — PrimeBlocks-inspired content layouts */
+.light-mode .home-landing-band--theme .blog-emphasized-post.p-card,
+.light-mode .home-landing-band--theme .blog-post-list-card.p-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #1a1a1a;
+}
+
+.dark-mode .home-landing-band--theme .blog-emphasized-post.p-card,
+.dark-mode .home-landing-band--theme .blog-post-list-card.p-card {
+  background: #1a1a1a;
+  border: 1px solid #333333;
+  color: #f5f5f5;
+}
+
+.home-landing-band--theme .blog-emphasized-post.p-card .p-card-body,
+.home-landing-band--theme .blog-post-list-card.p-card .p-card-body {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.blog-emphasized-post-image,
+.blog-post-list-image {
+  display: block;
+  min-height: 12rem;
+  max-height: 22rem;
+  object-fit: cover;
+}
+
+.blog-post-list {
+  gap: 1rem;
+}
+
+/* Blog index — supporting posts below featured (2 cols mobile, 3 desktop) */
+.blog-index-posts-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+
+@media screen and (min-width: 768px) {
+  .blog-index-posts-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.blog-index-posts-row .blog-index-posts-card,
+.blog-index-posts-row .blog-post-list-card {
+  width: 100%;
+  min-width: 0;
+}
+
+.blog-emphasized-post--clickable:hover,
+.blog-post-list-card:hover {
+  border-color: var(--primary-color, #f59e0b);
+}
+
+/* Full-bleed post hero (same placement as home MarketingHero — outside MarketingContainer) */
+.blog-post-hero-section {
+  width: 100%;
+}
+
+.blog-post-hero {
+  position: relative;
+  width: 100%;
+}
+
+.blog-post-hero-media.p-image,
+.blog-post-hero-media {
+  display: block;
+  width: 100%;
+}
+
+.blog-post-hero-image {
+  display: block;
+  width: 100%;
+  min-height: min(52vh, 28rem);
+  max-height: min(72vh, 40rem);
+  object-fit: cover;
+}
+
+.blog-post-hero-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0 0 clamp(1.5rem, 4vw, 2.75rem);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.08) 0%,
+    rgba(0, 0, 0, 0.25) 40%,
+    rgba(0, 0, 0, 0.78) 100%
+  );
+  pointer-events: none;
+}
+
+.blog-post-hero-overlay .home-landing-container {
+  width: 100%;
+}
+
+.blog-post-hero-overlay .p-tag {
+  pointer-events: auto;
+}
+
+/*
+ * Tighter space below full-bleed hero (blog post page only).
+ * MarketingSection uses PrimeFlex py-6 / md:py-8 (3rem / 5rem top, !important), loaded after
+ * index.css — override padding-top here with the same specificity + !important.
+ */
+.home-landing-band--theme.blog-post-section {
+  padding-top: 1.5rem !important;
+}
+
+@media screen and (min-width: 768px) {
+  .home-landing-band--theme.blog-post-section {
+    padding-top: 2.5rem !important;
+  }
+}
+
+.blog-post-hero-title {
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.blog-post-hero-meta {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.blog-post-body {
+  width: 100%;
+}
+
+.blog-post-body-content {
+  box-sizing: border-box;
+  width: calc(100% - 100px);
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.blog-post-body-content > :last-child {
+  margin-bottom: 0 !important;
+}
+
+.blog-mdx-inline-image {
+  max-height: 24rem;
+  object-fit: cover;
+}
+
+.blog-mdx-figure figcaption {
+  font-style: italic;
+}
+
+.blog-mdx-list {
+  list-style-position: outside;
+}
+
+.blog-mdx-pre {
+  margin: 0 0 1rem;
+  padding: 1rem 1.125rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.light-mode .blog-mdx-pre {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #1a1a1a;
+}
+
+.dark-mode .blog-mdx-pre {
+  background: #1a1a1a;
+  border: 1px solid #333333;
+  color: #e5e7eb;
+}
+
+.blog-mdx-code--inline {
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+  border-radius: 0.25rem;
+}
+
+.light-mode .blog-mdx-code--inline {
+  background: #f3f4f6;
+  color: #1a1a1a;
+}
+
+.dark-mode .blog-mdx-code--inline {
+  background: #2a2a2a;
+  color: #f5f5f5;
+}
+
+.blog-mdx-code--block {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  background: transparent;
+  padding: 0;
+}
+
+.blog-social-share {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--surface-border, #e5e7eb);
+}
+
+.dark-mode .blog-social-share {
+  border-top-color: #333333;
+}
+
+.blog-recent-posts-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+}
+
+@media (max-width: 767px) {
+  .blog-recent-posts-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.blog-recent-posts-row .blog-recent-posts-card,
+.blog-recent-posts-row .blog-post-list-card {
+  width: 100%;
+  min-width: 0;
+}
+
+.blog-recent-posts-row .blog-post-list-image {
+  min-height: 6.5rem;
+  max-height: 9.5rem;
+}
+
+.blog-recent-posts-row .blog-post-list-card .p-4 {
+  padding: 0.75rem 1rem;
+}
+
+.blog-recent-posts-row .blog-post-list-card h3 {
+  font-size: 1rem;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.blog-recent-posts-row .blog-post-list-card .text-color-secondary.line-height-3 {
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.blog-recent-posts-row .blog-post-list-card .text-primary.font-medium {
+  font-size: 0.875rem;
+}
+
+.blog-recent-posts-row .blog-post-list-card .flex.flex-wrap {
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+}
+
+.blog-recent-posts-row .blog-post-list-card .text-sm {
+  font-size: 0.75rem;
+  white-space: nowrap;
 }
 
 /* Cookie consent banner (GTM loads only after opt-in) */

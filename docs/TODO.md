@@ -53,6 +53,7 @@ Based on `docs/gridsmith-context.md`.
   - [x] Update page/app title to "GridSmith".
   - [x] Update PWA install name/short name in `manifest.json`.
   - [x] Update tagline placement/copy across pages: "Build Your World. One Tile at a Time."
+- [x] **Marketing landing (home & about):** Shared PrimeReact blocks in [`src/components/home/marketing-blocks.tsx`](../src/components/home/marketing-blocks.tsx); alternating light/dark/black bands (`.home-landing-*` in [`src/index.css`](../src/index.css)). Home: v1 “Your First Terrain System” hero, features, splits, footer CTA (`/tiles`, Etsy). About: hero + copy sections + footer CTA (`/tiles`, `/tile-builder`). Default meta in `public/index.html`.
 - [ ] **Cleanup:**
   - [x] Remove unused axes feature (toggle, overlay, and assets).
   - [ ] Remove remaining "Playground" legacy content where it no longer serves GridSmith.
@@ -86,7 +87,7 @@ Based on `docs/gridsmith-context.md`.
 ## 8. Future Work / Nice-to-Haves
 - [ ] Make the code editor accessible only to admin/advanced roles (hide for normal users).
 - [ ] Re-enable and design the "Advanced settings" section in the parameter panel.
-- [x] Flesh out About page copy and visuals.
+- [x] Flesh out About page copy and visuals (landing layout via shared `marketing-blocks` with home).
 - [x] Flesh out Get Tiles page content and CTAs for future tile packs/tools.
 - [ ] Add additional GridSmith-specific presets and refine parameter ranges and labels.
 - [ ] Consider PWA cache-busting/versioning strategy to reduce stale title/icon/install prompt artifacts after deploy.
@@ -116,8 +117,8 @@ Based on `docs/gridsmith-context.md`.
 - [x] **Assets & pipeline:** `public/tile_stls/manifest.json` + STL assets; main thread install + `sourcesWithTileStls` so worker FS receives tile meshes; `ensureParentDirs` in worker for nested writes.
 - [x] **SCAD:** `tile_builder.scad` assembler with `wall_profile` (`none` / `flat` / `curved`), `curved_wall_mirror`, per-side `use_*_wall` and `*_wall_type`, flat STL names `wall`/`door` vs curved `curved_wall`/`curved_door`, resolution-driven `tile_file()`.
 - [x] **UI (`TileBuilderPanel`):** accordion Core (default open) / Floor / Walls; resolution labels Low / Med / High (64 / 128 / 256); flat walls: per-side dropdown (None / Wall / Door) drives toggles; curved: **Type** (north) + **Mirror** checkbox (`curved_wall_mirror`): mirrored uses `use_east_wall` + `east_wall_type` instead of north; profile switch normalizes flat ↔ curved types and clears side toggles when entering curved.
-- [x] **Free tier (Med/High):** first dialog when selecting Med/High explains Pro (selection stays for preview); **Render** / **Download** / F6 / F7 open `TileBuilderUpsellContext` upsell modal instead of final render/export at 128/256 (preview still allowed).
-- [ ] **Pro gating (future):** replace UI-only upsell intercept with real membership check (Cognito group, entitlement API, or similar) before allowing final render + STL export at Med/High. (Aligned with **section 12 (Tile pack commerce)**—capabilities from Stripe-backed API.)
+- [x] **Free tier / Med/High:** Users can **preview** at Low / Med / High (64 / 128 / 256). Dialog when choosing Med/High without owning the matching pack (copy is user-tunable). **Full render**, **Download** (export), **F6**, and **F7** open the upsell modal instead of producing downloadable output at 128/256 unless `capabilities/me` + catalog show an owned pack with **`tile_builder_features`** for the active `tile_set` (`Model` enforces on non-preview render and `export()`).
+- [x] **Stripe-backed gating:** `TileCartContext` + `computeTileBuilderProEntitledForTileSet` (not UI-only); default **High** when entitled and resolution still Low.
 - [ ] **Optional:** tile-builder-specific analytics (`stl_previewed` / `stl_downloaded` with `resolution`, `wall_profile`, etc.) and download filename parity (north vs east when mirrored).
 
 ## 12. Tile pack commerce & backend (digital packs)
@@ -126,19 +127,58 @@ High-level roadmap; full design, sequence, and YAML todos live in **[`docs/plans
 
 **Principles:** Stripe is source of truth for products and paid orders (no local mirror DB). Add persistence (e.g. DynamoDB) only when a feature needs it (e.g. render telemetry). Signed-in checkout. S3 for STL files; downloads via JWT + server-side Stripe entitlement check + short-lived presigned URL. Separate dev/prod API URLs and Stripe test vs live keys.
 
+- [x] **Stripe Dashboard:** Account set up; **custom checkout domain** `checkout.gridsmith.io` for Stripe Hosted Checkout (align success/cancel URLs when Checkout Session API ships).
+
+- [ ] **Phase 2a — API deployment pipeline:** Workflow **`.github/workflows/api-deploy.yml`**: push to **`main`** (paths: `infra/api/**`, `scripts/deploy-api.sh`, workflow file) → **prod** API deploy; **`workflow_dispatch`** → dev / staging / prod for manual runs (use for **dev**). Requires GitHub **Environment** secrets + OIDC trust per stage (`AWS_ROLE_TO_ASSUME_PROD` on **prod**, etc.). Until wired, jobs skip with a log line; use local `npm run deploy:api:*` or manual dispatch when ready.
 - [x] **Phase 1 — Storefront UI (placeholders):** Done in repo.
   - [x] `/tiles` grid (PrimeReact cards), catalog [`src/data/placeholderTileSets.ts`](../src/data/placeholderTileSets.ts): `order`, `disabled`, `addToCartDisabled`, `priceLabel`, optional per-set **`whatYouGet`** (heading, intro, bullets, closing); real **Tavern Set** description copy. Card blurbs honor **line breaks** (`excerpt` + `pre-line` CSS).
   - [x] `/tile-details/:slug`: breadcrumb; **two columns from `lg` up** with **independent scroll** (`max-height` + `overflow-y` on each column); left = gallery + thumbs + **Designed for the Table**; right = title, price, multi-paragraph description, **Add to cart** / Continue shopping, **Included Files**, optional **What You Get** from data, second **Add to cart**. Below `lg`, columns stack and use normal page scroll.
-  - [x] **Add to cart:** always enabled; if `addToCartDisabled`, PrimeReact **Dialog** (coming-soon + check back / account; **Ok** closes). If not disabled, no-op until checkout exists.
+  - [x] **Add to cart:** always enabled; if `addToCartDisabled`, PrimeReact **Dialog** (coming-soon + check back / account; **Ok** closes). Otherwise adds to client cart / checkout when API is configured.
   - [x] Nested-route fixes: webpack `publicPath: '/'`, root-absolute `public/index.html` assets, PrimeIcons `url()` handling so fonts/scripts/WASM load under `/tile-details/...`.
   - [x] **Footer:** global **`SiteFooter`** only (below `<main>`). Inner-column footer was tried and reverted; long right-column content still scrolls inside the column, then the user scrolls the page to reach the footer.
   - [x] Deploy storefront UI to prod so live visitors see the shop shell.
-- [ ] **Phase 2 — AWS API:** API Gateway + Lambda: `GET /api/catalog/tile-packs` (Stripe list), then `POST /api/billing/checkout-session` and `GET /api/capabilities/me` (Stripe customer + purchase history; optional `custom:stripe_customer_id` on Cognito).
-- [ ] **Phase 3 — Wire catalog:** Replace placeholders with live catalog API; keep same components/routes.
-- [ ] **Phase 4 — Cart & checkout:** Client cart → Checkout Session (signed-in only).
-- [ ] **Phase 5 — Downloads:** Private S3; `POST` download endpoint validates JWT, confirms purchase in Stripe, returns presigned URL.
-- [ ] **Phase 6 — Tile Builder:** Wire Med/High render/download gates to **`/api/capabilities/me`** (real entitlements, not UI-only).
-- [ ] **Phase 7 — Admin:** In-app `/admin/*` (Cognito `admin` group); user lookup + Stripe read paths (no local order table).
-- [ ] **Phase 8 — Telemetry:** When built: chosen store (likely Dynamo) + `POST /api/telemetry/render` with non-PII `analytics_subject_id`—**do not create tables before this**.
+- [x] **Phase 2b — AWS API (SAM + Lambdas):** In-repo API Gateway + Lambda: `GET /api/catalog/tile-packs`, `POST /api/billing/checkout-session` (JWT; single `priceId` or `lineItems` for multi-pack cart), `GET /api/capabilities/me` (`ownedPriceIds`, `ownedProductIds`, `ownedPurchases[]` with per-price `purchasedAt` from paid Checkout Sessions). Cognito → Stripe via **Stripe Customer `metadata.cognito_sub`** + Customer Search (no Cognito `custom:stripe_customer_id` required for v1).
+- [x] **Phase 3 — Wire catalog:** Live catalog when `GRIDSMITH_API_BASE_URL` is set (`src/data/tilePackCatalog.ts`); same `/tiles` and `/tile-details` components; placeholder merge for select slugs until fully Stripe-metadata-driven.
+- [x] **Phase 4 — Cart & checkout:** Client cart (`TileCartContext`, drawer + `/cart`), Stripe Hosted Checkout; success/cancel handling on cart page.
+- [x] **Phase 5 — Downloads:** Private S3 per API stage; `POST /api/downloads/tile-pack` validates JWT, confirms purchase in Stripe, returns presigned URL; Product metadata `pack_download_s3_key`; Profile owned-pack download buttons (`gridSmithBilling`, `ProfilePage`).
+- [x] **Phase 6 — Tile Builder:** Med/High (128/256) entitlement from **SCAD `tile_set`** vs owned catalog slugs (`computeTileBuilderProEntitledForTileSet`); **preview** always allowed at Med/High; **full render + export** blocked in `Model` when not entitled; default **High** when entitled and resolution still Low; catalog Lambda `tile_builder_features` / `pack_download_s3_key`. Builder shell **awaits `Model.init()`** (which awaits syntax check) before first auto-preview so footer progress matches work completion.
+- [ ] **Phase 7 — Telemetry:** When built: chosen store (likely Dynamo) + `POST /api/telemetry/render` with non-PII `analytics_subject_id`—**do not create tables before this**.
 - [x] **Marketing opt-in:** Shipped in app—`custom:marketing_opt_in` on the user pool, Profile UI, in-browser attribute updates (no Lambda required for the boolean). Optional later: Post confirmation Lambda for server-side default, or ESP sync for campaigns (see **`docs/plans/tile_pack_commerce_v1.md`**).
-- [ ] **Ops reminder:** Local dev never targets prod API Lambdas or live Stripe once those exist (see plan).
+- [x] **Profile owned packs:** When signed in and API configured, Profile lists owned catalog rows from capabilities; shows **Purchased** date when deployed capabilities returns `ownedPurchases` (`src/data/ownedPacksMatch.ts`, `ProfilePage`).
+- [ ] **Ops reminder:** Local `.env` should target the intended API stage and Stripe mode (see commerce plan); never mix prod keys with dev Lambdas.
+
+## 13. Testing & release gates (commerce readiness)
+
+As Stripe and real-user flows land, CI should catch regressions before production.
+
+- [ ] **Keep existing OpenSCAD playground smoke tests healthy:** `tests/e2e.test.js` + GitHub Actions **`Test Build`** (`npm run build:all`, puppeteer e2e in dev + prod modes). Fix harness drift when UI routing or preview pipeline changes. **Local two-terminal loop:** Terminal A runs the app (`npm start` → `http://localhost:4000/baseplate`); Terminal B runs `npm run test:e2e:watch` (`jest --watchAll` + `PUPPETEER_SKIP_SERVER=1` so Jest does not spawn or tear down a dev server, and edits outside the test file still trigger reruns). For prod-bundle e2e against `serve dist`, use Terminal A `npm run start:production:e2e` (embeds `GRIDSMITH_TEST_HOOK` for `window.__GRIDSMITH_TEST__`; `:3000`) + Terminal B `npm run test:e2e:watch:prod`.
+- [ ] **Block releases on red CI:** Configure **`main`** branch protection (or equivalent) so merges/deploys require a green **`Test Build`** (and any future required workflows). Goal: a failing test fails the workflow and **does not ship** the static app to prod.
+
+## 14. Build log / blog (`feature-blog`) — v1 complete
+
+MDX file-based posts; plan in [`docs/plans/blog_build_log_v1.md`](plans/blog_build_log_v1.md). **Ready to release** — no published posts required (use `draft: true` or ship an empty index until content is ready; authoring is in [`src/blog/README.md`](../src/blog/README.md)).
+
+- [x] **Infrastructure:** `@mdx-js/loader` + `@mdx-js/react`, `src/blog/posts/*.mdx`, `registry.ts`, `load-posts.ts`.
+- [x] **Routes:** `/blog` index, `/blog/:slug` post (`BlogPage`, `BlogPostPage` in `App.tsx`).
+- [x] **Layouts (PrimeBlocks [content](https://primeblocks.org/marketing/content)):** index = Emphasized Post; post = full-bleed hero with title/date/read-time overlay + inset MDX body.
+- [x] **Seed content:** `test-post-1`, `test-post-2`, `test-post-media-demo` (dev/demo); `test-post-3-draft` exercises drafts.
+- [x] **Home CTA:** “Read the Build Log” → `/blog`.
+- [x] **Nav:** header + mobile menu + footer link to Build Log (`/blog`).
+- [x] **SEO/discovery:** `applyPageMeta` (canonical, OG, Twitter), JSON-LD (`Blog` / `BlogPosting`), `public/robots.txt`, `npm run generate:sitemap` → `public/sitemap.xml`, `npm run prerender:blog` (postbuild) for `/blog` and posts.
+- [x] **Theme:** blog bands use `tone="theme"` (follows app dark/light toggle via `home-landing-band--theme`).
+- [x] **Marketing routes:** skip BrowserFS / `Model` on non-builder paths (`src/routes.ts`); dev server avoids serving stale `dist/blog` prerender over SPA.
+- [x] **Drafts:** `meta.draft` — hidden in production, excluded from sitemap/prerender; visible in dev with Draft tag.
+- [x] **Read time:** auto-estimated on `npm run generate:sitemap` → `post-stats.generated.json`; shown on index cards (`· N min read`).
+- [x] **Recent posts:** 3-card section at bottom of each post page.
+- [x] **Social share:** `BlogSocialShare` on every post (X, Facebook, LinkedIn, copy link); optional `<BlogSocialShare />` in MDX.
+- [x] **Analytics:** SPA `page_view` on route change (`App.tsx`) — no blog-specific GTM tags (those would need container changes).
+- [x] **E2e:** tabled; blog routes not in scope for the initial broader test-suite pass.
+
+## 15. Marketing landing follow-ups
+
+Home and About use the shared landing system (see §4). Remaining polish:
+
+- [ ] Replace placeholder hero/split images with final marketing art (e.g. dedicated `/home/*` paths).
+- [ ] Optional e2e smoke for home/about hero copy and primary CTAs when routing changes.
+- [ ] **API automated tests (no extra UI e2e for now):** Add a focused test suite for Lambda handlers / billing logic—request validation, JWT behavior (happy + invalid token), Stripe client usage (mocked; **never** hit live Stripe in unit tests), and entitlement decisions. Run these tests in CI on every push/PR (separate job or folded into `Test Build` once the API code lives in-repo).
+- [ ] **Stripe test-mode fixtures:** Standardize on **`sk_test_` / restricted keys** for CI and local; prod secrets only in prod deploy environments.
