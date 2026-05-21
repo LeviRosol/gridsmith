@@ -166,23 +166,56 @@ function waitForServer(url, timeoutMs = 60_000) {
   });
 }
 
+/** Stop serve and any child processes so CI/postbuild does not hang on open stdio handles. */
+function stopServe(proc) {
+  return new Promise((resolve) => {
+    if (proc.exitCode != null) {
+      resolve();
+      return;
+    }
+    const forceKill = setTimeout(() => {
+      try {
+        if (process.platform !== 'win32' && proc.pid) {
+          process.kill(-proc.pid, 'SIGKILL');
+        } else {
+          proc.kill('SIGKILL');
+        }
+      } catch {
+        /* already exited */
+      }
+      resolve();
+    }, 3000);
+    proc.once('exit', () => {
+      clearTimeout(forceKill);
+      resolve();
+    });
+    try {
+      if (process.platform !== 'win32' && proc.pid) {
+        process.kill(-proc.pid, 'SIGTERM');
+      } else {
+        proc.kill('SIGTERM');
+      }
+    } catch {
+      clearTimeout(forceKill);
+      resolve();
+    }
+  });
+}
+
 function startServe() {
   return new Promise((resolve, reject) => {
-    const proc = spawn('npx', ['serve', '-s', DIST, '-l', String(PORT)], {
+    const proc = spawn('npx', ['--yes', 'serve', '-s', DIST, '-l', String(PORT)], {
       cwd: ROOT,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      shell: process.platform === 'win32',
-    });
-    let stderr = '';
-    proc.stderr?.on('data', (chunk) => {
-      stderr += chunk.toString();
+      stdio: 'ignore',
+      detached: process.platform !== 'win32',
+      shell: false,
     });
     proc.on('error', reject);
     waitForServer(`http://${HOST}:${PORT}/`)
       .then(() => resolve(proc))
-      .catch((err) => {
-        proc.kill();
-        reject(new Error(`${err.message}\n${stderr}`));
+      .catch(async (err) => {
+        await stopServe(proc);
+        reject(err);
       });
   });
 }
@@ -194,6 +227,8 @@ async function launchBrowser() {
   };
   if (process.env.PUPPETEER_EXECUTABLE_PATH) {
     launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  } else if (process.env.CI === 'true') {
+    launchOptions.executablePath = puppeteer.executablePath();
   } else {
     launchOptions.channel = 'chrome';
   }
@@ -239,7 +274,7 @@ async function puppeteerPrerenderAll(routes) {
     }
   } finally {
     await browser.close();
-    server.kill('SIGTERM');
+    await stopServe(server);
   }
 }
 

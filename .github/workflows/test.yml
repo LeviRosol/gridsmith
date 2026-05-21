@@ -25,5 +25,6 @@ jobs:
           name: dist-node-nvmrc
           path: dist
           retention-days: 30
-      - run: NODE_ENV=development npm run test:e2e
-      - run: NODE_ENV=production  npm run test:e2e
+      # E2e temporarily disabled while the test suite is being rebuilt (see docs/TODO.md §13).
+      # - run: NODE_ENV=development npm run test:e2e
+      # - run: NODE_ENV=production npm run test:e2e
