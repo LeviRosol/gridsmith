@@ -221,18 +221,15 @@ function startServe() {
 }
 
 async function launchBrowser() {
-  const launchOptions = {
+  return puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  };
-  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-    launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-  } else if (process.env.CI === 'true') {
-    launchOptions.executablePath = puppeteer.executablePath();
-  } else {
-    launchOptions.channel = 'chrome';
-  }
-  return puppeteer.launch(launchOptions);
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+    ],
+  });
 }
 
 const PRERENDER_CONSENT = JSON.stringify({ analytics: false, marketingEmails: true });
@@ -267,15 +264,26 @@ async function prerenderRoute(browser, urlPath, outRelative) {
 
 async function puppeteerPrerenderAll(routes) {
   const server = await startServe();
-  const browser = await launchBrowser();
+  let browser;
   try {
+    browser = await launchBrowser();
     for (const route of routes) {
       await prerenderRoute(browser, route.urlPath, route.outRelative);
     }
   } finally {
-    await browser.close();
+    if (browser) {
+      await browser.close().catch(() => {});
+    }
     await stopServe(server);
   }
+}
+
+/** Vercel has no system Chrome; bundled Chromium is heavy. Static head injection is enough for SEO. */
+function shouldUsePuppeteerPrerender() {
+  if (process.env.PRERENDER_STATIC_ONLY === '1') return false;
+  if (process.env.PRERENDER_USE_PUPPETEER === '1') return true;
+  if (process.env.VERCEL === '1') return false;
+  return true;
 }
 
 async function main() {
@@ -296,6 +304,12 @@ async function main() {
 
   console.log(`Prerendering ${routes.length} blog route(s)…`);
   const templateHtml = fs.readFileSync(indexPath, 'utf8');
+
+  if (!shouldUsePuppeteerPrerender()) {
+    staticPrerenderAll(templateHtml, posts);
+    console.log('Blog prerender complete (static head).');
+    return;
+  }
 
   try {
     await puppeteerPrerenderAll(routes);
