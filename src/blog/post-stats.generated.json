@@ -5,18 +5,18 @@
     "readingTimeMinutes": 1
   },
   {
-    "slug": "test-post-1",
+    "slug": "coming-soon",
     "draft": false,
     "readingTimeMinutes": 1
   },
   {
     "slug": "test-post-2",
-    "draft": false,
+    "draft": true,
     "readingTimeMinutes": 1
   },
   {
     "slug": "test-post-media-demo",
-    "draft": false,
+    "draft": true,
     "readingTimeMinutes": 1
   }
 ]

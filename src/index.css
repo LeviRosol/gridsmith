@@ -1491,6 +1491,26 @@ a.tile-shop-card-image-hit:focus-visible {
   gap: 1rem;
 }
 
+/* Blog index — supporting posts below featured (2 cols mobile, 3 desktop) */
+.blog-index-posts-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+
+@media screen and (min-width: 768px) {
+  .blog-index-posts-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.blog-index-posts-row .blog-index-posts-card,
+.blog-index-posts-row .blog-post-list-card {
+  width: 100%;
+  min-width: 0;
+}
+
 .blog-emphasized-post--clickable:hover,
 .blog-post-list-card:hover {
   border-color: var(--primary-color, #f59e0b);
