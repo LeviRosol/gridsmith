@@ -163,6 +163,9 @@ exports.handler = async (event) => {
       message: code === 401 ? 'Sign in required or session expired.' : 'Could not start checkout.',
       stage,
     };
+    if (code === 401 && err.message) {
+      payload.reason = String(err.message).slice(0, 120);
+    }
     if (stage === 'dev' && err.message) {
       payload.diagnostic = String(err.message).slice(0, 400);
     }

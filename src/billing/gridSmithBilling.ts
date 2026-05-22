@@ -1,4 +1,4 @@
-import { getStoredCognitoIdToken } from '../cognito/tokenStorage';
+import { ensureFreshCognitoIdToken } from '../cognito/ensureIdToken.ts';
 
 function apiBase(): string {
   return (process.env.GRIDSMITH_API_BASE_URL ?? '').trim().replace(/\/$/, '');
@@ -25,7 +25,7 @@ export async function createGridSmithCheckoutSession(
   if (!base) {
     throw new Error('GRIDSMITH_API_BASE_URL is not configured');
   }
-  const token = getStoredCognitoIdToken();
+  const token = await ensureFreshCognitoIdToken();
   if (!token) {
     throw new Error('Sign in to continue to checkout.');
   }
@@ -81,6 +81,14 @@ export async function createGridSmithCheckoutSession(
         detail = `${detail}\n(diagnostic) ${j.diagnostic.trim()}`;
       } else if (typeof j.message === 'string' && j.message.trim()) {
         detail = j.message.trim();
+      }
+      if (r.status === 401) {
+        const reason = typeof j.reason === 'string' ? j.reason.trim() : '';
+        if (reason) {
+          detail = `${detail} (${reason})`;
+        }
+        detail =
+          `${detail} Try signing out and back in. If it persists, production Cognito settings on the API may not match the site.`;
       }
     } catch {
       /* ignore */
@@ -169,7 +177,7 @@ export async function fetchGridSmithCapabilities(): Promise<GridSmithCapabilitie
   if (!base) {
     throw new Error('GRIDSMITH_API_BASE_URL is not configured');
   }
-  const token = getStoredCognitoIdToken();
+  const token = await ensureFreshCognitoIdToken();
   if (!token) {
     throw new Error('Sign in to load your purchases.');
   }
@@ -222,7 +230,7 @@ export async function fetchTilePackDownloadUrl(priceId: string): Promise<TilePac
   if (!base) {
     throw new Error('GRIDSMITH_API_BASE_URL is not configured');
   }
-  const token = getStoredCognitoIdToken();
+  const token = await ensureFreshCognitoIdToken();
   if (!token) {
     throw new Error('Sign in to download.');
   }
