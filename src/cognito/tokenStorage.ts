@@ -1,6 +1,8 @@
 /** Keys aligned with `AuthContext` Cognito localStorage. */
 
-const ID_TOKEN_KEY = 'gridsmith.cognito.idToken';
+export const ID_TOKEN_STORAGE_KEY = 'gridsmith.cognito.idToken';
+
+const ID_TOKEN_KEY = ID_TOKEN_STORAGE_KEY;
 
 export function getStoredCognitoIdToken(): string | null {
   try {
