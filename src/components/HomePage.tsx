@@ -20,12 +20,12 @@ const DESCRIPTION =
 
 const IMAGES = {
   hero: '/gs_hero_tavern_64_set.png',
-  fastPrints: '/combined_hero_even.png',
-  snapFit: '/walls_combined_close.png',
+  fastPrints: '/plate_print.gif',
+  snapFit: '/snap-fit.jpg',
   gameNight: '/tile-pack-gallery/tavern/2.jpg',
-  storage: '/gs_hero_final.png',
-  tavernSpread: '/tile-pack-gallery/tavern/1.jpg',
-  workbench: '/combined_hero_even.png',
+  storage: '/ender_3.jpg',
+  tavernSpread: '/tavern_set.jpg',
+  workbench: '/built-open.jpg',
 } as const;
 
 const TAVERN_CORE_SLUG = 'tavern-core-set';
@@ -155,7 +155,7 @@ export default function HomePage() {
         tone="dark"
         imagePosition="right"
         imageSrc={IMAGES.storage}
-        imageAlt="Stacked GridSmith storage trays with labeled lids and organized tile compartments"
+        imageAlt="Ender 3 3D printer with GridSmith terrain tiles on the build plate"
         title="Built for New Printer Owners"
       >
         <p className="m-0 mb-0">
@@ -174,6 +174,7 @@ export default function HomePage() {
         imagePosition="left"
         imageSrc={IMAGES.tavernSpread}
         imageAlt="Top-down view of the Tavern Core Set tile spread"
+        imagePreview
         title="Start with the Tavern Core Set"
         actions={
           <MarketingButton label="View Tavern Core Set" path={`/tile-details/${TAVERN_CORE_SLUG}`} />

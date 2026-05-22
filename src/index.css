@@ -690,14 +690,25 @@ code {
   border-radius: 10px;
   background: var(--surface-100);
   box-sizing: border-box;
+  --tile-detail-viewport-h: 22rem;
+}
+
+@media (min-width: 992px) {
+  .tile-detail-image-frame {
+    --tile-detail-viewport-h: 26rem;
+  }
 }
 
 .tile-detail-image {
   display: block;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   height: auto;
+  max-height: var(--tile-detail-viewport-h);
   object-fit: contain;
+  object-position: center;
   border-radius: 8px;
+  margin: 0 auto;
 }
 
 .tile-detail-image-badge {
@@ -723,14 +734,28 @@ code {
   width: 100%;
 }
 
+/* Fixed-height viewport; short images vertically centered */
+.tile-detail-galleria .p-galleria-item-wrapper {
+  min-height: var(--tile-detail-viewport-h);
+}
+
 /* Prev arrow is before the slide in DOM; full-width slide paints on top unless nav is raised. */
 .tile-detail-galleria .p-galleria-item-container {
   position: relative;
+  min-height: var(--tile-detail-viewport-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tile-detail-galleria .p-galleria-item {
   position: relative;
   z-index: 0;
+  min-height: var(--tile-detail-viewport-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
 }
 
 .tile-detail-galleria .p-galleria-item-nav {
@@ -742,9 +767,15 @@ code {
   display: none;
 }
 
-.tile-detail-galleria .p-galleria-item .p-image.p-image-preview-container {
+.tile-detail-galleria .p-galleria-item .p-image,
+.tile-detail-galleria .p-galleria-item .p-image.p-image-preview-container,
+.tile-detail-image-wrap.p-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   max-width: 100%;
+  min-height: var(--tile-detail-viewport-h);
 }
 
 .tile-detail-galleria .p-galleria-thumbnail-wrapper {
@@ -757,6 +788,69 @@ code {
   height: 4.5rem;
   object-fit: contain;
   border-radius: 6px;
+}
+
+.tile-detail-image-preview-trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--tile-detail-viewport-h);
+  cursor: zoom-in;
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.tile-detail-image-preview-trigger:focus-visible {
+  outline: 2px solid var(--primary-color, #eab308);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.tile-detail-image-preview-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.tile-detail-image-preview-trigger:hover .tile-detail-image-preview-icon,
+.tile-detail-image-preview-trigger:focus-visible .tile-detail-image-preview-icon {
+  opacity: 1;
+}
+
+/* Fullscreen gallery preview (arrows + keyboard via Galleria) */
+.tile-detail-galleria-fullscreen.p-galleria .p-galleria-mask {
+  background: rgba(0, 0, 0, 0.92);
+}
+
+.tile-detail-galleria-fullscreen .p-galleria-item-nav {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.tile-detail-galleria-fullscreen .p-galleria-item-nav:not(.p-disabled):hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.tile-detail-fullscreen-image {
+  display: block;
+  max-width: min(96vw, 1200px);
+  max-height: 85vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin: 0 auto;
 }
 
 .tile-detail-thumbs {
@@ -1413,6 +1507,33 @@ a.tile-shop-card-image-hit:focus-visible {
   max-height: 14rem;
   object-fit: cover;
   width: 100%;
+}
+
+/* Split-section image with PrimeReact fullscreen preview */
+.marketing-photo--preview.p-image {
+  cursor: zoom-in;
+}
+
+.marketing-photo--preview .p-image-preview-indicator {
+  border-radius: 0.5rem;
+}
+
+/* Split sections: natural aspect ratio (no 960×640 stretch) */
+.home-landing-split-image.p-image,
+.home-landing-split-image-col .p-image {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+.home-landing-split-image .home-landing-split-photo,
+.home-landing-split-image-col .p-image img {
+  width: 100%;
+  height: auto !important;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: center;
+  display: block;
 }
 
 /* Footer CTA on black band */
