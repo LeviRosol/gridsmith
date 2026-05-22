@@ -80,8 +80,13 @@ export default function CartPage() {
     };
   }, [signedIn, shopApiConfigured, flashSuccess]);
 
+  const showPostCheckoutDownloads = signedIn && flashSuccess;
   const showViewOwnedInEmptyCart =
-    signedIn && (flashSuccess || (shopApiConfigured && ownsPacksChecked && ownsPacks));
+    signedIn &&
+    !flashSuccess &&
+    shopApiConfigured &&
+    ownsPacksChecked &&
+    ownsPacks;
 
   const startCheckout = async () => {
     if (!auth.isSignedIn) {
@@ -122,11 +127,30 @@ export default function CartPage() {
       <section className="home-section home-section-alt">
         <div className="home-page-container" style={{ maxWidth: 720 }}>
           {flashSuccess ? (
-            <Message
-              severity="success"
-              text="Thanks! Your cart was cleared after checkout. Stripe will email your receipt when payment completes."
-              className="w-full mb-3"
-            />
+            <div className="tile-cart-checkout-success mb-3">
+              <Message
+                severity="success"
+                text="Thanks for your purchase! Your cart has been cleared. Download your tile packs from your Profile — Stripe will email your receipt when payment completes."
+                className="w-full mb-3"
+              />
+              {showPostCheckoutDownloads ? (
+                <Button
+                  type="button"
+                  label="Download your packs"
+                  icon="pi pi-download"
+                  className="w-full sm:w-auto"
+                  onClick={() => {
+                    window.location.assign('/profile#owned-packs');
+                  }}
+                />
+              ) : (
+                <Message
+                  severity="info"
+                  text="Sign in to access downloads on your Profile."
+                  className="w-full"
+                />
+              )}
+            </div>
           ) : null}
           {flashCancel ? (
             <Message
