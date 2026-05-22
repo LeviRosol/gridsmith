@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BreadCrumb } from 'primereact/breadcrumb';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { Divider } from 'primereact/divider';
 import { Galleria } from 'primereact/galleria';
-import { Image, type ImagePassThroughOptions } from 'primereact/image';
+import { Image } from 'primereact/image';
 import { Message } from 'primereact/message';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Tag } from 'primereact/tag';
@@ -45,12 +45,56 @@ const BUYBOX_HIGHLIGHT_BULLETS = [
 
 type TileDetailGalleriaItem = { itemImageSrc: string };
 
-/** Fullscreen preview: hide download + rotate; keep zoom and close (dismiss also via Escape / backdrop). */
-const TILE_DETAIL_IMAGE_PREVIEW_PT: ImagePassThroughOptions = {
-  downloadButton: { style: { display: 'none' } },
-  rotateLeftButton: { style: { display: 'none' } },
-  rotateRightButton: { style: { display: 'none' } },
-};
+function TileDetailGalleriaSlide({
+  item,
+  setSlug,
+  previewEnabled,
+  onOpenFullscreen,
+}: {
+  item: TileDetailGalleriaItem;
+  setSlug: string;
+  previewEnabled: boolean;
+  onOpenFullscreen: () => void;
+}) {
+  const image = (
+    <Image
+      key={`${setSlug}-${item.itemImageSrc}`}
+      src={item.itemImageSrc}
+      alt=""
+      preview={false}
+      imageClassName="tile-detail-image"
+      loading="eager"
+      className="tile-detail-image-wrap"
+    />
+  );
+
+  if (!previewEnabled) {
+    return image;
+  }
+
+  return (
+    <div
+      className="tile-detail-image-preview-trigger"
+      role="button"
+      tabIndex={0}
+      aria-label="Open image gallery preview"
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpenFullscreen();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          onOpenFullscreen();
+        }
+      }}
+    >
+      {image}
+      <span className="tile-detail-image-preview-icon pi pi-search-plus" aria-hidden />
+    </div>
+  );
+}
 
 function TileDetailSpecList({
   heading,
@@ -106,6 +150,8 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
   const [cartAddedFlash, setCartAddedFlash] = useState(false);
   const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [detailPackContent, setDetailPackContent] = useState<TilePackContent | null | undefined>(undefined);
+  const [fullscreenPreviewOpen, setFullscreenPreviewOpen] = useState(false);
+  const fullscreenGalleriaRef = useRef<Galleria>(null);
 
   useEffect(() => {
     if (!slug) {
@@ -216,6 +262,44 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
     () => allImages.map((itemImageSrc) => ({ itemImageSrc })),
     [allImages],
   );
+
+  const clampGalleryIndex = useCallback(
+    (index: number) => Math.max(0, Math.min(Math.max(0, allImages.length - 1), index)),
+    [allImages.length],
+  );
+
+  const openFullscreenPreview = useCallback(() => {
+    if (!set || set.disabled || allImages.length === 0) return;
+    fullscreenGalleriaRef.current?.show();
+  }, [set, allImages.length]);
+
+  const stepFullscreenPreview = useCallback(
+    (delta: number) => {
+      setActiveIndex((prev) => clampGalleryIndex(prev + delta));
+    },
+    [clampGalleryIndex],
+  );
+
+  useEffect(() => {
+    if (!fullscreenPreviewOpen) return undefined;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        fullscreenGalleriaRef.current?.hide();
+        return;
+      }
+      if (allImages.length <= 1) return;
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        stepFullscreenPreview(-1);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        stepFullscreenPreview(1);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [fullscreenPreviewOpen, allImages.length, stepFullscreenPreview]);
 
   useEffect(() => {
     if (catalogLoading) return undefined;
@@ -398,19 +482,11 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
                       showItemNavigators={galleriaItems.length > 1}
                       showThumbnailNavigators={galleriaItems.length > 4}
                       item={(item: TileDetailGalleriaItem) => (
-                        <Image
-                          key={`${set.slug}-${item.itemImageSrc}`}
-                          src={item.itemImageSrc}
-                          alt=""
-                          preview={!set.disabled}
-                          downloadable={false}
-                          closeOnEscape
-                          imageClassName="tile-detail-image"
-                          width="512"
-                          height="512"
-                          loading="eager"
-                          pt={TILE_DETAIL_IMAGE_PREVIEW_PT}
-                          className="flex w-full justify-content-center"
+                        <TileDetailGalleriaSlide
+                          item={item}
+                          setSlug={set.slug}
+                          previewEnabled={!set.disabled}
+                          onOpenFullscreen={openFullscreenPreview}
                         />
                       )}
                       thumbnail={(item: TileDetailGalleriaItem) => (
@@ -552,6 +628,35 @@ export default function TileSetDetailPage({ slug }: { slug: string }) {
               </div>
             </div>
           </div>
+
+          {!set.disabled && galleriaItems.length > 0 ? (
+            <Galleria
+              ref={fullscreenGalleriaRef}
+              value={galleriaItems}
+              activeIndex={activeIndex}
+              onItemChange={(e) => {
+                setActiveIndex(clampGalleryIndex(e.index));
+              }}
+              fullScreen
+              closeOnEscape
+              circular={galleriaItems.length > 1}
+              showItemNavigators={galleriaItems.length > 1}
+              showThumbnails={false}
+              onShow={() => setFullscreenPreviewOpen(true)}
+              onHide={() => setFullscreenPreviewOpen(false)}
+              item={(item: TileDetailGalleriaItem) => (
+                <img
+                  src={item.itemImageSrc}
+                  alt=""
+                  className="tile-detail-fullscreen-image"
+                />
+              )}
+              thumbnail={(item: TileDetailGalleriaItem) => (
+                <img src={item.itemImageSrc} alt="" className="tile-detail-galleria-thumb-img" />
+              )}
+              className="tile-detail-galleria-fullscreen"
+            />
+          ) : null}
 
           <Dialog
             header="Coming soon"

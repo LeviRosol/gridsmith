@@ -4,7 +4,6 @@ import {
   MarketingFeatureCard,
   MarketingFeatureGrid,
   MarketingFeatureGridItem,
-  MarketingHero,
   MarketingHighlightRow,
   MarketingButton,
   MarketingEtsyIcon,
@@ -13,19 +12,20 @@ import {
   MarketingSectionHeader,
   MarketingSplit,
 } from './home/marketing-blocks';
+import HomeHeroSection from './home/HomeHeroSection.tsx';
 
 const TITLE = 'GridSmith — Your First Terrain System';
 const DESCRIPTION =
   'Fast-print modular terrain designed to get you from printer setup to playable maps quickly. Print, snap together, and play—no magnets or clips required.';
 
 const IMAGES = {
-  hero: '/gs_hero_final.png',
-  fastPrints: '/combined_hero_even.png',
-  snapFit: '/walls_combined_close.png',
+  hero: '/gs_hero_tavern_64_set.png',
+  fastPrints: '/plate_print.gif',
+  snapFit: '/snap-fit.jpg',
   gameNight: '/tile-pack-gallery/tavern/2.jpg',
-  storage: '/gs_hero_final.png',
-  tavernSpread: '/tile-pack-gallery/tavern/1.jpg',
-  workbench: '/combined_hero_even.png',
+  storage: '/ender_3.jpg',
+  tavernSpread: '/tavern_set.jpg',
+  workbench: '/built-open.jpg',
 } as const;
 
 const TAVERN_CORE_SLUG = 'tavern-core-set';
@@ -42,6 +42,31 @@ const TAVERN_OPTIONS = [
   { icon: 'pi-download', label: 'STL Downloads' },
   { icon: 'pi-box', label: 'Physical Printed Sets' },
   { icon: 'pi-inbox', label: 'Optional Storage Trays' },
+] as const;
+
+const HERO_BULLETS = [
+  { icon: 'pi pi-ban', label: 'No magnets.' },
+  { icon: 'pi pi-link', label: 'No clips.' },
+  { icon: 'pi pi-wrench', label: 'No complicated setup.' },
+] as const;
+
+const HERO_FEATURES = [
+  { icon: 'pi pi-print', title: 'Fast Prints', description: 'Optimized for speed and efficiency.' },
+  {
+    icon: 'pi pi-th-large',
+    title: 'Snap-Together',
+    description: 'Tiles snap into reusable grids. No glue needed.',
+  },
+  {
+    icon: 'pi pi-inbox',
+    title: 'Organized',
+    description: 'Custom storage keeps everything in its place.',
+  },
+  {
+    icon: 'pi pi-users',
+    title: 'Ready to Play',
+    description: 'Build taverns, dungeons, and more in minutes.',
+  },
 ] as const;
 
 const BUILD_LOG_TOPICS = [
@@ -66,15 +91,22 @@ export default function HomePage() {
 
   return (
     <main className="home-page home-landing">
-      <MarketingHero
+      <HomeHeroSection
         title="Your First Terrain System"
-        lead="Fast-print modular terrain designed to get you from printer setup to playable maps as quickly as possible."
-        supportingLines={['No magnets. No clips. No complicated assembly.']}
-        tagline="Just print, snap together, and play."
-        primaryCta={{ label: 'Shop Tile Sets', path: '/tiles' }}
-        secondaryCta={{ label: 'Build for Free', path: '/tile-builder' }}
+        lead="Beginner-friendly modular terrain for tabletop RPGs."
+        bullets={HERO_BULLETS}
+        tagline="Print, snap together, and play."
+        primaryCta={{ label: 'Shop STLs', path: '/tiles' }}
+        secondaryCta={{ label: 'Shop Physical Sets', href: 'https://gridsmithio.etsy.com' }}
+        freeTiles={{
+          title: 'Start Printing Free',
+          description: 'Download free starter tiles and build your first dungeon tonight.',
+          linkLabel: 'Get Free Tiles →',
+          path: '/tile-builder',
+        }}
+        features={HERO_FEATURES}
         imageSrc={IMAGES.hero}
-        imageAlt="Tavern Core Set storage tray with organized tiles beside a partially assembled tavern layout"
+        imageAlt="GridSmith Tavern Core Set — 64 modular tavern tiles on a table with sample layouts"
       />
 
       <MarketingSection id="why-gridsmith" tone="light">
@@ -123,7 +155,7 @@ export default function HomePage() {
         tone="dark"
         imagePosition="right"
         imageSrc={IMAGES.storage}
-        imageAlt="Stacked GridSmith storage trays with labeled lids and organized tile compartments"
+        imageAlt="Ender 3 3D printer with GridSmith terrain tiles on the build plate"
         title="Built for New Printer Owners"
       >
         <p className="m-0 mb-0">
@@ -142,6 +174,7 @@ export default function HomePage() {
         imagePosition="left"
         imageSrc={IMAGES.tavernSpread}
         imageAlt="Top-down view of the Tavern Core Set tile spread"
+        imagePreview
         title="Start with the Tavern Core Set"
         actions={
           <MarketingButton label="View Tavern Core Set" path={`/tile-details/${TAVERN_CORE_SLUG}`} />

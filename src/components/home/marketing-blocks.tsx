@@ -3,7 +3,14 @@ import { FaEtsy } from 'react-icons/fa6';
 import { Avatar } from 'primereact/avatar';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
-import { Image } from 'primereact/image';
+import { Image, type ImagePassThroughOptions } from 'primereact/image';
+
+/** Fullscreen preview: zoom + close only (no download / rotate). */
+const MARKETING_IMAGE_PREVIEW_PT: ImagePassThroughOptions = {
+  downloadButton: { style: { display: 'none' } },
+  rotateLeftButton: { style: { display: 'none' } },
+  rotateRightButton: { style: { display: 'none' } },
+};
 /** Fixed light/dark/black bands for home/about, or `theme` to follow body dark/light mode. */
 export type MarketingTone = 'light' | 'dark' | 'black' | 'theme';
 
@@ -122,22 +129,37 @@ export function MarketingPhoto({
   alt,
   className = '',
   imageClassName = 'w-full border-round',
+  preview = false,
+  preserveAspectRatio = false,
 }: {
   src: string;
   alt: string;
   className?: string;
   imageClassName?: string;
+  /** Opens fullscreen overlay with zoom in/out and close. */
+  preview?: boolean;
+  /** Do not force 960×640 — keep the image's natural aspect ratio. */
+  preserveAspectRatio?: boolean;
 }) {
+  const imgClassName = [
+    imageClassName,
+    preserveAspectRatio ? 'home-landing-split-photo' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <Image
       src={src}
       alt={alt}
-      preview={false}
-      width="960"
-      height="640"
+      preview={preview}
+      downloadable={false}
+      closeOnEscape={preview}
+      {...(preserveAspectRatio ? {} : { width: '960', height: '640' })}
       loading="lazy"
-      className={`block w-full shadow-2 ${className}`.trim()}
-      imageClassName={imageClassName}
+      pt={preview ? MARKETING_IMAGE_PREVIEW_PT : undefined}
+      className={`block w-full shadow-2${preview ? ' marketing-photo--preview' : ''}${preserveAspectRatio ? ' home-landing-split-image' : ''} ${className}`.trim()}
+      imageClassName={imgClassName}
     />
   );
 }
@@ -297,6 +319,7 @@ export function MarketingSplit({
   imagePosition = 'left',
   imageSrc,
   imageAlt,
+  imagePreview = false,
   title,
   children,
   actions,
@@ -306,13 +329,19 @@ export function MarketingSplit({
   imagePosition?: 'left' | 'right';
   imageSrc: string;
   imageAlt: string;
+  imagePreview?: boolean;
   title: string;
   children: React.ReactNode;
   actions?: React.ReactNode;
 }) {
   const imageCol = (
-    <div className="col-12 lg:col-6 py-3 lg:py-0">
-      <MarketingPhoto src={imageSrc} alt={imageAlt} />
+    <div className="col-12 lg:col-6 py-3 lg:py-0 home-landing-split-image-col">
+      <MarketingPhoto
+        src={imageSrc}
+        alt={imageAlt}
+        preview={imagePreview}
+        preserveAspectRatio
+      />
     </div>
   );
   const copyCol = (
