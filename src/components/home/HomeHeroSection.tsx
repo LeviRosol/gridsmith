@@ -54,41 +54,45 @@ export default function HomeHeroSection({
 
       <div className="home-hero-v2__main">
         <MarketingContainer className="home-hero-v2__container">
-          <div className="home-hero-v2__copy">
-            <h1 className="home-hero-v2__title m-0">{title}</h1>
-            <p className="home-hero-v2__lead m-0">{lead}</p>
+          <div className="home-hero-v2__layout">
+            <div className="home-hero-v2__copy">
+              <div className="home-hero-v2__intro">
+                <h1 className="home-hero-v2__title">{title}</h1>
+                <p className="home-hero-v2__lead">{lead}</p>
 
-            <ul className="home-hero-v2__bullets list-none p-0 m-0">
-              {bullets.map((item) => (
-                <li key={item.label} className="home-hero-v2__bullet">
-                  <i className={`${item.icon} home-hero-v2__bullet-icon`} aria-hidden />
-                  <span>{item.label}</span>
-                </li>
-              ))}
-            </ul>
+                <ul className="home-hero-v2__bullets list-none p-0">
+                  {bullets.map((item) => (
+                    <li key={item.label} className="home-hero-v2__bullet">
+                      <i className={`${item.icon} home-hero-v2__bullet-icon`} aria-hidden />
+                      <span>{item.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-            <p className="home-hero-v2__tagline m-0">{tagline}</p>
+              <p className="home-hero-v2__tagline">{tagline}</p>
 
-            <div className="home-hero-v2__actions flex flex-wrap gap-2">
-              <MarketingButton
-                label={primaryCta.label}
-                path={primaryCta.path}
-                icon="pi pi-shopping-cart"
-                className="home-hero-v2__btn-primary"
-              />
-              <MarketingButton
-                label={secondaryCta.label}
-                href={secondaryCta.href}
-                outlined
-                className="home-hero-v2__btn-secondary"
-              />
+              <div className="home-hero-v2__actions flex flex-wrap gap-2">
+                <MarketingButton
+                  label={primaryCta.label}
+                  path={primaryCta.path}
+                  icon="pi pi-shopping-cart"
+                  className="home-hero-v2__btn-primary"
+                />
+                <MarketingButton
+                  label={secondaryCta.label}
+                  href={secondaryCta.href}
+                  outlined
+                  className="home-hero-v2__btn-secondary"
+                />
+              </div>
             </div>
 
-            <div className="home-hero-v2__free-card">
+            <aside className="home-hero-v2__free-card" aria-label={freeTiles.title}>
               <i className="pi pi-gift home-hero-v2__free-icon" aria-hidden />
               <div className="home-hero-v2__free-body">
-                <p className="home-hero-v2__free-title m-0">{freeTiles.title}</p>
-                <p className="home-hero-v2__free-desc m-0">{freeTiles.description}</p>
+                <p className="home-hero-v2__free-title">{freeTiles.title}</p>
+                <p className="home-hero-v2__free-desc">{freeTiles.description}</p>
                 <Button
                   type="button"
                   label={freeTiles.linkLabel}
@@ -97,7 +101,7 @@ export default function HomeHeroSection({
                   onClick={() => navigateMarketing(freeTiles.path)}
                 />
               </div>
-            </div>
+            </aside>
           </div>
         </MarketingContainer>
       </div>

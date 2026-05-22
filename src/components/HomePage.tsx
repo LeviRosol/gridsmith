@@ -93,7 +93,7 @@ export default function HomePage() {
     <main className="home-page home-landing">
       <HomeHeroSection
         title="Your First Terrain System"
-        lead="Fast-print modular terrain for tabletop RPGs."
+        lead="Beginner-friendly modular terrain for tabletop RPGs."
         bullets={HERO_BULLETS}
         tagline="Print, snap together, and play."
         primaryCta={{ label: 'Shop STLs', path: '/tiles' }}
