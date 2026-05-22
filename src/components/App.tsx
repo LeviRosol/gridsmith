@@ -43,7 +43,6 @@ import { TileCartProvider, useTileCart } from '../cart/TileCartContext';
 import { trackPageView } from '../analytics';
 import { installTileStls } from '../tile-builder/install-tile-stls.ts';
 import { isTileBuilderProTierResolution } from '../utils.ts';
-import { FaDiscord } from 'react-icons/fa6';
 import { isBuilderRoute, normalizePathname } from '../routes.ts';
 
 const THEME_MODE_STORAGE_KEY = 'gridsmith.theme.darkMode';
@@ -195,15 +194,14 @@ function AppImpl({
 
   const mobileMenuItems: MenuItem[] = [
     {
-      label: 'Build',
-      icon: 'pi pi-bolt',
+      label: 'Free Tile Builder',
+      icon: 'pi pi-th-large',
       command: () => {
         setBuildChooserModalOpen(true);
       },
     },
     { label: 'Get Tiles', command: () => (window.location.pathname = '/tiles') },
     { label: 'Build Log', command: () => (window.location.pathname = '/blog') },
-    { label: 'About', command: () => (window.location.pathname = '/about') },
     {
       label: 'Cart',
       icon: 'pi pi-shopping-cart',
@@ -413,26 +411,15 @@ function AppImpl({
           <div className="app-header-nav-desktop">
             <a href="/tiles" className="app-header-link">Get Tiles</a>
             <a href="/blog" className="app-header-link">Build Log</a>
-            <a href="/about" className="app-header-link">About</a>
             <Button
               type="button"
-              label="Build"
-              icon="pi pi-bolt"
+              label="Free Tile Builder"
+              icon="pi pi-th-large"
+              severity="secondary"
               onClick={() => setBuildChooserModalOpen(true)}
               className="app-header-link-button app-header-build-button"
               style={{ paddingInline: '0.75rem' }}
             />
-            <a
-              href="https://discord.gg/AeBpv33ru"
-              className="app-header-link"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Discord"
-              title="Discord"
-              style={{ display: 'inline-flex', alignItems: 'center' }}
-            >
-              <FaDiscord size={18} aria-hidden="true" />
-            </a>
             <div className="app-header-cart-wrap">
               <Button
                 type="button"
