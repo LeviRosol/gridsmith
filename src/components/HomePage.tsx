@@ -100,7 +100,7 @@ export default function HomePage() {
         secondaryCta={{ label: 'Shop Physical Sets', href: 'https://gridsmithio.etsy.com' }}
         freeTiles={{
           title: 'Start Printing Free',
-          description: 'Download free starter tiles and build your first dungeon tonight.',
+          description: 'New to 3D printing terrain? Start with free dungeon starter tiles.',
           linkLabel: 'Get Free Tiles →',
           path: '/tile-builder',
         }}

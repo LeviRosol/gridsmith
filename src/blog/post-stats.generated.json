@@ -1,12 +1,12 @@
 [
   {
-    "slug": "test-post-3-draft",
-    "draft": true,
-    "readingTimeMinutes": 1
+    "slug": "why-i-started-gridsmith",
+    "draft": false,
+    "readingTimeMinutes": 2
   },
   {
-    "slug": "coming-soon",
-    "draft": false,
+    "slug": "test-post-3-draft",
+    "draft": true,
     "readingTimeMinutes": 1
   },
   {

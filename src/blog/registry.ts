@@ -1,7 +1,7 @@
 import type { BlogPost } from './types.ts';
 import { enrichPostMeta } from './enrich-meta.ts';
 import { isPostVisible } from './publish.ts';
-import ComingSoon, { meta as comingSoonMeta } from './posts/coming-soon.mdx';
+import WhyIStartedGridsmith, { meta as whyIStartedGridsmithMeta } from './posts/why-i-started-gridsmith.mdx';
 import TestPost2, { meta as testPost2Meta } from './posts/test-post-2.mdx';
 import TestPost3Draft, { meta as testPost3DraftMeta } from './posts/test-post-3-draft.mdx';
 import TestPostMediaDemo, { meta as testPostMediaDemoMeta } from './posts/test-post-media-demo.mdx';
@@ -9,9 +9,9 @@ import TestPostMediaDemo, { meta as testPostMediaDemoMeta } from './posts/test-p
 /** All posts registered here — add new `.mdx` imports. */
 const POST_ENTRIES: BlogPost[] = [
   {
-    slug: 'coming-soon',
-    meta: enrichPostMeta('coming-soon', comingSoonMeta),
-    Component: ComingSoon,
+    slug: 'why-i-started-gridsmith',
+    meta: enrichPostMeta('why-i-started-gridsmith', whyIStartedGridsmithMeta),
+    Component: WhyIStartedGridsmith,
   },
   {
     slug: 'test-post-2',
