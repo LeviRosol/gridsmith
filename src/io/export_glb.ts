@@ -1,4 +1,4 @@
-import { Document, NodeIO, Accessor, Primitive } from '@gltf-transform/core';
+import { Document, WebIO, Accessor, Primitive } from '@gltf-transform/core';
 import { Light as LightDef, KHRLightsPunctual } from '@gltf-transform/extensions';
 import { Vertex, Color, Face, IndexedPolyhedron, DEFAULT_FACE_COLOR } from './common';
 
@@ -107,6 +107,6 @@ export async function exportGlb(data: IndexedPolyhedron, defaultColor: Color = D
     }
     scene.addChild(doc.createNode().setMesh(mesh));
 
-    const glb = await new NodeIO().registerExtensions([KHRLightsPunctual]).writeBinary(doc);
+    const glb = await new WebIO().registerExtensions([KHRLightsPunctual]).writeBinary(doc);
     return new Blob([glb], { type: 'model/gltf-binary' });
 }

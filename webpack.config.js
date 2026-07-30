@@ -12,6 +12,13 @@ const __dirname = dirname(__filename);
 
 const isDev = process.env.NODE_ENV !== 'production';
 
+/** Rewrite `node:path` / `node:fs` to bare modules so resolve.fallback can stub them for the browser. */
+function nodeProtocolRewritePlugin() {
+  return new webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
+    resource.request = resource.request.replace(/^node:/, '');
+  });
+}
+
 
 /** @type {import('webpack').Configuration[]} */
 const config = [
@@ -136,6 +143,7 @@ const config = [
       historyApiFallback: true,
     },
     plugins: [
+      nodeProtocolRewritePlugin(),
       // Load .env and inject process.env.COGNITO_* (and any other process.env.X used in code) into the bundle
       new Dotenv({
         path: path.resolve(__dirname, '.env'),
@@ -267,6 +275,7 @@ const config = [
       'browserfs': 'BrowserFS'
     },
     plugins: [
+      nodeProtocolRewritePlugin(),
       new webpack.EnvironmentPlugin({
         'process.env.NODE_ENV': process.env.NODE_ENV ?? 'development',
         'process.env.CI': process.env.CI ?? 'false',
