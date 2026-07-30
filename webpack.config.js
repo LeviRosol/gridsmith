@@ -181,6 +181,21 @@ const config = [
             from: path.resolve(__dirname, 'public'),
             toType: 'dir',
           },
+          // Bundle PrimeReact themes locally (theme toggle swaps these; avoid unpkg CDN 404s).
+          {
+            from: path.resolve(
+              __dirname,
+              'node_modules/primereact/resources/themes/lara-dark-amber',
+            ),
+            to: path.resolve(__dirname, 'dist/themes/lara-dark-amber'),
+          },
+          {
+            from: path.resolve(
+              __dirname,
+              'node_modules/primereact/resources/themes/lara-light-amber',
+            ),
+            to: path.resolve(__dirname, 'dist/themes/lara-light-amber'),
+          },
           {
             from: path.resolve(__dirname, 'src/wasm/openscad.js'),
             to: path.resolve(__dirname, 'dist'),

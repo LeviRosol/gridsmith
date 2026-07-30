@@ -331,12 +331,14 @@ function AppImpl({
 
     const themeId = 'primereact-theme';
     const existing = document.getElementById(themeId) as HTMLLinkElement | null;
+    // Served from dist/themes via CopyPlugin (same package version as node_modules).
     const href = darkMode
-      ? 'https://unpkg.com/primereact/resources/themes/lara-dark-amber/theme.css'
-      : 'https://unpkg.com/primereact/resources/themes/lara-light-amber/theme.css';
+      ? '/themes/lara-dark-amber/theme.css'
+      : '/themes/lara-light-amber/theme.css';
 
     if (existing) {
-      if (existing.href !== href) {
+      const current = existing.getAttribute('href') ?? '';
+      if (current !== href) {
         existing.href = href;
       }
     } else {
